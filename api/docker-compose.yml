@@ -1,0 +1,54 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: caremp-sentinel-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-caremp_sentinel}
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - JWT_SECRET=${JWT_SECRET:-CAREMP_SENTINEL}
+      - JWT_SECRET_EXPIRES=${JWT_SECRET_EXPIRES:-30d}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-CAREMP_SENTINEL_REFRESH}
+      - JWT_REFRESH_EXPIRES=${JWT_REFRESH_EXPIRES:-30d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - caremp-sentienl-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: care-mp-postgres
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-caremp_sentinel}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-caremp_sentinel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - caremp-sentienl-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  caremp-sentinel-network:
+    driver: bridge
