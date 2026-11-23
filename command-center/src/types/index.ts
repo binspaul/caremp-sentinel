@@ -121,3 +121,81 @@ export interface DashboardCounters {
   usersActive: number;
   lastUpdated: Date;
 }
+
+// ==========================================
+// Hardware Band / Device Fleet Types
+// ==========================================
+
+export type BandStatus = 'available' | 'active' | 'charging' | 'maintenance';
+export type BandDeviceType = 'wristband' | 'radar_pod' | 'chest_patch';
+
+export interface Band {
+  id: number;
+  serialNumber: string;
+  macAddress: string;
+  model: string;
+  deviceType: BandDeviceType;
+  firmwareVersion: string;
+  batteryLevel: number;
+  isWorn: boolean;
+  rssi: number;
+  status: BandStatus;
+  lastSeenAt: string | null;
+  notes?: string;
+  assignedResidentId: number | null;
+  assignedResident?: Resident | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BandCounters {
+  total: number;
+  active: number;
+  available: number;
+  charging: number;
+  maintenance: number;
+  lowBattery: number;
+  notWorn: number;
+}
+
+// ==========================================
+// Fall Incident & Emergency Dispatch Types
+// ==========================================
+
+export type FallSeverity = 'moderate' | 'severe' | 'critical';
+export type FallIncidentStatus =
+  | 'unresolved'
+  | 'emergency_dispatched'
+  | 'resolved_false_alarm'
+  | 'resolved_assisted';
+
+export interface FallIncident {
+  id: number;
+  residentId: number;
+  bandId: number | null;
+  impactForceG: number;
+  orientationChangeDeg: number;
+  motionlessDurationSeconds: number;
+  severity: FallSeverity;
+  status: FallIncidentStatus;
+  location: string;
+  clinicalDescription?: string;
+  detectedAt: string;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
+  resolutionNotes?: string | null;
+  resident?: Resident;
+  band?: Band | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FallCounters {
+  total: number;
+  unresolved: number;
+  emergencyDispatched: number;
+  resolvedFalseAlarm: number;
+  resolvedAssisted: number;
+}
+
+

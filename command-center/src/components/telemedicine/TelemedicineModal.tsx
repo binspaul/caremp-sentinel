@@ -116,25 +116,25 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-6xl h-[90vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-white">
+    <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-6xl h-[92vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-900 dark:text-white transition-colors">
         {/* Header */}
-        <div className="h-18 px-6 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between shrink-0">
+        <div className="h-18 px-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
               <Video className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white tracking-tight">{residentName}</h2>
-                <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">{residentName}</h2>
+                <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
                   UHID: {uhid}
                 </span>
-                <span className="text-xs text-slate-400">{age} yrs</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{age} yrs</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
-                <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-semibold">
+                <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-semibold">
                   Secure Encrypted Telehealth Link · WebRTC Connected
                 </span>
               </div>
@@ -144,7 +144,7 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowReportModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition cursor-pointer"
               title="Export Clinical Handover & SBAR Report"
             >
               <FileText className="w-3.5 h-3.5" />
@@ -152,7 +152,7 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -162,19 +162,19 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
         {/* Modal Main Content: Split View */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 overflow-hidden">
           {/* Left Column: Simulated Video + Live Telemetry HUD (7 Cols) */}
-          <div className="lg:col-span-7 border-r border-slate-800 p-6 flex flex-col justify-between overflow-y-auto bg-slate-950/40 space-y-4">
+          <div className="lg:col-span-7 border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between overflow-y-auto bg-slate-50/50 dark:bg-slate-950/40 space-y-4">
             {/* Simulated Telehealth Video Frame */}
-            <div className="relative w-full aspect-video bg-gradient-to-br from-slate-950 to-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-inner flex items-center justify-center group">
+            <div className="relative w-full aspect-video bg-gradient-to-br from-slate-900 to-slate-950 dark:from-slate-950 dark:to-slate-900 rounded-2xl border border-slate-300 dark:border-slate-800 overflow-hidden shadow-inner flex items-center justify-center group">
               <div className="flex flex-col items-center gap-2 text-center text-slate-400">
-                <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center text-2xl font-bold text-emerald-400">
+                <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center text-2xl font-bold text-emerald-400 shadow-md">
                   {residentName.split(' ').map((n) => n[0]).join('')}
                 </div>
-                <p className="text-xs font-semibold text-slate-300">Resident Video Stream (Remote Bedside)</p>
-                <p className="text-[11px] font-mono text-slate-500">720p HD · 60fps · Latency 28ms</p>
+                <p className="text-xs font-semibold text-slate-200">Resident Video Stream (Remote Bedside)</p>
+                <p className="text-[11px] font-mono text-slate-400">720p HD · 60fps · Latency 28ms</p>
               </div>
 
               {/* Patient Live Video Pill */}
-              <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono">
+              <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-mono">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>LIVE FEED</span>
               </div>
@@ -208,57 +208,73 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
 
             {/* Live Synchronized Biometric Telemetry HUD */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+              <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                 <span className="flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-emerald-400" />
+                  <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   Live Wearable Sensor Telemetry HUD
                 </span>
-                <span className={isCritical ? 'text-rose-400 font-extrabold animate-pulse' : 'text-emerald-400'}>
+                <span className={isCritical ? 'text-rose-600 dark:text-rose-400 font-extrabold animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}>
                   {isCritical ? 'CRITICAL DETERIORATION DETECTED' : 'NORMAL VITALS'}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {/* Heart Rate */}
-                <div className={`p-3 rounded-2xl border ${hr > 115 ? 'bg-rose-500/10 border-rose-500/40 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-200'}`}>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <div className={`p-3 rounded-2xl border transition-colors ${
+                  hr > 115 
+                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-xs'
+                }`}>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                     <Heart className="w-3.5 h-3.5 text-rose-500" />
                     <span>Heart Rate</span>
                   </div>
-                  <div className="mt-1 font-mono font-bold text-xl text-white">
-                    {hr} <span className="text-[10px] font-normal text-slate-400">bpm</span>
+                  <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
+                    {hr} <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">bpm</span>
                   </div>
                 </div>
 
                 {/* Blood Pressure */}
-                <div className={`p-3 rounded-2xl border ${sbp < 95 ? 'bg-rose-500/10 border-rose-500/40 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-200'}`}>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <div className={`p-3 rounded-2xl border transition-colors ${
+                  sbp < 95 
+                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-xs'
+                }`}>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                     <Activity className="w-3.5 h-3.5 text-amber-500" />
                     <span>BP (SBP/DBP)</span>
                   </div>
-                  <div className="mt-1 font-mono font-bold text-xl text-white">
-                    {sbp}/{dbp} <span className="text-[10px] font-normal text-slate-400">mmHg</span>
+                  <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
+                    {sbp}/{dbp} <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">mmHg</span>
                   </div>
                 </div>
 
                 {/* SpO2 */}
-                <div className={`p-3 rounded-2xl border ${spo2 < 92 ? 'bg-rose-500/10 border-rose-500/40 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-200'}`}>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                    <Wind className="w-3.5 h-3.5 text-cyan-400" />
+                <div className={`p-3 rounded-2xl border transition-colors ${
+                  spo2 < 92 
+                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-xs'
+                }`}>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <Wind className="w-3.5 h-3.5 text-cyan-500" />
                     <span>SpO2 Pulse Ox</span>
                   </div>
-                  <div className="mt-1 font-mono font-bold text-xl text-white">
+                  <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
                     {spo2}%
                   </div>
                 </div>
 
                 {/* Temp */}
-                <div className={`p-3 rounded-2xl border ${Number(temp) > 38.5 ? 'bg-rose-500/10 border-rose-500/40 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-200'}`}>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                    <Thermometer className="w-3.5 h-3.5 text-orange-400" />
+                <div className={`p-3 rounded-2xl border transition-colors ${
+                  Number(temp) > 38.5 
+                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-xs'
+                }`}>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <Thermometer className="w-3.5 h-3.5 text-orange-500" />
                     <span>Temperature</span>
                   </div>
-                  <div className="mt-1 font-mono font-bold text-xl text-white">
+                  <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
                     {temp}°C
                   </div>
                 </div>
@@ -267,11 +283,11 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
           </div>
 
           {/* Right Column: AI Clinical Diagnostic Brief & Interactive Copilot (5 Cols) */}
-          <div className="lg:col-span-5 flex flex-col justify-between overflow-hidden bg-slate-900/90 p-5 space-y-4">
+          <div className="lg:col-span-5 flex flex-col justify-between overflow-hidden bg-slate-50/70 dark:bg-slate-900/90 p-5 space-y-4">
             {/* Clinical Brief Card */}
-            <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase font-bold tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <span className="text-xs font-mono uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   30s AI Triage Diagnostic Synopsis
                 </span>
@@ -280,27 +296,27 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
                 </Badge>
               </div>
 
-              <div className="text-xs text-slate-300 space-y-1.5 font-sans leading-relaxed">
+              <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 font-sans leading-relaxed">
                 <p>
-                  <span className="font-semibold text-rose-400">Sepsis Prodrome: </span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">Sepsis Prodrome: </span>
                   qSOFA 2/3 (Tachypnea + Hypotension) detected. Estimated 8.5 hr advance warning window before overt septic shock.
                 </p>
                 <p>
-                  <span className="font-semibold text-purple-400">Pharmacogenomic Conflict: </span>
-                  Taking <span className="font-mono text-purple-300">Clopidogrel</span> with CYP2C19 *1/*2 (Antiplatelet failure) and <span className="font-mono text-purple-300">Atorvastatin</span> with SLCO1B1 (Myopathy risk).
+                  <span className="font-semibold text-purple-700 dark:text-purple-400">Pharmacogenomic Conflict: </span>
+                  Taking <span className="font-mono font-medium text-purple-700 dark:text-purple-300">Clopidogrel</span> with CYP2C19 *1/*2 (Antiplatelet failure) and <span className="font-mono font-medium text-purple-700 dark:text-purple-300">Atorvastatin</span> with SLCO1B1 (Myopathy risk).
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80">
-                <span className="text-[11px] font-mono text-slate-400">Action:</span>
-                <span className="text-[11px] font-semibold text-emerald-400">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800/80">
+                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Action:</span>
+                <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
                   Switch Plavix → Ticagrelor 90mg BID · Sepsis Six Protocol
                 </span>
               </div>
             </div>
 
             {/* Interactive Gemini Chat Assistant */}
-            <div className="flex-1 flex flex-col min-h-0 bg-slate-950 rounded-2xl border border-slate-800 p-3 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-3 overflow-hidden">
               <div className="flex-1 overflow-y-auto space-y-3 p-1">
                 {chatMessages.map((msg) => (
                   <div
@@ -310,62 +326,62 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
                     <div
                       className={`max-w-[90%] p-3 rounded-2xl text-xs leading-relaxed ${
                         msg.sender === 'physician'
-                          ? 'bg-emerald-600 text-white rounded-br-none'
-                          : 'bg-slate-800/80 text-slate-200 border border-slate-700/60 rounded-bl-none whitespace-pre-line'
+                          ? 'bg-emerald-600 text-white rounded-br-none shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 rounded-bl-none whitespace-pre-line shadow-2xs'
                       }`}
                     >
                       {msg.text}
                     </div>
-                    <span className="text-[9px] font-mono text-slate-500 mt-1 px-1">
+                    <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1 px-1">
                       {msg.timestamp}
                     </span>
                   </div>
                 ))}
                 {isTyping && (
-                  <div className="flex items-center gap-1.5 p-2 text-xs text-slate-400 font-mono">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.4s]" />
+                  <div className="flex items-center gap-1.5 p-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.4s]" />
                     <span>Gemini analyzing clinical context...</span>
                   </div>
                 )}
               </div>
 
               {/* Quick Prompt Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto py-2 shrink-0 border-t border-slate-800/60">
+              <div className="flex items-center gap-1.5 overflow-x-auto py-2 shrink-0 border-t border-slate-200 dark:border-slate-800/60">
                 <button
                   onClick={() => handleSendQuery('Why is the NEWS2 score critical?')}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] whitespace-nowrap transition cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent text-[11px] whitespace-nowrap transition cursor-pointer"
                 >
                   ⚡ Explain NEWS2 Score
                 </button>
                 <button
                   onClick={() => handleSendQuery('Review active Pharmacogenomic conflicts')}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] whitespace-nowrap transition cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent text-[11px] whitespace-nowrap transition cursor-pointer"
                 >
                   🧬 Review PGx Conflicts
                 </button>
                 <button
                   onClick={() => handleSendQuery('Generate formal clinical handover note')}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] whitespace-nowrap transition cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent text-[11px] whitespace-nowrap transition cursor-pointer"
                 >
                   📋 Handover Note
                 </button>
               </div>
 
               {/* Chat Input */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-800 shrink-0">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 shrink-0">
                 <input
                   type="text"
                   value={inputQuery}
                   onChange={(e) => setInputQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendQuery()}
                   placeholder="Ask Gemini Clinical Copilot..."
-                  className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-emerald-500 transition"
+                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-500 transition"
                 />
                 <button
                   onClick={() => handleSendQuery()}
-                  className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer"
+                  className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer shadow-xs active:scale-95"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>

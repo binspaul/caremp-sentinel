@@ -13,7 +13,6 @@ import {
   Moon,
   Clock,
   Filter,
-  RefreshCw,
   X,
   Battery,
   Eye,
@@ -26,11 +25,13 @@ import {
 interface VitalsViewProps {
   initialResidentId?: number | null;
   onClearResidentFilter?: () => void;
+  lastUpdated?: Date;
 }
 
 export const VitalsView: React.FC<VitalsViewProps> = ({
   initialResidentId,
   onClearResidentFilter,
+  lastUpdated,
 }) => {
   const [vitals, setVitals] = useState<Vital[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -95,7 +96,7 @@ export const VitalsView: React.FC<VitalsViewProps> = ({
 
   useEffect(() => {
     loadVitals();
-  }, [loadVitals]);
+  }, [loadVitals, lastUpdated]);
 
   const handleResidentChange = (residentId?: number) => {
     setSelectedResidentId(residentId);
@@ -150,7 +151,7 @@ export const VitalsView: React.FC<VitalsViewProps> = ({
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
             <HeartPulse className="w-6 h-6 text-cyan-500 dark:text-cyan-400" />
-            Vitals Telemetry
+            Vitals
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Complete high-frequency physiological telemetry log. Total: {total} readings
@@ -188,15 +189,6 @@ export const VitalsView: React.FC<VitalsViewProps> = ({
               <span>Clear Filter</span>
             </button>
           )}
-
-          <button
-            onClick={loadVitals}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-500/40 shadow-sm dark:shadow-none transition cursor-pointer"
-            title="Refresh Vitals"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </div>
 

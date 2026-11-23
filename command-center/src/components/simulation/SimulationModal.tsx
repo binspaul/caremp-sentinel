@@ -11,13 +11,6 @@ import {
   Zap,
   RotateCcw,
   User,
-  Radio,
-  Cpu,
-  Layers,
-  DollarSign,
-  TrendingDown,
-  ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import commandCenterService from '../../services/commandCenterService';
 import { Resident, Vital } from '../../types';
@@ -166,6 +159,21 @@ const CONDITIONS: ConditionOption[] = [
       temp: '37.4°C',
     },
   },
+  {
+    type: 9,
+    name: 'Acute Fall & Post-Impact Immobility',
+    badge: '🚨 Kinematic Fall Detected',
+    badgeColor: 'bg-red-600/10 text-red-600 dark:text-red-400 border-red-600/30',
+    severity: 'critical',
+    description: 'High-g impact deceleration (>3.4g) with >80° orientation drop and 45s complete thoracic immobility. Auto-triggers emergency escalation protocol.',
+    metrics: {
+      hr: '~118 bpm',
+      hrv: '~15 ms',
+      bp: '~92/58 mmHg',
+      spo2: '~96%',
+      temp: '36.8°C',
+    },
+  },
 ];
 
 export const SimulationModal: React.FC<SimulationModalProps> = ({
@@ -174,7 +182,6 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
   onSimulated,
   residents: initialResidents,
 }) => {
-  const [activeTab, setActiveTab] = useState<'scenarios' | 'hardware'>('scenarios');
   const [residents, setResidents] = useState<Resident[]>(initialResidents || []);
   const [isLoadingResidents, setIsLoadingResidents] = useState(false);
   const [selectedResidentId, setSelectedResidentId] = useState<number | null>(null);
@@ -292,16 +299,14 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
         <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-950/40">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25 shrink-0">
-              {activeTab === 'scenarios' ? <Zap className="w-5 h-5" /> : <Radio className="w-5 h-5" />}
+              <Zap className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                {activeTab === 'scenarios' ? 'Simulate Vital Conditions' : 'Affordable Hardware Emulation HUD'}
+                Simulate Vital Conditions
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {activeTab === 'scenarios'
-                  ? 'Inject synthetic physiological signals into the digital twin telemetry stream'
-                  : 'Contact-free & low-cost multi-modal sensing cluster ($45 BOM vs $15k ICU cart)'}
+                Inject synthetic physiological signals into the digital twin telemetry stream
               </p>
             </div>
           </div>
@@ -311,38 +316,6 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
             className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-950/60 px-5 pt-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('scenarios')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition cursor-pointer ${
-              activeTab === 'scenarios'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Clinical Scenarios (1–8)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('hardware')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition cursor-pointer ${
-              activeTab === 'hardware'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5" />
-            <span>Affordable Sensor Cluster ($45 BOM)</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
-              Pillar 3
-            </span>
           </button>
         </div>
 
@@ -361,7 +334,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                   <span className="font-semibold">
                     {selectedResident ? getResidentDisplayName(selectedResident) : `Resident #${selectedResidentId}`}
                   </span>{' '}
-                  ({activeTab === 'hardware' ? 'Low-Cost Hardware Pod Telemetry' : activeCondition.name}). HR:{' '}
+                  ({activeCondition.name}). HR:{' '}
                   {Math.round(simulatedResult.heartRate)} bpm, BP:{' '}
                   {Math.round(simulatedResult.systolicBP)}/{Math.round(simulatedResult.diastolicBP)} mmHg, SpO2:{' '}
                   {simulatedResult.oxygenSaturation}%.
@@ -381,7 +354,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
             </div>
           )}
 
-          {/* Target Resident Selector (Shared across both tabs) */}
+          {/* Target Resident Selector */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
@@ -419,216 +392,91 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
             </select>
           </div>
 
-          {/* TAB 1: Clinical Scenarios View */}
-          {activeTab === 'scenarios' && (
-            <div className="space-y-4">
-              {/* Condition Selector */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-emerald-500" />
-                  Condition Pattern
-                </label>
+          {/* Condition Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-emerald-500" />
+              Condition Pattern
+            </label>
 
-                <select
-                  value={selectedConditionType}
-                  onChange={(e) => setSelectedConditionType(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                >
-                  {CONDITIONS.map((cond) => (
-                    <option key={cond.type} value={cond.type}>
-                      {cond.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <select
+              value={selectedConditionType}
+              onChange={(e) => setSelectedConditionType(Number(e.target.value))}
+              className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+            >
+              {CONDITIONS.map((cond) => (
+                <option key={cond.type} value={cond.type}>
+                  {cond.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              {/* Condition Context & Description Badge */}
-              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-3 text-xs">
-                <span className="text-slate-600 dark:text-slate-400 line-clamp-1">
-                  {activeCondition.description}
-                </span>
-                <span
-                  className={`shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${activeCondition.badgeColor}`}
-                >
-                  {activeCondition.badge}
-                </span>
-              </div>
+          {/* Condition Context & Description Badge */}
+          <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-3 text-xs">
+            <span className="text-slate-600 dark:text-slate-400 line-clamp-1">
+              {activeCondition.description}
+            </span>
+            <span
+              className={`shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${activeCondition.badgeColor}`}
+            >
+              {activeCondition.badge}
+            </span>
+          </div>
 
-              {/* Simulated Hemodynamic Projection Tiles */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 font-semibold">
-                    Simulated Hemodynamic Projections
-                  </span>
-                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                    Pattern #{activeCondition.type}
-                  </span>
+          {/* Simulated Hemodynamic Projection Tiles */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 font-semibold">
+                Simulated Hemodynamic Projections
+              </span>
+              <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                Pattern #{activeCondition.type}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <Heart className="w-3.5 h-3.5 text-rose-500 mx-auto mb-1" />
+                <div className="text-[10px] text-slate-400">Heart Rate</div>
+                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                  {activeCondition.metrics.hr}
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <Heart className="w-3.5 h-3.5 text-rose-500 mx-auto mb-1" />
-                    <div className="text-[10px] text-slate-400">Heart Rate</div>
-                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                      {activeCondition.metrics.hr}
-                    </div>
-                  </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <Activity className="w-3.5 h-3.5 text-emerald-500 mx-auto mb-1" />
+                <div className="text-[10px] text-slate-400">HRV (rMSSD)</div>
+                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                  {activeCondition.metrics.hrv}
+                </div>
+              </div>
 
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <Activity className="w-3.5 h-3.5 text-purple-500 mx-auto mb-1" />
-                    <div className="text-[10px] text-slate-400">HRV (ms)</div>
-                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                      {activeCondition.metrics.hrv}
-                    </div>
-                  </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <Wind className="w-3.5 h-3.5 text-cyan-500 mx-auto mb-1" />
+                <div className="text-[10px] text-slate-400">Blood Pressure</div>
+                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                  {activeCondition.metrics.bp}
+                </div>
+              </div>
 
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <Activity className="w-3.5 h-3.5 text-amber-500 mx-auto mb-1" />
-                    <div className="text-[10px] text-slate-400">Blood Pressure</div>
-                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                      {activeCondition.metrics.bp}
-                    </div>
-                  </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <Activity className="w-3.5 h-3.5 text-blue-500 mx-auto mb-1" />
+                <div className="text-[10px] text-slate-400">Oxygen Saturation</div>
+                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                  {activeCondition.metrics.spo2}
+                </div>
+              </div>
 
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <Wind className="w-3.5 h-3.5 text-cyan-500 mx-auto mb-1" />
-                    <div className="text-[10px] text-slate-400">Oxygen (SpO2)</div>
-                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                      {activeCondition.metrics.spo2}
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1">
-                    <Thermometer className="w-3.5 h-3.5 text-orange-500 mx-auto mb-1" />
-                    <div className="text-[10px] text-slate-400">Body Temp</div>
-                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                      {activeCondition.metrics.temp}
-                    </div>
-                  </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1">
+                <Thermometer className="w-3.5 h-3.5 text-orange-500 mx-auto mb-1" />
+                <div className="text-[10px] text-slate-400">Body Temp</div>
+                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                  {activeCondition.metrics.temp}
                 </div>
               </div>
             </div>
-          )}
-
-          {/* TAB 2: Affordable Hardware Sensor Cluster ($45 BOM) View */}
-          {activeTab === 'hardware' && (
-            <div className="space-y-4">
-              {/* Cost & Healthspan Comparison Callout */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-slate-950/20 border border-emerald-500/30 text-xs space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <DollarSign className="w-4 h-4" />
-                    Hardware Democratization (Pillar 3)
-                  </span>
-                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/40">
-                    &gt;99.7% Cost Reduction
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-500 font-medium">Traditional ICU Cart</div>
-                    <div className="text-base font-bold text-rose-500 font-mono mt-0.5">$15,000 / bed</div>
-                    <p className="text-[10px] text-slate-500 mt-1 leading-tight">
-                      Heavy 45kg cart, 8 skin electrode leads, $450/mo disposable patches. Restricts mobility.
-                    </p>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40">
-                    <div className="text-[10px] text-emerald-800 dark:text-emerald-300 font-medium">
-                      careMP Sentinel Sensor Pod
-                    </div>
-                    <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                      $45.00 BOM
-                    </div>
-                    <p className="text-[10px] text-emerald-700 dark:text-emerald-300 mt-1 leading-tight">
-                      Solid-state 120g pod. Contact-free mmWave radar + low-profile optical PPG & IR thermopile.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3-Sensor Cluster Breakdown */}
-              <div className="space-y-2">
-                <span className="text-[11px] font-mono uppercase font-bold text-slate-500 dark:text-slate-400">
-                  Sensor Cluster Architecture ($45 Total BOM)
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {/* Sensor 1 */}
-                  <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-                        <Radio className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400">$25 BOM</span>
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">60-GHz mmWave Radar</h4>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
-                      Contact-free ballistocardiography (BCG). Respiration (12-24 rpm) & HR through clothes/blankets (&plusmn;0.45mm resolution).
-                    </p>
-                    <div className="pt-1 text-[9px] font-mono text-indigo-600 dark:text-indigo-400">
-                      &bull; 50 Hz FMCW Chirps
-                    </div>
-                  </div>
-
-                  {/* Sensor 2 */}
-                  <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
-                        <Activity className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-mono text-[11px] font-bold text-cyan-600 dark:text-cyan-400">$15 BOM</span>
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">Dual-λ Epicutaneous PPG</h4>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
-                      660nm Red / 940nm IR photoplethysmography. Continuous SpO2 & PTT-derived cuffless blood pressure.
-                    </p>
-                    <div className="pt-1 text-[9px] font-mono text-cyan-600 dark:text-cyan-400">
-                      &bull; 100 Hz Photodiode MAC
-                    </div>
-                  </div>
-
-                  {/* Sensor 3 */}
-                  <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                        <Thermometer className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-mono text-[11px] font-bold text-orange-600 dark:text-orange-400">$5 BOM</span>
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">IR Medical Thermopile</h4>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
-                      Non-contact core-equivalent temperature (36.0&ndash;40.5&deg;C) with auto-ambient gradient correction (&plusmn;0.1&deg;C accuracy).
-                    </p>
-                    <div className="pt-1 text-[9px] font-mono text-orange-600 dark:text-orange-400">
-                      &bull; 1 Hz I2C Bus Telemetry
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Sensor Telemetry Frame Feed (Emulation Stream) */}
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
-                <div className="flex items-center justify-between text-[10px] text-emerald-400 font-bold border-b border-slate-800/80 pb-1 mb-1">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    LIVE SENSOR BUS STREAM · BLE 5.3 / 802.11ax
-                  </span>
-                  <span>SQI: 98.4%</span>
-                </div>
-                <div className="text-slate-400">
-                  <span className="text-indigo-400">[RADAR_FMCW]</span> f0=60.5GHz | Δφ=0.31rad | chest_disp=1.8mm &rarr; RR: 16 rpm, HR: 72 bpm
-                </div>
-                <div className="text-slate-400">
-                  <span className="text-cyan-400">[PPG_OPTICAL]</span> λ1=660nm, λ2=940nm | R_ratio=0.62 | PTT=184ms &rarr; SpO2: 98.4%, BP: 118/76
-                </div>
-                <div className="text-slate-400">
-                  <span className="text-orange-400">[IR_THERMAL]</span> v_sense=1.38mV | t_ambient=22.4&deg;C &rarr; Core Temp: 36.7&deg;C
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Modal Footer */}
@@ -652,11 +500,6 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
               <>
                 <RotateCcw className="w-3.5 h-3.5 animate-spin" />
                 <span>Simulating...</span>
-              </>
-            ) : activeTab === 'hardware' ? (
-              <>
-                <Radio className="w-3.5 h-3.5" />
-                <span>Transmit Sensor Frame ($45 BOM)</span>
               </>
             ) : (
               <>

@@ -1,5 +1,15 @@
 import apiClient from './api';
-import { ApiResponse, Resident, Vital, User, DashboardCounters } from '../types';
+import {
+  ApiResponse,
+  Resident,
+  Vital,
+  User,
+  DashboardCounters,
+  Band,
+  BandCounters,
+  FallIncident,
+  FallCounters,
+} from '../types';
 
 export const commandCenterService = {
   // ==========================================
@@ -114,6 +124,10 @@ export const commandCenterService = {
     return response.data.data;
   },
 
+  async simulateScenario(residentId: number, conditionType: number): Promise<Vital> {
+    return this.simulateVitals(residentId, conditionType);
+  },
+
   // ==========================================
   // Combined Dashboard Overview
   // ==========================================
@@ -126,7 +140,7 @@ export const commandCenterService = {
     // Concurrently fetch counts & data
     const [residentsRes, vitalsRes, usersRes] = await Promise.all([
       this.getResidents({ skip: 0, limit: 100 }).catch(() => ({ data: [], total: 0 })),
-      this.getRecentVitals(15).catch(() => ({ data: [], total: 0 })),
+      this.getRecentVitals(10).catch(() => ({ data: [], total: 0 })),
       this.getUsers({ skip: 0, limit: 100 }).catch(() => ({ data: [], total: 0 })),
     ]);
 
@@ -155,6 +169,138 @@ export const commandCenterService = {
       residents: residentsRes.data,
       residentsMap,
     };
+  },
+
+  // ==========================================
+  // Hardware Bands & Pod Fleet API
+  // ==========================================
+  async getBands(params?: {
+    skip?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    residentId?: number;
+  }): Promise<{ data: Band[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<Band[]>>('/bands', {
+      params: {
+        skip: params?.skip ?? 0,
+        limit: params?.limit ?? 50,
+        status: params?.status,
+        search: params?.search,
+        residentId: params?.residentId,
+      },
+    });
+
+    return {
+      data: response.data.data || [],
+      total: response.data.pagination?.total ?? response.data.data?.length ?? 0,
+    };
+  },
+
+  async getBandCounters(): Promise<BandCounters | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<BandCounters>>('/bands/counters');
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async getBand(id: number): Promise<Band | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<Band>>(`/bands/${id}`);
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async assignBand(bandId: number, residentId: number | null): Promise<Band> {
+    const response = await apiClient.post<ApiResponse<Band>>(`/bands/${bandId}/assign`, {
+      residentId,
+    });
+    return response.data.data;
+  },
+
+  async unassignBand(bandId: number): Promise<Band> {
+    const response = await apiClient.post<ApiResponse<Band>>(`/bands/${bandId}/unassign`);
+    return response.data.data;
+  },
+
+  async createBand(data: Partial<Band>): Promise<Band> {
+    const response = await apiClient.post<ApiResponse<Band>>('/bands', data);
+    return response.data.data;
+  },
+
+  async updateBand(bandId: number, data: Partial<Band>): Promise<Band> {
+    const response = await apiClient.patch<ApiResponse<Band>>(`/bands/${bandId}`, data);
+    return response.data.data;
+  },
+
+  async deleteBand(bandId: number): Promise<boolean> {
+    const response = await apiClient.delete<ApiResponse<null>>(`/bands/${bandId}`);
+    return response.data.code === 200;
+  },
+
+  // ==========================================
+  // Fall Detection & Emergency Dispatch API
+  // ==========================================
+  async getLatestUnresolvedFall(residentId?: number): Promise<FallIncident | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<FallIncident | null>>('/falls/latest-unresolved', {
+        params: residentId ? { residentId } : undefined,
+      });
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async getFalls(params?: {
+    skip?: number;
+    limit?: number;
+    residentId?: number;
+    status?: string;
+  }): Promise<{ data: FallIncident[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<FallIncident[]>>('/falls', {
+      params: {
+        skip: params?.skip ?? 0,
+        limit: params?.limit ?? 50,
+        residentId: params?.residentId,
+        status: params?.status,
+      },
+    });
+
+    return {
+      data: response.data.data || [],
+      total: response.data.pagination?.total ?? response.data.data?.length ?? 0,
+    };
+  },
+
+  async getFallCounters(): Promise<FallCounters | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<FallCounters>>('/falls/counters');
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async resolveFall(
+    id: number,
+    data: {
+      status: 'resolved_false_alarm' | 'resolved_assisted' | 'emergency_dispatched';
+      resolvedBy?: string;
+      resolutionNotes?: string;
+    }
+  ): Promise<FallIncident> {
+    const response = await apiClient.post<ApiResponse<FallIncident>>(`/falls/${id}/resolve`, data);
+    return response.data.data;
+  },
+
+  async recordFall(data: Partial<FallIncident>): Promise<FallIncident> {
+    const response = await apiClient.post<ApiResponse<FallIncident>>('/falls', data);
+    return response.data.data;
   },
 };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Video } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/auth/LoginPage';
@@ -10,10 +11,15 @@ import { ResidentsView } from './components/residents/ResidentsView';
 import { VitalsView } from './components/vitals/VitalsView';
 import { UsersView } from './components/users/UsersView';
 import { SimulationModal } from './components/simulation/SimulationModal';
-import { GenomicsView } from './components/genomics/GenomicsView';
 import { TelemedicineModal } from './components/telemedicine/TelemedicineModal';
+import { BandsManagementModal } from './components/bands/BandsManagementModal';
+import { EmergencyFallAlert } from './components/falls/EmergencyFallAlert';
+import { FallsHistoryModal } from './components/falls/FallsHistoryModal';
+import { FallsView } from './components/falls/FallsView';
+import { BandsView } from './components/bands/BandsView';
+import { RecentFallsAndResidents } from './components/dashboard/RecentFallsAndResidents';
 import commandCenterService from './services/commandCenterService';
-import { DashboardCounters, Vital, Resident } from './types';
+import { DashboardCounters, Vital, Resident, FallIncident } from './types';
 
 const AUTO_REFRESH_INTERVAL_SECONDS = 60;
 
@@ -24,9 +30,14 @@ const CommandCenterApp: React.FC = () => {
   // Filter state for cross-navigation (e.g. clicking a resident in list jumps to vitals)
   const [selectedResidentId, setSelectedResidentId] = useState<number | null>(null);
 
-  // Simulation & Telemedicine Modal States
+  // Simulation, Telemedicine, Bands Fleet & Falls Modal States
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isTelemedicineModalOpen, setIsTelemedicineModalOpen] = useState(false);
+  const [isBandsModalOpen, setIsBandsModalOpen] = useState(false);
+  const [isFallsModalOpen, setIsFallsModalOpen] = useState(false);
+  const [latestFall, setLatestFall] = useState<FallIncident | null>(null);
+  const [unresolvedFallCount, setUnresolvedFallCount] = useState<number>(0);
+  const [recentFalls, setRecentFalls] = useState<FallIncident[]>([]);
 
   // Dashboard Data State
   const [counters, setCounters] = useState<DashboardCounters>({
@@ -49,11 +60,19 @@ const CommandCenterApp: React.FC = () => {
   const loadDashboardData = useCallback(async () => {
     setIsDataLoading(true);
     try {
-      const summary = await commandCenterService.getDashboardSummary();
+      const [summary, latestUnresolved, fallCounters, fallsListRes] = await Promise.all([
+        commandCenterService.getDashboardSummary(),
+        commandCenterService.getLatestUnresolvedFall(),
+        commandCenterService.getFallCounters(),
+        commandCenterService.getFalls({ skip: 0, limit: 5 }),
+      ]);
       setCounters(summary.counters);
       setRecentVitals(summary.recentVitals);
       setResidents(summary.residents);
       setResidentsMap(summary.residentsMap);
+      setLatestFall(latestUnresolved);
+      setUnresolvedFallCount(fallCounters?.unresolved || (latestUnresolved ? 1 : 0));
+      setRecentFalls(fallsListRes.data || []);
       setLastUpdated(new Date());
       setSecondsRemaining(AUTO_REFRESH_INTERVAL_SECONDS);
     } catch (error) {
@@ -119,10 +138,12 @@ const CommandCenterApp: React.FC = () => {
         return 'Real-time telemetry, deterioration triage, and active digital twins';
       case 'vitals':
         return 'Continuous physiological telemetry signals and sensor feeds';
-      case 'genomics':
-        return 'Polygenic Risk Scores (PRS), CPIC Pharmacogenomic safety alerts, and functional longevity clocks';
+      case 'falls':
+        return 'Kinematic impact telemetry, post-fall immobility verification, and emergency dispatch';
+      case 'bands':
+        return 'Hardware sensor pod fleet inventory, battery telemetry, and resident pairing';
       case 'residents':
-        return 'Care recipient genomic and physiological baseline configurations';
+        return 'Care recipient registry and physiological baseline configurations';
       case 'users':
         return 'User administration, role management, and access controls';
     }
@@ -131,7 +152,11 @@ const CommandCenterApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors duration-200">
       {/* Navigation Sidebar */}
-      <Sidebar activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        unresolvedFallCount={unresolvedFallCount}
+      />
 
       {/* Main Command View Area */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -143,10 +168,19 @@ const CommandCenterApp: React.FC = () => {
           isRefreshing={isDataLoading}
           onRefresh={loadDashboardData}
           onOpenSimulation={() => setIsSimulationModalOpen(true)}
-          onOpenTelemedicine={() => setIsTelemedicineModalOpen(true)}
         />
 
         <main className="flex-1 px-8 py-8 overflow-y-auto w-full space-y-8">
+          {/* Emergency Fall Alert Banner (Always Visible on Top when an Incident is Unresolved) */}
+          <EmergencyFallAlert
+            incident={latestFall}
+            onResolved={loadDashboardData}
+            onLaunchTelemedicine={(resId) => {
+              setSelectedResidentId(resId);
+              setIsTelemedicineModalOpen(true);
+            }}
+          />
+
           {activeTab === 'dashboard' && (
             <>
               {/* Top Summary Tiles */}
@@ -157,7 +191,22 @@ const CommandCenterApp: React.FC = () => {
                 />
               </section>
 
-              {/* Recent Resident Vitals Table */}
+              {/* 2-Column Card Layout: Recent Falls & Recent Residents (Recent 5 Each) */}
+              <section aria-label="Recent Falls and Recent Residents">
+                <RecentFallsAndResidents
+                  recentFalls={recentFalls}
+                  recentResidents={residents}
+                  onNavigateToFalls={() => setActiveTab('falls')}
+                  onNavigateToResidents={() => setActiveTab('residents')}
+                  onSelectResident={handleSelectResidentVitals}
+                  onLaunchTelemedicine={(id) => {
+                    setSelectedResidentId(id);
+                    setIsTelemedicineModalOpen(true);
+                  }}
+                />
+              </section>
+
+              {/* Recent Resident Vitals Table (Recent 10) */}
               <section aria-label="Recent Vitals Stream">
                 <RecentVitalsTable
                   vitals={recentVitals}
@@ -175,15 +224,15 @@ const CommandCenterApp: React.FC = () => {
 
           {activeTab === 'vitals' && (
             <VitalsView
+              lastUpdated={lastUpdated}
               initialResidentId={selectedResidentId}
               onClearResidentFilter={() => setSelectedResidentId(null)}
             />
           )}
 
-          {activeTab === 'genomics' && (
-            <GenomicsView
-              residents={residents}
-              selectedResidentId={selectedResidentId}
+          {activeTab === 'falls' && (
+            <FallsView
+              lastUpdated={lastUpdated}
               onLaunchTelemedicine={(id) => {
                 setSelectedResidentId(id);
                 setIsTelemedicineModalOpen(true);
@@ -191,13 +240,34 @@ const CommandCenterApp: React.FC = () => {
             />
           )}
 
-          {activeTab === 'residents' && (
-            <ResidentsView onSelectResidentVitals={handleSelectResidentVitals} />
+          {activeTab === 'bands' && (
+            <BandsView
+              lastUpdated={lastUpdated}
+              residents={residents}
+              onFleetUpdated={loadDashboardData}
+            />
           )}
 
-          {activeTab === 'users' && <UsersView />}
+          {activeTab === 'residents' && (
+            <ResidentsView
+              lastUpdated={lastUpdated}
+              onSelectResidentVitals={handleSelectResidentVitals}
+            />
+          )}
+
+          {activeTab === 'users' && <UsersView lastUpdated={lastUpdated} />}
         </main>
       </div>
+
+      {/* Floating Action Button (FAB): AI Tele-Consult available across all screens */}
+      <button
+        onClick={() => setIsTelemedicineModalOpen(true)}
+        aria-label="Open AI Telemedicine Copilot"
+        title="Launch AI Telemedicine Consultation & Clinical Brief"
+        className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-900/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
+      >
+        <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
+      </button>
 
       {/* Vital Simulation Modal Dialog */}
       <SimulationModal
@@ -213,6 +283,24 @@ const CommandCenterApp: React.FC = () => {
         onClose={() => setIsTelemedicineModalOpen(false)}
         resident={residentsMap[selectedResidentId || 1] || residents[0]}
         recentVital={recentVitals[0]}
+      />
+
+      {/* Hardware Bands & Sensor Pod Fleet Modal */}
+      <BandsManagementModal
+        isOpen={isBandsModalOpen}
+        onClose={() => setIsBandsModalOpen(false)}
+        residents={residents}
+        onFleetUpdated={loadDashboardData}
+      />
+
+      {/* Fall Incidents & Emergency Dispatch Log Modal */}
+      <FallsHistoryModal
+        isOpen={isFallsModalOpen}
+        onClose={() => setIsFallsModalOpen(false)}
+        onLaunchTelemedicine={(resId) => {
+          setSelectedResidentId(resId);
+          setIsTelemedicineModalOpen(true);
+        }}
       />
     </div>
   );

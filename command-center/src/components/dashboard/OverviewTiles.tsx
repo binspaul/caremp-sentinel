@@ -2,19 +2,18 @@ import React from 'react';
 import {
   Users,
   HeartPulse,
-  Dna,
+  Radio,
   ShieldAlert,
   TrendingUp,
   Activity,
   ArrowUpRight,
   AlertOctagon,
-  Pill,
 } from 'lucide-react';
 import { DashboardCounters } from '../../types';
 
 interface OverviewTilesProps {
   counters: DashboardCounters;
-  onTileClick?: (tab: 'residents' | 'vitals' | 'genomics' | 'users') => void;
+  onTileClick?: (tab: 'residents' | 'vitals' | 'falls' | 'bands' | 'users') => void;
 }
 
 export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileClick }) => {
@@ -92,38 +91,38 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileCl
         </div>
       </div>
 
-      {/* Tile 3: Pharmacogenomic Safety Conflicts */}
+      {/* Tile 3: Hardware Sensor Bands & Pod Fleet */}
       <div
-        onClick={() => onTileClick?.('genomics')}
-        className="group relative overflow-hidden rounded-2xl border border-purple-500/30 bg-purple-50/20 dark:bg-purple-950/20 p-5 shadow-xs hover:border-purple-500 hover:shadow-purple-500/10 transition-all duration-200 cursor-pointer"
+        onClick={() => onTileClick?.('bands')}
+        className="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-gradient-to-b dark:from-slate-900/90 dark:to-slate-900/50 p-5 shadow-xs hover:border-emerald-500/50 hover:shadow-emerald-500/10 transition-all duration-200 cursor-pointer"
       >
         <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowUpRight className="w-4 h-4 text-purple-400" />
+          <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div className="flex items-center justify-between mb-3">
-          <div className="p-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400">
-            <Dna className="w-5 h-5" />
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <Radio className="w-5 h-5" />
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30">
-            CPIC Level A
+          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            Hardware Fleet
           </span>
         </div>
 
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            PGx Drug-Gene Conflicts
+            Sensor Pods &amp; Bands
           </p>
           <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold tracking-tight text-purple-400 font-mono">
-              2 Flags
+            <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
+              6 Units
             </span>
-            <span className="text-xs text-slate-500 font-mono">
-              CYP2C19 & SLCO1B1
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
+              4 Active
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
-            <Pill className="w-3.5 h-3.5 text-purple-400" />
-            <span>Clopidogrel & Statin alerts</span>
+            <Activity className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Radar &bull; PPG &bull; Thermopile</span>
           </p>
         </div>
       </div>

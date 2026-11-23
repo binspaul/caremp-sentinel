@@ -63,14 +63,16 @@ export const RecentVitalsTable: React.FC<RecentVitalsTableProps> = ({
     }
   };
 
-  const filteredVitals = vitals.filter((v) => {
-    const resident = residentsMap[v.residentId];
-    const name = resident ? `${resident.firstName} ${resident.lastName}`.toLowerCase() : '';
-    const uhid = resident?.uhid?.toLowerCase() || '';
-    const id = String(v.residentId);
-    const search = searchTerm.toLowerCase();
-    return name.includes(search) || uhid.includes(search) || id.includes(search);
-  });
+  const filteredVitals = vitals
+    .filter((v) => {
+      const resident = residentsMap[v.residentId];
+      const name = resident ? `${resident.firstName} ${resident.lastName}`.toLowerCase() : '';
+      const uhid = resident?.uhid?.toLowerCase() || '';
+      const id = String(v.residentId);
+      const search = searchTerm.toLowerCase();
+      return name.includes(search) || uhid.includes(search) || id.includes(search);
+    })
+    .slice(0, 10);
 
   const handleRowClick = (vital: Vital) => {
     const resident = residentsMap[vital.residentId] || (vital.resident as Resident);
@@ -90,7 +92,7 @@ export const RecentVitalsTable: React.FC<RecentVitalsTableProps> = ({
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              Recent Resident Vitals Telemetry
+              Recent Resident Vitals
             </h2>
             <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               {filteredVitals.length} records

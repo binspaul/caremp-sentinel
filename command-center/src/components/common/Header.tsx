@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Activity, LogOut, Video, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, Activity, LogOut } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -55,19 +55,6 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* AI Telemedicine Copilot Trigger Button */}
-        {onOpenTelemedicine && (
-          <button
-            onClick={onOpenTelemedicine}
-            aria-label="Open AI Telemedicine Copilot"
-            title="Launch AI Telemedicine Consultation & Clinical Brief"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-medium text-xs shadow-md shadow-emerald-500/20 hover:shadow-lg transition-all cursor-pointer active:scale-95"
-          >
-            <Video className="w-3.5 h-3.5 animate-pulse" />
-            <span className="hidden sm:inline">AI Tele-Consult</span>
-          </button>
-        )}
-
         {/* Last sync timestamp (Single row) */}
         <div className="hidden lg:flex items-center gap-1.5 font-mono text-xs text-slate-500 dark:text-slate-400 mr-1">
           <span className="text-slate-400 dark:text-slate-500 font-semibold text-[10px] uppercase tracking-wider">

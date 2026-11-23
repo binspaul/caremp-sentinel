@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vital, Status, Priority, TemperatureUnit, SleepStatus, SleepComputationState } from '../vitals/entities/vital.entity';
 import { Resident } from '../residents/entities/resident.entity';
+import { FallsService } from '../falls/falls.service';
+import { FallSeverity } from '../falls/entities/fall-incident.entity';
+import { HealthspanService } from '../healthspan/healthspan.service';
 
 @Injectable()
 export class SimulationService {
@@ -12,6 +15,9 @@ export class SimulationService {
 
     @InjectRepository(Vital)
     private readonly vitalRepository: Repository<Vital>,
+
+    private readonly fallsService: FallsService,
+    private readonly healthspanService: HealthspanService,
   ) { }
 
   async simulate(residentId: number, conditionType: number): Promise<Vital> {
@@ -278,6 +284,49 @@ export class SimulationService {
 
         break;
 
+      case 9: // Acute Fall & Post-Impact Immobility
+        heartRate = getNextVal(lastVital?.heartRate, 118, 8, 4, 110, 126, 0.75, 110, 126);
+        hrv = getNextVal(lastVital?.hrv, 15, 3, 1, 10, 20, 0.75, 10, 20);
+        systolicBP = getNextVal(lastVital?.systolicBP, 92, 5, 3, 85, 98, 0.75, 85, 98);
+        diastolicBP = getNextVal(lastVital?.diastolicBP, 58, 4, 2, 52, 64, 0.75, 52, 64);
+        oxygenSaturation = getNextVal(lastVital?.oxygenSaturation, 96, 1.5, 0.5, 94, 98, 0.08);
+        bodyTemperature = getNextVal(lastVital?.bodyTemperature, refBodyTemperature, temperatureToleranceCelsius, 0.05, 36.2, 37.5, 0.08);
+        skinTemperature = bodyTemperature - 1.4;
+        source = 'fall-immobility-simulator';
+
+        // Auto-create an acute FallIncident
+        await this.fallsService.create({
+          residentId,
+          impactForceG: 3.4,
+          orientationChangeDeg: 88.0,
+          motionlessDurationSeconds: 45,
+          severity: FallSeverity.CRITICAL,
+          location: resident.address ? `${resident.address} - Bedside` : 'Bedroom Bedside',
+          clinicalDescription: 'Sudden high-g deceleration impact (3.4g) followed by 45s loss of thoracic micro-motion.',
+        });
+
+        break;
+
+      case 10: // Multimodal Longevity Protocol Reversal (Healthspan Optimization)
+        heartRate = getNextVal(lastVital?.heartRate, 64, 4, 2, 60, 70, 0.7, 60, 70);
+        hrv = getNextVal(lastVital?.hrv, 58, 6, 2, 52, 68, 0.7, 52, 68);
+        systolicBP = getNextVal(lastVital?.systolicBP, 116, 4, 2, 110, 122, 0.7, 110, 122);
+        diastolicBP = getNextVal(lastVital?.diastolicBP, 74, 3, 1.5, 70, 78, 0.7, 70, 78);
+        oxygenSaturation = getNextVal(lastVital?.oxygenSaturation, 99, 0.5, 0.2, 98, 100, 0.08);
+        bodyTemperature = getNextVal(lastVital?.bodyTemperature, 36.6, 0.2, 0.05, 36.4, 37.0, 0.08);
+        skinTemperature = bodyTemperature - 1.2;
+        source = 'longevity-reversal-simulator';
+
+        // Auto-save rejuvenated HealthspanAssessment record
+        await this.healthspanService.simulateIntervention(residentId, {
+          protocol: 'SGLT2i + Progressive Resistance Training + Circadian Sleep Entrainment',
+          monthsOfIntervention: 6,
+          biologicalAgeReductionYears: 2.8,
+          notes: 'Clinically guided longevity reversal protocol completed.',
+        });
+
+        break;
+
       default:
         throw new NotFoundException('Invalid condition type');
     }
@@ -310,12 +359,15 @@ export class SimulationService {
       diastolicBP: parseFloat(finalDiastolicBP.toFixed(2)),
       oxygenSaturation: parseFloat(finalOxygenSaturation.toFixed(2)),
       wearingIndicator: true,
-      movementDetected: true,
+      movementDetected: conditionType === 9 ? false : true,
       bodyTemperature: parseFloat(finalBodyTemperature.toFixed(2)),
       skinTemperature: parseFloat(finalSkinTemperature.toFixed(2)),
       temperatureUnit: TemperatureUnit.CELSIUS,
       batteryLevel: parseFloat(batteryLevel.toFixed(2)),
-      payload: { source },
+      payload: {
+        source,
+        ...(conditionType === 9 ? { fallImpactG: 3.4, motionlessSec: 45 } : {}),
+      },
       deepSleepTime,
       lightSleepTime,
       remSleepTime,

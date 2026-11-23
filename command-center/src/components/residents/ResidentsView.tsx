@@ -14,15 +14,18 @@ import {
   Calendar,
   AlertCircle,
   Eye,
-  RefreshCw,
   User,
 } from 'lucide-react';
 
 interface ResidentsViewProps {
   onSelectResidentVitals: (residentId: number) => void;
+  lastUpdated?: Date;
 }
 
-export const ResidentsView: React.FC<ResidentsViewProps> = ({ onSelectResidentVitals }) => {
+export const ResidentsView: React.FC<ResidentsViewProps> = ({
+  onSelectResidentVitals,
+  lastUpdated,
+}) => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +51,7 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({ onSelectResidentVi
 
   useEffect(() => {
     loadResidents();
-  }, []);
+  }, [lastUpdated]);
 
   const handleOpenProfile = (resident: Resident) => {
     setSelectedResidentForProfile(resident);
@@ -108,15 +111,6 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({ onSelectResidentVi
             <option value="all">All Statuses</option>
             <option value="active">Active Only</option>
           </select>
-
-          <button
-            onClick={loadResidents}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/40 shadow-sm dark:shadow-none transition cursor-pointer"
-            title="Reload Residents"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </div>
 

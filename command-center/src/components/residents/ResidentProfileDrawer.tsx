@@ -20,7 +20,6 @@ import {
   HeartPulse,
   Radio,
   Clock,
-  Dna,
   Video,
   Sparkles,
   Pill,
@@ -379,42 +378,42 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
               </div>
             </div>
 
-            {/* careMP Sentinel: Genomics, PGx & Longevity Profile */}
+            {/* careMP Sentinel: Assigned Hardware Pod & Sensor Fleet */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-mono uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <Dna className="w-4 h-4 text-purple-500" />
-                  Genomics & Pharmacogenomics Profile
+                  <Radio className="w-4 h-4 text-emerald-500" />
+                  Assigned Hardware Sensor Pod
                 </h3>
-                <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full font-bold">
-                  CPIC Level A
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold">
+                  $45 BOM
                 </span>
               </div>
 
-              <div className="p-4 rounded-2xl bg-purple-50/20 dark:bg-purple-950/20 border border-purple-500/30 space-y-3">
+              <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                    Genetic Risk Tier: HIGH
-                  </span>
-                  <span className="text-[11px] font-mono text-rose-500 font-bold">
-                    CAD PRS: 84th pct
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+                      Sentinel Pod #BND-00{resident.id || 1}
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md font-semibold">
+                      BLE Active
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-emerald-500">
+                    ⚡ 94% Battery
                   </span>
                 </div>
 
                 <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
-                  <p>
-                    <span className="font-semibold text-purple-600 dark:text-purple-400">CYP2C19 *1/*2: </span>
-                    Intermediate metabolizer. Diminished Clopidogrel efficacy.
-                  </p>
-                  <p>
-                    <span className="font-semibold text-purple-600 dark:text-purple-400">SLCO1B1 521T&gt;C: </span>
-                    Decreased function. High statin-induced myopathy risk.
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-purple-500/20 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500">Biological Age: <strong className="text-rose-500">+5.8 yrs</strong></span>
-                  <span className="text-slate-500">Rockwood e-FI: <strong className="text-amber-500">0.32 (Frail)</strong></span>
+                  <div className="flex items-center justify-between">
+                    <span>Sensors: 60GHz mmWave Radar + Dual-λ PPG</span>
+                    <span className="font-mono text-[10px] text-slate-400">Firmware v1.2.0</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Lead Status: <strong className="text-emerald-600 dark:text-emerald-400">Lead Worn (Contact OK)</strong></span>
+                    <span className="font-mono text-[10px] text-slate-400">Signal: -64 dBm</span>
+                  </div>
                 </div>
               </div>
             </div>

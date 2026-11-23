@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { User } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
 import { Badge } from '../common/Badge';
-import { UserCheck, Search, ShieldCheck, Mail, Phone, Calendar, RefreshCw } from 'lucide-react';
+import { UserCheck, Search, ShieldCheck, Mail, Phone, Calendar } from 'lucide-react';
 
-export const UsersView: React.FC = () => {
+interface UsersViewProps {
+  lastUpdated?: Date;
+}
+
+export const UsersView: React.FC<UsersViewProps> = ({ lastUpdated }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +30,7 @@ export const UsersView: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [lastUpdated]);
 
   const filteredUsers = users.filter((u) => {
     const fullName = `${u.firstName} ${u.lastName || ''}`.toLowerCase();
@@ -87,15 +91,6 @@ export const UsersView: React.FC = () => {
             <option value="admin">Admin</option>
             <option value="resident">Resident</option>
           </select>
-
-          <button
-            onClick={loadUsers}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-500/40 shadow-sm dark:shadow-none transition cursor-pointer"
-            title="Reload Users"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </div>
 

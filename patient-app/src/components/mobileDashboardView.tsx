@@ -526,13 +526,18 @@ export function MobileDashboardView({
               A clear picture of your health. A little guidance for what&apos;s
               next.
             </p>
-            <div>
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200/70 bg-white/90 text-[10px] font-medium text-slate-600 shadow-2xs">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
                 </span>
                 <span>Live · Synced 1 min ago</span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Sentinel Bio-Pod #BND-001 · 94% ⚡ Paired</span>
               </div>
             </div>
           </div>
@@ -984,13 +989,18 @@ export function MobileDashboardView({
             <p className="text-[11px] text-slate-500 leading-snug">
               Understand what&apos;s changing — and what&apos;s normal for you.
             </p>
-            <div>
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200/70 bg-white/90 text-[10px] font-medium text-slate-600 shadow-2xs">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
                 </span>
                 <span>Live · Synced 1 min ago</span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Sentinel Bio-Pod #BND-001 · 94% ⚡ Paired</span>
               </div>
             </div>
           </div>

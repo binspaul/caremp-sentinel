@@ -17,6 +17,22 @@ import { AuthModule } from './auth/auth.module';
 // Admins
 import { Admin } from './admins/entities/admin.entity';
 
+// Bands
+import { Band } from './bands/entities/band.entity';
+import { BandsModule } from './bands/bands.module';
+
+// Falls
+import { FallIncident } from './falls/entities/fall-incident.entity';
+import { FallsModule } from './falls/falls.module';
+
+// Genomics & Pharmacogenomics
+import { GenomicProfile } from './genomics/entities/genomic-profile.entity';
+import { GenomicsModule } from './genomics/genomics.module';
+
+// Healthspan & Functional Longevity Clock
+import { HealthspanAssessment } from './healthspan/entities/healthspan-assessment.entity';
+import { HealthspanModule } from './healthspan/healthspan.module';
+
 // Residents
 import { Resident } from './residents/entities/resident.entity';
 import { ResidentsModule } from './residents/residents.module';
@@ -62,6 +78,10 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
         database: config.get('DB_DATABASE'),
         entities: [
           Admin,
+          Band,
+          FallIncident,
+          GenomicProfile,
+          HealthspanAssessment,
           DigitalTwin,
           Resident,
           Role,
@@ -86,6 +106,10 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
     AnalyticsSchedulerModule,
     VitalsToDigitalTwinModule,
     AuthModule,
+    BandsModule,
+    FallsModule,
+    GenomicsModule,
+    HealthspanModule,
     DigitalTwinModule,
     ResidentsModule,
     RolesModule,

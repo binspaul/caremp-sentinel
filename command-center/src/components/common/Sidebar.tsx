@@ -5,18 +5,29 @@ import {
   HeartPulse,
   UserCheck,
   Radio,
-  Dna,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-export type NavTab = 'dashboard' | 'vitals' | 'genomics' | 'residents' | 'users';
+export type NavTab =
+  | 'dashboard'
+  | 'vitals'
+  | 'falls'
+  | 'bands'
+  | 'residents'
+  | 'users';
 
 interface SidebarProps {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
+  unresolvedFallCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeTab,
+  onTabChange,
+  unresolvedFallCount = 0,
+}) => {
   const { user } = useAuth();
 
   const navItems = [
@@ -28,15 +39,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     },
     {
       id: 'vitals' as NavTab,
-      label: 'Vitals Telemetry',
+      label: 'Vitals',
       description: 'Continuous telemetry stream',
       icon: HeartPulse,
     },
     {
-      id: 'genomics' as NavTab,
-      label: 'Genomics & Longevity',
-      description: 'PRS & Pharmacogenomics',
-      icon: Dna,
+      id: 'falls' as NavTab,
+      label: 'Falls',
+      description: 'Fall detection & emergency dispatch',
+      icon: AlertTriangle,
+      badge: unresolvedFallCount > 0 ? unresolvedFallCount : undefined,
+    },
+    {
+      id: 'bands' as NavTab,
+      label: 'Bands',
+      description: 'Hardware sensor pod fleet',
+      icon: Radio,
     },
     {
       id: 'residents' as NavTab,
@@ -89,6 +107,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 {/* Active Indicator Pip */}
                 {isActive && (
                   <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-emerald-500 rounded-r-full shadow-sm" />
+                )}
+                {item.badge !== undefined && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-rose-600 text-white font-mono text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm">
+                    {item.badge}
+                  </span>
                 )}
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.2]' : 'stroke-[1.8]'}`} />
               </button>

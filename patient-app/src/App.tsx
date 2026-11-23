@@ -26,8 +26,9 @@ import { MobileDashboardView } from "./components/mobileDashboardView";
 import { TabletDashboardView } from "./components/tabletDashboardView";
 import { PatientTelemedicineModal } from "./components/telemedicine/PatientTelemedicineModal";
 import { PatientGenomicsCard } from "./components/genomics/PatientGenomicsCard";
+import { PatientFallDialog } from "./components/falls/PatientFallDialog";
 import { Login } from "./Login";
-import { getDigitalTwin, getVitals, getVitalsTrendData } from "./api";
+import { getDigitalTwin, getVitals, getVitalsTrendData, getLatestUnresolvedFall, FallIncidentData } from "./api";
 import {
   VitalsTrendGraph,
   type VitalMetricKey,
@@ -105,13 +106,25 @@ export default function App() {
   const [latestVital, setLatestVital] = useState<VitalRecord | null>(null);
   const [trendVitals, setTrendVitals] = useState<VitalRecord[]>([]);
   const [isTelemedicineOpen, setIsTelemedicineOpen] = useState(false);
+  const [activeFall, setActiveFall] = useState<FallIncidentData | null>(null);
 
   const [digitalTwin, setDigitalTwin] = useState<ResidentDigitalTwinData>();
   const [selectedOrgan, setSelectedOrgan] = useState<OrganType>("heart");
   console.log("digitalTwin", digitalTwin);
 
+  const fetchActiveFall = async () => {
+    try {
+      const residentId = currentUser?.personId ? Number(currentUser.personId) : undefined;
+      const fall = await getLatestUnresolvedFall(residentId);
+      setActiveFall(fall);
+    } catch (err) {
+      console.error("Failed to fetch active fall incident:", err);
+    }
+  };
+
   const fetchVitalsData = async () => {
     try {
+      fetchActiveFall();
       const list = await getVitals();
       if (list && list.length > 0) {
         // use the latest one which will be the first one since its being ordered from API
@@ -1879,6 +1892,16 @@ export default function App() {
         onClose={() => setIsTelemedicineOpen(false)}
         latestVital={latestVital}
         patientName={fullName || "John Doe"}
+      />
+
+      {/* Patient Hard Fall Detection Reassurance Dialog */}
+      <PatientFallDialog
+        incident={activeFall}
+        onDismiss={() => setActiveFall(null)}
+        onCallCareTeam={() => {
+          setActiveFall(null);
+          setIsTelemedicineOpen(true);
+        }}
       />
     </Tabs>
   );

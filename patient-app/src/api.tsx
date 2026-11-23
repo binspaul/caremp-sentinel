@@ -146,4 +146,83 @@ export async function sendAgentChatMessage(
   return response.data;
 }
 
+export interface FallIncidentData {
+  id: number;
+  residentId: number;
+  bandId: number | null;
+  impactForceG: number;
+  orientationChangeDeg: number;
+  motionlessDurationSeconds: number;
+  severity: string;
+  status: string;
+  location: string;
+  clinicalDescription?: string;
+  detectedAt: string;
+}
+
+export async function getLatestUnresolvedFall(residentId?: number): Promise<FallIncidentData | null> {
+  try {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get("/v1/falls/latest-unresolved", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: residentId ? { residentId } : undefined,
+    });
+    return response.data?.data || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveFallIncident(
+  id: number,
+  status: "resolved_false_alarm" | "resolved_assisted" | "emergency_dispatched",
+  notes?: string
+): Promise<any> {
+  const token = localStorage.getItem("token") || "";
+  const response = await api.post(
+    `/v1/falls/${id}/resolve`,
+    {
+      status,
+      resolvedBy: "Resident (Patient App)",
+      resolutionNotes: notes || (status === "resolved_false_alarm" ? "Resident confirmed OK from bedside tablet/mobile." : "Assistance requested by resident."),
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
+}
+
+export async function getResidentGenomicProfile(residentId: number = 1): Promise<any | null> {
+  try {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get(`/v1/genomics/resident/${residentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data?.data || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getResidentHealthspan(residentId: number = 1): Promise<any | null> {
+  try {
+    const token = localStorage.getItem("token") || "";
+    const response = await api.get(`/v1/healthspan/resident/${residentId}/latest`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data?.data || null;
+  } catch {
+    return null;
+  }
+}
+
 export default api;
