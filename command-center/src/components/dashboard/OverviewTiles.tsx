@@ -32,13 +32,13 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileCl
             <Users className="w-5 h-5" />
           </div>
           <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            Cohort
+            Memory Care
           </span>
         </div>
 
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Monitored Residents
+            Cognitive Cohort
           </p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
@@ -50,12 +50,12 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileCl
           </div>
           <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Digital twins synchronized</span>
+            <span>2 Advanced Dementia &bull; 2 MCI</span>
           </p>
         </div>
       </div>
 
-      {/* Tile 2: AI Deterioration & Sepsis Triage */}
+      {/* Tile 2: Sundowning & Agitation Risk */}
       <div
         onClick={() => onTileClick?.('vitals')}
         className="group relative overflow-hidden rounded-2xl border border-rose-500/30 bg-rose-50/20 dark:bg-rose-950/20 p-5 shadow-xs hover:border-rose-500 hover:shadow-rose-500/10 transition-all duration-200 cursor-pointer"
@@ -68,25 +68,25 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileCl
             <AlertOctagon className="w-5 h-5 animate-pulse" />
           </div>
           <span className="text-[10px] font-mono uppercase tracking-wider text-rose-600 dark:text-rose-400 font-semibold px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30">
-            NEWS2 Alert
+            Sundowning Alert
           </span>
         </div>
 
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Critical Acuity / Sepsis
+            Agitation &amp; Pre-Delirium
           </p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-extrabold tracking-tight text-rose-500 font-mono">
-              1 Active
+              1 Escalating
             </span>
             <span className="text-xs text-rose-400 font-mono">
-              Score: 12
+              Risk: 88/100
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-rose-500" />
-            <span>Tachycardia + SpO2 desaturation</span>
+            <span>Late-afternoon sympathetic surge</span>
           </p>
         </div>
       </div>
@@ -110,7 +110,7 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileCl
 
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Sensor Pods &amp; Bands
+            Sensor Pods &amp; Beacons
           </p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
@@ -122,7 +122,7 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileCl
           </div>
           <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Radar &bull; PPG &bull; Thermopile</span>
+            <span>60-GHz Radar Sleep &bull; BLE Geofence</span>
           </p>
         </div>
       </div>
@@ -140,25 +140,25 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({ counters, onTileCl
             <HeartPulse className="w-5 h-5" />
           </div>
           <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-700 dark:text-cyan-400 font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-            Streams
+            Geofencing
           </span>
         </div>
 
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Telemetry Readings
+            Safe-Zone Wandering
           </p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
-              {counters.vitalsTotal.toLocaleString()}
+              100%
             </span>
-            <span className="text-xs text-slate-500 font-mono">
-              logged
+            <span className="text-xs text-cyan-600 dark:text-cyan-400 font-mono font-semibold">
+              Perimeter Safe
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-cyan-500" />
-            <span>PPG, BP, SpO2, Temp, Sleep</span>
+            <span>0 Egress alerts &bull; Ward 4B Secure</span>
           </p>
         </div>
       </div>

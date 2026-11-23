@@ -248,27 +248,27 @@ export class SimulationService {
 
         break;
 
-      case 6: // Sepsis Prodrome & Acute Deterioration (NEWS2 High)
-        heartRate = getNextVal(lastVital?.heartRate, 126, 8, 4, 118, 138, 0.75, 118, 138);
-        hrv = getNextVal(lastVital?.hrv, 14, 3, 1, 10, 18, 0.75, 10, 18);
-        systolicBP = getNextVal(lastVital?.systolicBP, 88, 5, 3, 80, 94, 0.75, 80, 94);
-        diastolicBP = getNextVal(lastVital?.diastolicBP, 54, 4, 2, 48, 60, 0.75, 48, 60);
-        oxygenSaturation = getNextVal(lastVital?.oxygenSaturation, 89, 2, 1, 86, 91, 0.75, 86, 91);
-        bodyTemperature = getNextVal(lastVital?.bodyTemperature, 39.3, 0.5, 0.2, 38.9, 39.8, 0.75, 38.9, 39.8);
-        skinTemperature = bodyTemperature - 1.0;
-        source = 'sepsis-simulator';
+      case 6: // Sundowning Agitation Surge & Pre-Delirium (NEWS2 / Autonomic High)
+        heartRate = getNextVal(lastVital?.heartRate, 122, 6, 3, 115, 134, 0.75, 115, 134);
+        hrv = getNextVal(lastVital?.hrv, 11, 2, 1, 9, 15, 0.75, 9, 15);
+        systolicBP = getNextVal(lastVital?.systolicBP, 146, 6, 3, 138, 158, 0.75, 138, 158);
+        diastolicBP = getNextVal(lastVital?.diastolicBP, 92, 4, 2, 86, 98, 0.75, 86, 98);
+        oxygenSaturation = getNextVal(lastVital?.oxygenSaturation, 96.5, 1.5, 0.5, 95, 98, 0.08);
+        bodyTemperature = getNextVal(lastVital?.bodyTemperature, 37.1, 0.3, 0.1, 36.8, 37.4, 0.08);
+        skinTemperature = bodyTemperature - 1.2;
+        source = 'sundowning-agitation-simulator';
 
         break;
 
-      case 7: // Nocturnal Arrhythmia & Sleep Apnea/Hypoxia Event
-        heartRate = getNextVal(lastVital?.heartRate, 128, 10, 5, 115, 140, 0.75, 115, 140);
-        hrv = getNextVal(lastVital?.hrv, 12, 3, 1, 8, 16, 0.75, 8, 16);
-        systolicBP = getNextVal(lastVital?.systolicBP, 148, 7, 3, 140, 158, 0.75, 140, 158);
-        diastolicBP = getNextVal(lastVital?.diastolicBP, 92, 5, 2, 86, 98, 0.75, 86, 98);
-        oxygenSaturation = getNextVal(lastVital?.oxygenSaturation, 85, 3, 1.5, 82, 88, 0.75, 82, 88);
+      case 7: // Nocturnal Sleep Restlessness & Wandering Egress
+        heartRate = getNextVal(lastVital?.heartRate, 94, 6, 3, 88, 104, 0.75, 88, 104);
+        hrv = getNextVal(lastVital?.hrv, 22, 3, 1, 18, 26, 0.75, 18, 26);
+        systolicBP = getNextVal(lastVital?.systolicBP, 136, 6, 3, 128, 144, 0.75, 128, 144);
+        diastolicBP = getNextVal(lastVital?.diastolicBP, 86, 4, 2, 80, 92, 0.75, 80, 92);
+        oxygenSaturation = getNextVal(lastVital?.oxygenSaturation, 96, 1.5, 0.5, 94, 98, 0.08);
         bodyTemperature = getNextVal(lastVital?.bodyTemperature, refBodyTemperature, temperatureToleranceCelsius, 0.05, 36.2, 37.5, 0.08);
         skinTemperature = bodyTemperature - 1.4;
-        source = 'nocturnal-arrhythmia-simulator';
+        source = 'wandering-egress-simulator';
 
         break;
 
@@ -284,7 +284,7 @@ export class SimulationService {
 
         break;
 
-      case 9: // Acute Fall & Post-Impact Immobility
+      case 9: // Freeze-of-Gait Fall & Post-Impact Immobility
         heartRate = getNextVal(lastVital?.heartRate, 118, 8, 4, 110, 126, 0.75, 110, 126);
         hrv = getNextVal(lastVital?.hrv, 15, 3, 1, 10, 20, 0.75, 10, 20);
         systolicBP = getNextVal(lastVital?.systolicBP, 92, 5, 3, 85, 98, 0.75, 85, 98);
@@ -292,7 +292,7 @@ export class SimulationService {
         oxygenSaturation = getNextVal(lastVital?.oxygenSaturation, 96, 1.5, 0.5, 94, 98, 0.08);
         bodyTemperature = getNextVal(lastVital?.bodyTemperature, refBodyTemperature, temperatureToleranceCelsius, 0.05, 36.2, 37.5, 0.08);
         skinTemperature = bodyTemperature - 1.4;
-        source = 'fall-immobility-simulator';
+        source = 'freeze-of-gait-fall-simulator';
 
         // Auto-create an acute FallIncident
         await this.fallsService.create({
@@ -301,8 +301,8 @@ export class SimulationService {
           orientationChangeDeg: 88.0,
           motionlessDurationSeconds: 45,
           severity: FallSeverity.CRITICAL,
-          location: resident.address ? `${resident.address} - Bedside` : 'Bedroom Bedside',
-          clinicalDescription: 'Sudden high-g deceleration impact (3.4g) followed by 45s loss of thoracic micro-motion.',
+          location: resident.address ? `${resident.address} - Memory Corridor 4B` : 'Memory Ward Corridor 4B',
+          clinicalDescription: 'Freeze-of-gait catastrophic fall: Kinematic impact with 45s post-fall immobility in resident with neurocognitive deficit. Emergency dispatch triggered.',
         });
 
         break;

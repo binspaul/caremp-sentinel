@@ -21,6 +21,12 @@ import { Admin } from './admins/entities/admin.entity';
 import { Band } from './bands/entities/band.entity';
 import { BandsModule } from './bands/bands.module';
 
+// Facility & Indoor Beacons
+import { Floor } from './facility/entities/floor.entity';
+import { RoomZone } from './facility/entities/room-zone.entity';
+import { Beacon } from './facility/entities/beacon.entity';
+import { FacilityModule } from './facility/facility.module';
+
 // Falls
 import { FallIncident } from './falls/entities/fall-incident.entity';
 import { FallsModule } from './falls/falls.module';
@@ -79,6 +85,9 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
         entities: [
           Admin,
           Band,
+          Beacon,
+          Floor,
+          RoomZone,
           FallIncident,
           GenomicProfile,
           HealthspanAssessment,
@@ -107,6 +116,7 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
     VitalsToDigitalTwinModule,
     AuthModule,
     BandsModule,
+    FacilityModule,
     FallsModule,
     GenomicsModule,
     HealthspanModule,

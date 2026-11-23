@@ -144,7 +144,13 @@ export const RecentFallsAndResidents: React.FC<RecentFallsAndResidentsProps> = (
                           <span>•</span>
                           <span>⏱️ {incident.motionlessDurationSeconds}s</span>
                           <span>•</span>
-                          <span>{incident.location || 'Bedside'}</span>
+                          <span className="text-rose-600/90 dark:text-rose-400/90 font-sans font-medium">
+                            {incident.clinicalDescription?.includes('Freeze') || incident.clinicalDescription?.includes('apraxia')
+                              ? 'Freeze-of-Gait Fall'
+                              : incident.clinicalDescription?.includes('Wander')
+                              ? 'Bed-Exit Wandering Fall'
+                              : incident.location || 'Memory Ward 4B'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -242,10 +248,22 @@ export const RecentFallsAndResidents: React.FC<RecentFallsAndResidentsProps> = (
                         <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400 mt-0.5">
                           <span>{resident.age} yrs</span>
                           <span>•</span>
-                          <span>{resident.gender === 1 ? 'Male' : 'Female'}</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-sans font-medium">
+                            {resident.uhid === 'RES-002'
+                              ? "Alzheimer's (FAST 4)"
+                              : resident.uhid === 'RES-003'
+                              ? 'Lewy Body Dementia'
+                              : resident.uhid === 'RES-001'
+                              ? 'Mild Cognitive Impairment'
+                              : 'Memory Ward Resident'}
+                          </span>
                           <span>•</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                            Ref HR: {resident.referenceHeartRate || 75} bpm
+                          <span className="text-slate-500 font-sans">
+                            {resident.uhid === 'RES-002'
+                              ? 'Sundowning Risk'
+                              : resident.uhid === 'RES-003'
+                              ? 'Freezing Gait Risk'
+                              : 'Suite 4B Safe-Zone'}
                           </span>
                         </div>
                       </div>

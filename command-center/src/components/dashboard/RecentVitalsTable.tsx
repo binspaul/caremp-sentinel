@@ -126,8 +126,8 @@ export const RecentVitalsTable: React.FC<RecentVitalsTableProps> = ({
               <th className="py-3.5 px-4 font-semibold">Blood Pressure</th>
               <th className="py-3.5 px-4 font-semibold">SpO2</th>
               <th className="py-3.5 px-4 font-semibold">Body Temp</th>
-              <th className="py-3.5 px-4 font-semibold">Sleep & State</th>
-              <th className="py-3.5 px-4 font-semibold">Status</th>
+              <th className="py-3.5 px-4 font-semibold">Sleep &amp; Restlessness</th>
+              <th className="py-3.5 px-4 font-semibold">Cognitive Acuity</th>
               <th className="py-3.5 px-6 font-semibold text-right">Timestamp</th>
             </tr>
           </thead>
@@ -246,27 +246,36 @@ export const RecentVitalsTable: React.FC<RecentVitalsTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Sleep Status */}
+                    {/* Sleep & Restlessness Status */}
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
                         <Moon className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                         <span>{getSleepLabel(vital.sleepStatus)}</span>
                       </div>
-                      {vital.wearingIndicator !== undefined && (
-                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                          {vital.wearingIndicator ? 'Sensor worn' : 'Sensor removed'}
-                        </span>
-                      )}
+                      <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 block">
+                        {vital.heartRate > 115
+                          ? 'Radar: Restless micro-motion'
+                          : vital.wearingIndicator
+                          ? 'Radar: Restful sleep'
+                          : 'Radar & BLE Active'}
+                      </span>
                     </td>
 
-                    {/* Status Badge */}
+                    {/* Cognitive Acuity / Status Badge */}
                     <td className="py-4 px-4">
-                      <Badge variant={status.variant} size="sm" pulse={status.variant !== 'normal'}>
-                        {status.variant === 'normal' && <CheckCircle2 className="w-3 h-3" />}
-                        {status.variant === 'warning' && <AlertTriangle className="w-3 h-3" />}
-                        {status.variant === 'critical' && <AlertOctagon className="w-3 h-3" />}
-                        {status.label}
-                      </Badge>
+                      {vital.heartRate > 115 ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border font-mono tracking-wide px-2 py-0.5 text-xs bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30">
+                          <AlertOctagon className="w-3 h-3 animate-pulse" />
+                          Sundowning Alert
+                        </span>
+                      ) : (
+                        <Badge variant={status.variant} size="sm" pulse={status.variant !== 'normal'}>
+                          {status.variant === 'normal' && <CheckCircle2 className="w-3 h-3" />}
+                          {status.variant === 'warning' && <AlertTriangle className="w-3 h-3" />}
+                          {status.variant === 'critical' && <AlertOctagon className="w-3 h-3" />}
+                          {status.label === 'Normal' ? 'Restful Stable' : status.label}
+                        </Badge>
+                      )}
                     </td>
 
                     {/* Timestamp */}

@@ -54,7 +54,7 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
     {
       id: 'msg-1',
       sender: 'copilot',
-      text: "Hello Dr. Jenkins. I have pre-loaded Alex Rivera's longitudinal twin telemetry, latest acute vital anomaly, and sequenced pharmacogenomic profile. What would you like me to analyze?",
+      text: "Hello Dr. Jenkins. I have pre-loaded the resident's longitudinal cognitive telemetry, 60-GHz mmWave nocturnal restlessness feed, safe-zone geofence logs, and CPIC anticholinergic profile. What would you like me to analyze?",
       timestamp: 'Just now',
     },
   ]);
@@ -94,14 +94,16 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
       let reply = '';
       const lowerQ = q.toLowerCase();
 
-      if (lowerQ.includes('sepsis') || lowerQ.includes('news2') || lowerQ.includes('deteriorat')) {
-        reply = `CRITICAL ALERT: Current NEWS2 is 12 (High Clinical Risk). Parameter breakdown: Tachypnea (24 bpm, 2 pts), Severe Hypotension (${sbp}/${dbp} mmHg, 3 pts), Severe Hypoxemia (${spo2}%, 3 pts), Tachycardia (${hr} bpm, 2 pts), Pyrexia (${temp}°C, 2 pts). qSOFA is 2. Recommend immediate Sepsis Six protocol: obtain blood cultures, check lactate, initiate IV fluid bolus, and start broad-spectrum IV antimicrobials.`;
-      } else if (lowerQ.includes('pgx') || lowerQ.includes('statin') || lowerQ.includes('clopidogrel') || lowerQ.includes('drug') || lowerQ.includes('medication')) {
-        reply = `PHARMACOGENOMIC WARNING: Alex Rivera carries CYP2C19 *1/*2 (Intermediate Metabolizer) causing reduced Clopidogrel bioactivation; switch to Ticagrelor 90 mg BID. Additionally, SLCO1B1 521T>C variant confers high statin myopathy risk with Atorvastatin 40mg; recommend switching to Rosuvastatin 5-10 mg daily with CK monitoring.`;
+      if (lowerQ.includes('sundown') || lowerQ.includes('agitat') || lowerQ.includes('delirium') || lowerQ.includes('sepsis') || lowerQ.includes('news2')) {
+        reply = `CRITICAL ALERT: Sundowning & Pre-Delirium Agitation Index is 88/100 (High Risk). Autonomic parameter breakdown: Marked sympathetic surge (HR ${hr} bpm), micro-motion restlessness via 60-GHz mmWave radar (74% fragmentation), and late-afternoon circadian disorientation window. Recommend non-pharmacological calming protocol: adjust lighting to 2700K warm tone, initiate 432 Hz auditory relaxation, and assign reassuring caregiver presence before overt agitation escalates.`;
+      } else if (lowerQ.includes('geofence') || lowerQ.includes('wander') || lowerQ.includes('perimeter') || lowerQ.includes('location')) {
+        reply = `GEOFENCE & WANDERING SURVEILLANCE: Resident ${residentName} (UHID: ${uhid}) is monitored via BLE RSSI beacon. Location: Memory Ward Suite 4B / Corridor Perimeter. Pre-agitation micro-motion surge indicates elevated risk of unassisted bed-exit; bedside sensor alert armed.`;
+      } else if (lowerQ.includes('pgx') || lowerQ.includes('anticholinergic') || lowerQ.includes('donepezil') || lowerQ.includes('drug') || lowerQ.includes('medication')) {
+        reply = `COGNITIVE PHARMACOGENOMIC WARNING: Resident carries CYP2D6 Poor Metabolizer phenotype; Donepezil (Aricept) clearance is reduced, requiring 5 mg daily cap to avoid cholinergic toxicity. Additionally, Anticholinergic Burden Score (ARS) is elevated; recommend discontinuing bladder antispasmodics/sedatives to prevent drug-induced cognitive worsening and delirium.`;
       } else if (lowerQ.includes('note') || lowerQ.includes('handover') || lowerQ.includes('summary')) {
-        reply = `CLINICAL CONSULTATION NOTE (FHIR-Compliant):\n• Patient: ${residentName} (UHID: ${uhid}, 72yo M)\n• Tele-consult indication: Emergency deterioration triage\n• Objective Vitals: HR ${hr} bpm, BP ${sbp}/${dbp} mmHg, SpO2 ${spo2}%, Temp ${temp}°C\n• Acuity: NEWS2 12 (Critical), Sepsis prodrome confirmed\n• Pharmacogenomics: CYP2C19 *1/*2 (switch Plavix to Ticagrelor), SLCO1B1 (switch Atorvastatin to Rosuvastatin)\n• Disposition: Emergency medical transfer / ICU admission.`;
+        reply = `CLINICAL COGNITIVE CONSULTATION NOTE (FHIR-Compliant):\n• Patient: ${residentName} (UHID: ${uhid}, ${age}yo)\n• Indication: Sundowning agitation & nocturnal wandering surveillance\n• Objective Vitals: HR ${hr} bpm (Sympathetic surge), BP ${sbp}/${dbp} mmHg, SpO2 ${spo2}%, Temp ${temp}°C\n• Neuro-Behavioral: Sundowning Agitation Index 88/100, Radar Sleep Fragmentation 74%\n• Safe-Zone Status: Memory Ward Corridor Perimeter (BLE RSSI active)\n• Pharmacogenomics: CYP2D6 Poor Metabolizer (Donepezil 5mg cap), High Anticholinergic Risk\n• Disposition: Environmental calming protocol; bedtime 1:1 orientation supervision.`;
       } else {
-        reply = `Resident ${residentName}'s baseline trajectory shows high cardiovascular vulnerability (CAD PRS 84th percentile). Current telemetry reflects acute systemic decompensation over the last 90 minutes. I have prepared the emergency protocol order and pharmacogenomic medication adjustments.`;
+        reply = `Resident ${residentName}'s baseline shows cognitive vulnerability (FAST Stage 4 Alzheimer's / MCI). Current telemetry indicates late-afternoon autonomic sympathetic escalation (Agitation Index 88/100). Non-pharmacological sensory de-escalation protocol prepared.`;
       }
 
       const copilotMsg: ChatMessage = {
@@ -206,20 +208,20 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
               </div>
             </div>
 
-            {/* Live Synchronized Biometric Telemetry HUD */}
+            {/* Live Synchronized Memory Care & Biometric Telemetry HUD */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  Live Wearable Sensor Telemetry HUD
+                  Live Memory Care &amp; Sensor Telemetry HUD
                 </span>
                 <span className={isCritical ? 'text-rose-600 dark:text-rose-400 font-extrabold animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}>
-                  {isCritical ? 'CRITICAL DETERIORATION DETECTED' : 'NORMAL VITALS'}
+                  {isCritical ? 'SUNDOWNING AGITATION SURGE DETECTED' : 'COGNITIVE STATE: RESTFUL'}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {/* Heart Rate */}
+                {/* Heart Rate & Autonomic Vagal Tone */}
                 <div className={`p-3 rounded-2xl border transition-colors ${
                   hr > 115 
                     ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
@@ -227,56 +229,68 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
                 }`}>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                     <Heart className="w-3.5 h-3.5 text-rose-500" />
-                    <span>Heart Rate</span>
+                    <span>Heart Rate &amp; Tone</span>
                   </div>
                   <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
                     {hr} <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">bpm</span>
                   </div>
+                  <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                    {hr > 110 ? '⚡ Sympathetic Surge' : '🌿 Vagal Restful'}
+                  </span>
                 </div>
 
-                {/* Blood Pressure */}
+                {/* Sundowning / Agitation Risk Index */}
                 <div className={`p-3 rounded-2xl border transition-colors ${
-                  sbp < 95 
+                  isCritical 
                     ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-xs'
                 }`}>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                     <Activity className="w-3.5 h-3.5 text-amber-500" />
-                    <span>BP (SBP/DBP)</span>
+                    <span>Sundowning Risk</span>
                   </div>
                   <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
-                    {sbp}/{dbp} <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">mmHg</span>
+                    {isCritical ? '88' : '14'} <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">/100</span>
                   </div>
+                  <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                    {isCritical ? '🚨 Escalating Pre-Delirium' : '✓ Calm Baseline'}
+                  </span>
                 </div>
 
-                {/* SpO2 */}
+                {/* 60-GHz mmWave Radar Micro-Motion / Sleep Restlessness */}
                 <div className={`p-3 rounded-2xl border transition-colors ${
-                  spo2 < 92 
-                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
+                  isCritical 
+                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300' 
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-xs'
                 }`}>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                     <Wind className="w-3.5 h-3.5 text-cyan-500" />
-                    <span>SpO2 Pulse Ox</span>
+                    <span>Radar Micro-Motion</span>
                   </div>
                   <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
-                    {spo2}%
+                    {isCritical ? '74%' : '18%'}
                   </div>
+                  <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                    {isCritical ? 'Restless Fragmentation' : 'Restful Continuity'}
+                  </span>
                 </div>
 
-                {/* Temp */}
+                {/* Safe-Zone Geofence / Wandering Location */}
                 <div className={`p-3 rounded-2xl border transition-colors ${
-                  Number(temp) > 38.5 
-                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300' 
+                  isCritical 
+                    ? 'bg-orange-500/10 border-orange-500/40 text-orange-700 dark:text-orange-300' 
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-xs'
                 }`}>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                     <Thermometer className="w-3.5 h-3.5 text-orange-500" />
-                    <span>Temperature</span>
+                    <span>Safe Geofence (BLE)</span>
                   </div>
-                  <div className="mt-1 font-mono font-bold text-xl text-slate-900 dark:text-white">
-                    {temp}°C
+                  <div className="mt-1 font-mono font-bold text-sm text-slate-900 dark:text-white truncate">
+                    {isCritical ? 'Doorway Egress' : 'Suite 4B'}
                   </div>
+                  <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                    {isCritical ? '⚠️ Corridor Alert' : '✓ Perimeter Safe'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -292,25 +306,25 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
                   30s AI Triage Diagnostic Synopsis
                 </span>
                 <Badge variant={isCritical ? 'critical' : 'normal'} size="sm">
-                  {isCritical ? 'NEWS2: 12 (CRITICAL)' : 'NEWS2: 0 (ROUTINE)'}
+                  {isCritical ? 'SUNDOWNING SURGE: HIGH RISK (88)' : 'COGNITIVE STATE: STABLE'}
                 </Badge>
               </div>
 
               <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 font-sans leading-relaxed">
                 <p>
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">Sepsis Prodrome: </span>
-                  qSOFA 2/3 (Tachypnea + Hypotension) detected. Estimated 8.5 hr advance warning window before overt septic shock.
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">Sundowning Prodrome: </span>
+                  Late-afternoon sympathetic autonomic surge and micro-motion hyperactivity detected 40 min prior to overt combativeness. Peak vulnerability window active.
                 </p>
                 <p>
-                  <span className="font-semibold text-purple-700 dark:text-purple-400">Pharmacogenomic Conflict: </span>
-                  Taking <span className="font-mono font-medium text-purple-700 dark:text-purple-300">Clopidogrel</span> with CYP2C19 *1/*2 (Antiplatelet failure) and <span className="font-mono font-medium text-purple-700 dark:text-purple-300">Atorvastatin</span> with SLCO1B1 (Myopathy risk).
+                  <span className="font-semibold text-purple-700 dark:text-purple-400">Anticholinergic / PGx Warning: </span>
+                  CYP2D6 Poor Metabolizer (Donepezil capped 5mg) &amp; High Anticholinergic Burden (ARS: 3). High risk of drug-induced cognitive worsening and delirium.
                 </p>
               </div>
 
               <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800/80">
                 <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Action:</span>
                 <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                  Switch Plavix → Ticagrelor 90mg BID · Sepsis Six Protocol
+                  Non-Pharm De-escalation &bull; Dim Circadian Light &bull; Reassuring Bedside Check
                 </span>
               </div>
             </div>
@@ -342,7 +356,7 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" />
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.2s]" />
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.4s]" />
-                    <span>Gemini analyzing clinical context...</span>
+                    <span>Gemini analyzing cognitive context...</span>
                   </div>
                 )}
               </div>
@@ -350,16 +364,22 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
               {/* Quick Prompt Chips */}
               <div className="flex items-center gap-1.5 overflow-x-auto py-2 shrink-0 border-t border-slate-200 dark:border-slate-800/60">
                 <button
-                  onClick={() => handleSendQuery('Why is the NEWS2 score critical?')}
+                  onClick={() => handleSendQuery('Explain the Sundowning Agitation Score and de-escalation protocol')}
                   className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent text-[11px] whitespace-nowrap transition cursor-pointer"
                 >
-                  ⚡ Explain NEWS2 Score
+                  ⚡ Sundowning De-escalation
                 </button>
                 <button
-                  onClick={() => handleSendQuery('Review active Pharmacogenomic conflicts')}
+                  onClick={() => handleSendQuery('Check current safe-zone geofence and wandering log')}
                   className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent text-[11px] whitespace-nowrap transition cursor-pointer"
                 >
-                  🧬 Review PGx Conflicts
+                  🧭 Safe-Zone &amp; Wandering
+                </button>
+                <button
+                  onClick={() => handleSendQuery('Audit anticholinergic burden and Donepezil PGx')}
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent text-[11px] whitespace-nowrap transition cursor-pointer"
+                >
+                  🧬 Anticholinergic &amp; PGx
                 </button>
                 <button
                   onClick={() => handleSendQuery('Generate formal clinical handover note')}

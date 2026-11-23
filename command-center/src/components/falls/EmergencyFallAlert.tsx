@@ -11,6 +11,7 @@ import {
   Radio,
   ChevronDown,
   ChevronUp,
+  MapPin,
 } from 'lucide-react';
 import { FallIncident } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
@@ -19,12 +20,14 @@ interface EmergencyFallAlertProps {
   incident: FallIncident | null;
   onResolved: () => void;
   onLaunchTelemedicine: (residentId: number) => void;
+  onLocateOnMap?: (location?: string) => void;
 }
 
 export const EmergencyFallAlert: React.FC<EmergencyFallAlertProps> = ({
   incident,
   onResolved,
   onLaunchTelemedicine,
+  onLocateOnMap,
 }) => {
   const [isResolving, setIsResolving] = useState(false);
   const [resolutionNote, setResolutionNote] = useState('');
@@ -144,6 +147,18 @@ export const EmergencyFallAlert: React.FC<EmergencyFallAlertProps> = ({
             <Video className="w-4 h-4 text-rose-600 animate-pulse" />
             <span>Launch Emergency Video</span>
           </button>
+
+          {/* Locate on Indoor Map */}
+          {onLocateOnMap && (
+            <button
+              onClick={() => onLocateOnMap(incident.location)}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-black/30 hover:bg-black/50 text-white font-medium text-xs border border-white/20 transition active:scale-95 cursor-pointer"
+              title="View resident location on 2-Floor Facility Map"
+            >
+              <MapPin className="w-3.5 h-3.5 text-cyan-300" />
+              <span>Locate on Map</span>
+            </button>
+          )}
 
           {/* Floor Dispatch Button */}
           <button

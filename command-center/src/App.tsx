@@ -17,6 +17,10 @@ import { EmergencyFallAlert } from './components/falls/EmergencyFallAlert';
 import { FallsHistoryModal } from './components/falls/FallsHistoryModal';
 import { FallsView } from './components/falls/FallsView';
 import { BandsView } from './components/bands/BandsView';
+import { FacilityMapView } from './components/facility/FacilityMapView';
+import { FloorsView } from './components/facility/FloorsView';
+import { RoomsView } from './components/facility/RoomsView';
+import { BeaconsView } from './components/facility/BeaconsView';
 import { RecentFallsAndResidents } from './components/dashboard/RecentFallsAndResidents';
 import commandCenterService from './services/commandCenterService';
 import { DashboardCounters, Vital, Resident, FallIncident } from './types';
@@ -29,6 +33,8 @@ const CommandCenterApp: React.FC = () => {
 
   // Filter state for cross-navigation (e.g. clicking a resident in list jumps to vitals)
   const [selectedResidentId, setSelectedResidentId] = useState<number | null>(null);
+  const [mapTargetRoom, setMapTargetRoom] = useState<string | null>(null);
+  const [selectedFloorForRooms, setSelectedFloorForRooms] = useState<number | 'all'>('all');
 
   // Simulation, Telemedicine, Bands Fleet & Falls Modal States
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
@@ -135,15 +141,23 @@ const CommandCenterApp: React.FC = () => {
   const getPageSubtitle = (tab: NavTab) => {
     switch (tab) {
       case 'dashboard':
-        return 'Real-time telemetry, deterioration triage, and active digital twins';
+        return 'Cognitive surveillance, sundowning pre-agitation triage, and safe-zone geofencing';
+      case 'map':
+        return '2-Floor interactive BLE beacon indoor topology, memory care safe-zones, and resident tracking';
+      case 'floors':
+        return 'Facility architectural topology, elevation floor levels, building wings, and blueprints';
+      case 'rooms':
+        return 'Resident suites, micro-location zones, capacity, safe-perimeter geofencing, and room anchors';
+      case 'beacons':
+        return 'BLE location beacon inventory, battery telemetry, RSSI calibration, and room anchor pairing';
       case 'vitals':
-        return 'Continuous physiological telemetry signals and sensor feeds';
+        return 'Continuous physiological signals, 60-GHz radar sleep restlessness, and autonomic stress feeds';
       case 'falls':
-        return 'Kinematic impact telemetry, post-fall immobility verification, and emergency dispatch';
+        return 'Kinematic impact telemetry, cognitive freeze-of-gait falls, and emergency dispatch';
       case 'bands':
         return 'Hardware sensor pod fleet inventory, battery telemetry, and resident pairing';
       case 'residents':
-        return 'Care recipient registry and physiological baseline configurations';
+        return 'Care recipient registry and cognitive/physiological baseline configurations';
       case 'users':
         return 'User administration, role management, and access controls';
     }
@@ -178,6 +192,10 @@ const CommandCenterApp: React.FC = () => {
             onLaunchTelemedicine={(resId) => {
               setSelectedResidentId(resId);
               setIsTelemedicineModalOpen(true);
+            }}
+            onLocateOnMap={(location) => {
+              setMapTargetRoom(location || null);
+              setActiveTab('map');
             }}
           />
 
@@ -220,6 +238,44 @@ const CommandCenterApp: React.FC = () => {
                 />
               </section>
             </>
+          )}
+
+          {activeTab === 'map' && (
+            <FacilityMapView
+              lastUpdated={lastUpdated}
+              targetRoomNumber={mapTargetRoom}
+              onLaunchTelemedicine={(id) => {
+                setSelectedResidentId(id);
+                setIsTelemedicineModalOpen(true);
+              }}
+            />
+          )}
+
+          {activeTab === 'floors' && (
+            <FloorsView
+              lastUpdated={lastUpdated}
+              onNavigateToMap={() => setActiveTab('map')}
+              onNavigateToRooms={(floorId) => {
+                setSelectedFloorForRooms(floorId || 'all');
+                setActiveTab('rooms');
+              }}
+            />
+          )}
+
+          {activeTab === 'rooms' && (
+            <RoomsView
+              lastUpdated={lastUpdated}
+              initialFloorId={selectedFloorForRooms}
+              onNavigateToMap={() => setActiveTab('map')}
+              onNavigateToFloors={() => setActiveTab('floors')}
+            />
+          )}
+
+          {activeTab === 'beacons' && (
+            <BeaconsView
+              lastUpdated={lastUpdated}
+              onNavigateToMap={() => setActiveTab('map')}
+            />
           )}
 
           {activeTab === 'vitals' && (

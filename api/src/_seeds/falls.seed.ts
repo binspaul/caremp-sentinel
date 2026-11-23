@@ -44,7 +44,7 @@ export async function seedFalls(dataSource: DataSource): Promise<FallIncident[]>
     status: FallIncidentStatus.RESOLVED_ASSISTED,
     location: eleanor.address ? `${eleanor.address} - En-Suite Bathroom` : 'En-Suite Bathroom',
     clinicalDescription:
-      'Sudden 3.2g downward deceleration impact with 84.5 degree orientation tilt. Zero micro-motion detected for 40 seconds post-impact.',
+      'Freeze-of-Gait Fall: Sudden 3.2g downward deceleration impact with 84.5 degree orientation tilt in resident with neurocognitive deficit. Zero micro-motion detected for 40 seconds post-impact.',
     detectedAt: twoHoursAgo,
     resolvedAt: resolvedTime,
     resolvedBy: 'Dr. Sarah Jenkins',

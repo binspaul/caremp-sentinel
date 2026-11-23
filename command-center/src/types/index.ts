@@ -61,6 +61,8 @@ export interface Resident {
   referenceDiastolicBP?: number;
   referenceOxygenSaturation?: number;
   referenceBodyTemperature?: number;
+  fallRiskScore?: number;
+  hasFallHistory?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -197,5 +199,110 @@ export interface FallCounters {
   resolvedFalseAlarm: number;
   resolvedAssisted: number;
 }
+
+// ==========================================
+// Facility Indoor Map & Beacon Micro-Location Types
+// ==========================================
+
+export type FacilityZoneType =
+  | 'suite'
+  | 'corridor'
+  | 'common'
+  | 'dining'
+  | 'garden'
+  | 'staff'
+  | 'therapy'
+  | 'calming'
+  | 'restricted';
+
+export interface BeaconInfo {
+  id: number;
+  serialNumber: string;
+  macAddress?: string;
+  batteryLevel: number;
+  status: string;
+}
+
+export type BeaconStatus = 'active' | 'low_battery' | 'offline' | 'maintenance';
+
+export interface Beacon {
+  id: number;
+  serialNumber: string;
+  macAddress: string;
+  model: string;
+  zoneId?: number | null;
+  zone?: {
+    id: number;
+    roomNumber: string;
+    name: string;
+    floor?: { id?: number; floorNumber: number; name: string };
+  } | null;
+  major?: number;
+  minor?: number;
+  rssiCalibrated1m?: number;
+  batteryLevel: number;
+  status: BeaconStatus;
+  txIntervalHz?: number;
+  lastHeartbeatAt?: string;
+  createdAt?: string;
+}
+
+export interface BeaconCounters {
+  total: number;
+  active: number;
+  lowBattery: number;
+  unassigned: number;
+}
+
+export interface RoomZone {
+  id: number;
+  floorId: number;
+  floor?: Partial<Floor>;
+  roomNumber: string;
+  name: string;
+  zoneType: FacilityZoneType;
+  isSafePerimeter: boolean;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  maxCapacity?: number;
+  description?: string;
+  currentResident?: Resident | null;
+  beacons?: BeaconInfo[];
+}
+
+export interface Floor {
+  id: number;
+  floorNumber: number;
+  name: string;
+  code: string;
+  description?: string;
+  layoutWidth: number;
+  layoutHeight: number;
+  isActive: boolean;
+  zones: RoomZone[];
+}
+
+export interface ResidentPresence {
+  residentId: number;
+  uhid: string;
+  name: string;
+  age: number;
+  floorNumber: number;
+  floorName: string;
+  zoneId: number;
+  roomNumber: string;
+  zoneName: string;
+  zoneType: FacilityZoneType;
+  isSafePerimeter: boolean;
+  x: number;
+  y: number;
+  beaconId: string;
+  rssi: number;
+  dwellMinutes: number;
+  status: 'safe' | 'egress_alert';
+}
+
 
 

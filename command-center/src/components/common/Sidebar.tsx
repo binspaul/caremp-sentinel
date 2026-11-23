@@ -6,6 +6,10 @@ import {
   UserCheck,
   Radio,
   AlertTriangle,
+  MapPin,
+  Building2,
+  Signal,
+  DoorOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,6 +18,10 @@ export type NavTab =
   | 'vitals'
   | 'falls'
   | 'bands'
+  | 'beacons'
+  | 'floors'
+  | 'rooms'
+  | 'map'
   | 'residents'
   | 'users';
 
@@ -55,6 +63,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Bands',
       description: 'Hardware sensor pod fleet',
       icon: Radio,
+    },
+    {
+      id: 'beacons' as NavTab,
+      label: 'Beacons',
+      description: 'Manage indoor BLE beacon anchors',
+      icon: Signal,
+    },
+    {
+      id: 'floors' as NavTab,
+      label: 'Floors',
+      description: 'Manage architectural levels & wings',
+      icon: Building2,
+    },
+    {
+      id: 'rooms' as NavTab,
+      label: 'Rooms',
+      description: 'Manage suites, zones & perimeters',
+      icon: DoorOpen,
+    },
+    {
+      id: 'map' as NavTab,
+      label: 'Facility Map',
+      description: 'Indoor BLE beacon tracking',
+      icon: MapPin,
     },
     {
       id: 'residents' as NavTab,

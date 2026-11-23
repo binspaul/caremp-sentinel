@@ -9,6 +9,11 @@ import {
   BandCounters,
   FallIncident,
   FallCounters,
+  Floor,
+  RoomZone,
+  Beacon,
+  BeaconCounters,
+  ResidentPresence,
 } from '../types';
 
 export const commandCenterService = {
@@ -300,6 +305,122 @@ export const commandCenterService = {
 
   async recordFall(data: Partial<FallIncident>): Promise<FallIncident> {
     const response = await apiClient.post<ApiResponse<FallIncident>>('/falls', data);
+    return response.data.data;
+  },
+
+  // ==========================================
+  // Facility Indoor Map, Floors & Zones API
+  // ==========================================
+  async getFacilityFloors(): Promise<Floor[]> {
+    try {
+      const response = await apiClient.get<ApiResponse<Floor[]>>('/facility/floors');
+      return response.data.data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async createFloor(data: Partial<Floor>): Promise<Floor> {
+    const response = await apiClient.post<ApiResponse<Floor>>('/facility/floors', data);
+    return response.data.data;
+  },
+
+  async updateFloor(id: number, data: Partial<Floor>): Promise<Floor> {
+    const response = await apiClient.put<ApiResponse<Floor>>(`/facility/floors/${id}`, data);
+    return response.data.data;
+  },
+
+  async deleteFloor(id: number): Promise<boolean> {
+    const response = await apiClient.delete<ApiResponse<any>>(`/facility/floors/${id}`);
+    return response.data.code === 200;
+  },
+
+  async getRoomZones(floorId?: number): Promise<RoomZone[]> {
+    try {
+      const response = await apiClient.get<ApiResponse<RoomZone[]>>('/facility/zones', {
+        params: floorId ? { floorId } : undefined,
+      });
+      return response.data.data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async createRoomZone(data: Partial<RoomZone>): Promise<RoomZone> {
+    const response = await apiClient.post<ApiResponse<RoomZone>>('/facility/zones', data);
+    return response.data.data;
+  },
+
+  async updateRoomZone(id: number, data: Partial<RoomZone>): Promise<RoomZone> {
+    const response = await apiClient.put<ApiResponse<RoomZone>>(`/facility/zones/${id}`, data);
+    return response.data.data;
+  },
+
+  async deleteRoomZone(id: number): Promise<boolean> {
+    const response = await apiClient.delete<ApiResponse<any>>(`/facility/zones/${id}`);
+    return response.data.code === 200;
+  },
+
+  // ==========================================
+  // BLE Beacons Management & Fleet API
+  // ==========================================
+  async getBeacons(): Promise<Beacon[]> {
+    try {
+      const response = await apiClient.get<ApiResponse<Beacon[]>>('/facility/beacons');
+      return response.data.data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async getBeaconCounters(): Promise<BeaconCounters | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<BeaconCounters>>('/facility/beacons/counters');
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async createBeacon(data: Partial<Beacon>): Promise<Beacon> {
+    const response = await apiClient.post<ApiResponse<Beacon>>('/facility/beacons', data);
+    return response.data.data;
+  },
+
+  async updateBeacon(id: number, data: Partial<Beacon>): Promise<Beacon> {
+    const response = await apiClient.put<ApiResponse<Beacon>>(`/facility/beacons/${id}`, data);
+    return response.data.data;
+  },
+
+  async assignBeacon(id: number, zoneId: number | null): Promise<Beacon> {
+    const response = await apiClient.post<ApiResponse<Beacon>>(`/facility/beacons/${id}/assign`, {
+      zoneId,
+    });
+    return response.data.data;
+  },
+
+  async deleteBeacon(id: number): Promise<boolean> {
+    const response = await apiClient.delete<ApiResponse<any>>(`/facility/beacons/${id}`);
+    return response.data.code === 200;
+  },
+
+  // ==========================================
+  // Presence & Movement Simulation
+  // ==========================================
+  async getFacilityPresence(): Promise<ResidentPresence[]> {
+    try {
+      const response = await apiClient.get<ApiResponse<ResidentPresence[]>>('/facility/presence');
+      return response.data.data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async simulateResidentMovement(residentId: number, targetZoneId: number): Promise<any> {
+    const response = await apiClient.post<ApiResponse<any>>('/facility/simulate-movement', {
+      residentId,
+      targetZoneId,
+    });
     return response.data.data;
   },
 };
