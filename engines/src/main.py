@@ -12,6 +12,7 @@ from .services.deterioration import DeteriorationEngine
 from .services.frailty import FrailtyEngine
 from .services.sundowning import SundowningEngine
 from .services.wandering import WanderingEngine
+from .services.circadian import CircadianEngine
 from .utils import mapper
 from .config import settings
 
@@ -34,7 +35,6 @@ baseline_engine = BaselineEngine()
 trend_engine = TrendEngine(recalculate_every=1)
 correlation_engine = CorrelationEngine(recalculate_every=1)
 healthy_ageing_engine = HealthyAgeingEngine(baseline_engine, trend_engine, correlation_engine, recalculate_every=1)
-ai_summary_engine = AISummaryEngine(baseline_engine, trend_engine, correlation_engine, healthy_ageing_engine)
 
 # careMP Sentinel Core Innovations
 genomics_engine = GenomicsEngine()
@@ -42,6 +42,19 @@ deterioration_engine = DeteriorationEngine()
 frailty_engine = FrailtyEngine()
 sundowning_engine = SundowningEngine(baseline_engine, trend_engine)
 wandering_engine = WanderingEngine(baseline_engine)
+circadian_engine = CircadianEngine()
+
+# AI Summary Engine with dementia intelligence integration
+ai_summary_engine = AISummaryEngine(
+    baseline_engine=baseline_engine,
+    trend_engine=trend_engine,
+    correlation_engine=correlation_engine,
+    healthy_ageing_engine=healthy_ageing_engine,
+    sundowning_engine=sundowning_engine,
+    wandering_engine=wandering_engine,
+    circadian_engine=circadian_engine,
+    deterioration_engine=deterioration_engine,
+)
 
 # Pre-seed Resident 1 (Alex Rivera) with clinically grounded Biotech & Genomic profile
 genomics_engine.register_profile(
@@ -71,7 +84,7 @@ def health_check():
     return {
         "status": "ok",
         "app": settings.APP_NAME,
-        "sentinel_suite": ["baseline", "trend", "correlation", "healthy_ageing", "genomics", "deterioration", "frailty", "sundowning", "wandering", "ai_summary"]
+        "sentinel_suite": ["baseline", "trend", "correlation", "healthy_ageing", "genomics", "deterioration", "frailty", "sundowning", "wandering", "circadian", "ai_summary"]
     }
 
 
@@ -298,6 +311,29 @@ def run_wandering(twin: Dict[str, Any]) -> Dict[str, Any]:
     return updated_twin
 
 
+@app.post("/engines/circadian")
+@app.post("/api/engines/circadian")
+def run_circadian(twin: Dict[str, Any]) -> Dict[str, Any]:
+    """Computes 24-hour Circadian Sleep-Wake rhythm stability and day-night reversal."""
+    resident_id = _require_resident_id(twin)
+    reading = mapper.build_reading_from_twin(twin)
+    sleep_data = twin.get("physiology", {}).get("sleep") or {}
+
+    circadian_data = mapper.map_circadian(circadian_engine, reading, sleep_data=sleep_data)
+    updated_twin = dict(twin)
+    existing_insights = twin.get("healthInsights") or {}
+    updated_twin["healthInsights"] = {**existing_insights, "circadian": circadian_data}
+
+    print(f"\n================ [CIRCADIAN SLEEP RHYTHM] ================")
+    print(f"Resident ID: {resident_id}")
+    print(f"  • Circadian Score: {circadian_data['circadianScore']}/100 ({circadian_data['status']})")
+    print(f"  • Day-Night Ratio: {circadian_data['dayNightRatio']} (Day: {circadian_data['daytimeSleepMinutes']}m, Night: {circadian_data['nighttimeSleepMinutes']}m)")
+    if circadian_data.get('actionableAdvice'):
+        print(f"  • Advice: {circadian_data['actionableAdvice'][0]}")
+    print("==========================================================")
+    return updated_twin
+
+
 @app.post("/engines/ai-summary")
 @app.post("/api/engines/ai-summary")
 def run_ai_summary(twin: Dict[str, Any]) -> Dict[str, Any]:
@@ -305,7 +341,7 @@ def run_ai_summary(twin: Dict[str, Any]) -> Dict[str, Any]:
     identity = twin.get("identity") or {}
     resident_name = identity.get("firstName")
 
-    result = ai_summary_engine.get_current_summary(resident_id, resident_name)
+    result = ai_summary_engine.get_current_summary(resident_id, resident_name, twin=twin)
 
     updated_twin = dict(twin)
     print(f"\n=================== [AI SUMMARY ENGINE] ===================")
@@ -317,7 +353,7 @@ def run_ai_summary(twin: Dict[str, Any]) -> Dict[str, Any]:
         print(f"  • Headline: {headline}")
         print(f"  • Summary:  {summary_text}")
     else:
-        print("  • Status: Waiting for healthy ageing assessment...")
+        print("  • Status: Waiting for baselines or reading context...")
     print("===========================================================\n")
     return updated_twin
 
@@ -332,6 +368,7 @@ def run_pipeline(twin: Dict[str, Any]) -> Dict[str, Any]:
     twin = run_deterioration(twin)
     twin = run_sundowning(twin)
     twin = run_wandering(twin)
+    twin = run_circadian(twin)
     twin = run_ai_summary(twin)
     return twin
 

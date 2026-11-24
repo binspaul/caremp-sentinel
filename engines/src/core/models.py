@@ -42,3 +42,4 @@ class DigitalTwinPayload(BaseModel):
     frailty: Optional[Dict[str, Any]] = None
     sundowning: Optional[Dict[str, Any]] = None
     wandering: Optional[Dict[str, Any]] = None
+    circadian: Optional[Dict[str, Any]] = None
