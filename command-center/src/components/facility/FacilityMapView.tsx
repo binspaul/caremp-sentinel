@@ -258,10 +258,10 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
 
         {/* Vector Blueprint Canvas View */}
         <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 relative shadow-inner">
-          <div className="w-full aspect-16/10 max-h-[560px] flex items-center justify-center p-2 sm:p-4">
+          <div className="w-full flex items-center justify-center p-2 sm:p-4">
             <svg
               viewBox={`0 0 ${activeFloor?.layoutWidth || 1000} ${activeFloor?.layoutHeight || 600}`}
-              className="w-full h-full select-none"
+              className="w-full h-auto select-none block"
               style={{ shapeRendering: 'geometricPrecision' }}
             >
               {/* Background architectural grid */}
