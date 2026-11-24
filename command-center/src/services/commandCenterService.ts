@@ -7,6 +7,10 @@ import {
   DashboardCounters,
   Band,
   BandCounters,
+  RadarPod,
+  RadarPodCounters,
+  ChestPatch,
+  ChestPatchCounters,
   FallIncident,
   FallCounters,
   Floor,
@@ -14,6 +18,7 @@ import {
   Beacon,
   BeaconCounters,
   ResidentPresence,
+  FacilityGeoJson,
 } from '../types';
 
 export const commandCenterService = {
@@ -248,6 +253,161 @@ export const commandCenterService = {
   },
 
   // ==========================================
+  // Radar Pods Hardware Fleet API
+  // ==========================================
+  async getRadarPods(params?: {
+    skip?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    residentId?: number;
+  }): Promise<{ data: RadarPod[]; total: number }> {
+    try {
+      const response = await apiClient.get<ApiResponse<RadarPod[]>>('/radar-pods', {
+        params: {
+          skip: params?.skip ?? 0,
+          limit: params?.limit ?? 50,
+          status: params?.status,
+          search: params?.search,
+          residentId: params?.residentId,
+        },
+      });
+
+      return {
+        data: response.data.data || [],
+        total: response.data.pagination?.total ?? response.data.data?.length ?? 0,
+      };
+    } catch {
+      return { data: [], total: 0 };
+    }
+  },
+
+  async getRadarPodCounters(): Promise<RadarPodCounters | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<RadarPodCounters>>('/radar-pods/counters');
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async getRadarPod(id: number): Promise<RadarPod | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<RadarPod>>(`/radar-pods/${id}`);
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async assignRadarPod(
+    podId: number,
+    residentId: number | null,
+    roomNumber?: string,
+  ): Promise<RadarPod> {
+    const response = await apiClient.post<ApiResponse<RadarPod>>(`/radar-pods/${podId}/assign`, {
+      residentId,
+      roomNumber,
+    });
+    return response.data.data;
+  },
+
+  async unassignRadarPod(podId: number): Promise<RadarPod> {
+    const response = await apiClient.post<ApiResponse<RadarPod>>(`/radar-pods/${podId}/unassign`);
+    return response.data.data;
+  },
+
+  async createRadarPod(data: Partial<RadarPod>): Promise<RadarPod> {
+    const response = await apiClient.post<ApiResponse<RadarPod>>('/radar-pods', data);
+    return response.data.data;
+  },
+
+  async updateRadarPod(podId: number, data: Partial<RadarPod>): Promise<RadarPod> {
+    const response = await apiClient.patch<ApiResponse<RadarPod>>(`/radar-pods/${podId}`, data);
+    return response.data.data;
+  },
+
+  async deleteRadarPod(podId: number): Promise<boolean> {
+    const response = await apiClient.delete<ApiResponse<null>>(`/radar-pods/${podId}`);
+    return response.data.code === 200;
+  },
+
+  // ==========================================
+  // Chest Patches Hardware Fleet API
+  // ==========================================
+  async getChestPatches(params?: {
+    skip?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    residentId?: number;
+  }): Promise<{ data: ChestPatch[]; total: number }> {
+    try {
+      const response = await apiClient.get<ApiResponse<ChestPatch[]>>('/chest-patches', {
+        params: {
+          skip: params?.skip ?? 0,
+          limit: params?.limit ?? 50,
+          status: params?.status,
+          search: params?.search,
+          residentId: params?.residentId,
+        },
+      });
+
+      return {
+        data: response.data.data || [],
+        total: response.data.pagination?.total ?? response.data.data?.length ?? 0,
+      };
+    } catch {
+      return { data: [], total: 0 };
+    }
+  },
+
+  async getChestPatchCounters(): Promise<ChestPatchCounters | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<ChestPatchCounters>>('/chest-patches/counters');
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async getChestPatch(id: number): Promise<ChestPatch | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<ChestPatch>>(`/chest-patches/${id}`);
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async assignChestPatch(patchId: number, residentId: number | null): Promise<ChestPatch> {
+    const response = await apiClient.post<ApiResponse<ChestPatch>>(`/chest-patches/${patchId}/assign`, {
+      residentId,
+    });
+    return response.data.data;
+  },
+
+  async unassignChestPatch(patchId: number): Promise<ChestPatch> {
+    const response = await apiClient.post<ApiResponse<ChestPatch>>(`/chest-patches/${patchId}/unassign`);
+    return response.data.data;
+  },
+
+  async createChestPatch(data: Partial<ChestPatch>): Promise<ChestPatch> {
+    const response = await apiClient.post<ApiResponse<ChestPatch>>('/chest-patches', data);
+    return response.data.data;
+  },
+
+  async updateChestPatch(patchId: number, data: Partial<ChestPatch>): Promise<ChestPatch> {
+    const response = await apiClient.patch<ApiResponse<ChestPatch>>(`/chest-patches/${patchId}`, data);
+    return response.data.data;
+  },
+
+  async deleteChestPatch(patchId: number): Promise<boolean> {
+    const response = await apiClient.delete<ApiResponse<null>>(`/chest-patches/${patchId}`);
+    return response.data.code === 200;
+  },
+
+  // ==========================================
   // Fall Detection & Emergency Dispatch API
   // ==========================================
   async getLatestUnresolvedFall(residentId?: number): Promise<FallIncident | null> {
@@ -413,6 +573,17 @@ export const commandCenterService = {
       return response.data.data || [];
     } catch {
       return [];
+    }
+  },
+
+  async getFacilityGeoJson(floorNumber?: number): Promise<FacilityGeoJson | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<FacilityGeoJson>>('/facility/geojson', {
+        params: floorNumber ? { floorNumber } : undefined,
+      });
+      return response.data.data || null;
+    } catch {
+      return null;
     }
   },
 

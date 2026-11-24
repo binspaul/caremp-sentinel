@@ -17,6 +17,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Users,
+  Plus,
 } from 'lucide-react';
 import { Floor, RoomZone, FacilityZoneType } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
@@ -98,6 +99,22 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
   const showNotification = (text: string, type: 'success' | 'error' = 'success') => {
     setFeedbackMsg({ text, type });
     setTimeout(() => setFeedbackMsg(null), 4000);
+  };
+
+  const handleOpenAddRoom = () => {
+    setEditingRoom(null);
+    setRoomFloorId(selectedFloorId !== 'all' ? selectedFloorId : (floors[0]?.id || 1));
+    setRoomNumber('');
+    setRoomName('');
+    setRoomZoneType('suite');
+    setRoomIsSafe(true);
+    setRoomCapacity(1);
+    setRoomDesc('');
+    setRoomX(40);
+    setRoomY(40);
+    setRoomW(160);
+    setRoomH(140);
+    setIsRoomModalOpen(true);
   };
 
   const handleOpenEditRoom = (room: RoomZone) => {
@@ -220,17 +237,13 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
           </p>
         </div>
 
-        {onNavigateToMap && (
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <button
-              onClick={onNavigateToMap}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition cursor-pointer"
-            >
-              <MapPin className="w-4 h-4 text-cyan-500" />
-              <span>View Facility Map</span>
-            </button>
-          </div>
-        )}
+        <button
+          onClick={handleOpenAddRoom}
+          className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-emerald-500/20 transition-all cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Room</span>
+        </button>
       </div>
 
       {/* Toast Feedback */}
@@ -676,11 +689,11 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
 
       {/* Create / Edit Room Modal */}
       {isRoomModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/70 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <DoorOpen className="w-5 h-5 text-teal-500" />
+                <DoorOpen className="w-5 h-5 text-emerald-500" />
                 <span>{editingRoom ? `Edit Room ${editingRoom.roomNumber}` : 'Register New Room Zone'}</span>
               </h3>
               <button
@@ -700,7 +713,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                   <select
                     value={roomFloorId}
                     onChange={(e) => setRoomFloorId(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500 cursor-pointer"
                   >
                     {floors.map((f) => (
                       <option key={f.id} value={f.id}>
@@ -720,7 +733,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                     placeholder="e.g. 204 or S-101"
                     value={roomNumber}
                     onChange={(e) => setRoomNumber(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -735,7 +748,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                   placeholder="e.g. Eleanor Vance Suite or Sensory Garden Safe Zone"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                 />
               </div>
 
@@ -747,7 +760,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                   <select
                     value={roomZoneType}
                     onChange={(e) => setRoomZoneType(e.target.value as FacilityZoneType)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500 cursor-pointer"
                   >
                     {Object.entries(ZONE_TYPE_LABELS).map(([k, meta]) => (
                       <option key={k} value={k}>
@@ -767,7 +780,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                     max={50}
                     value={roomCapacity}
                     onChange={(e) => setRoomCapacity(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -824,7 +837,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                   placeholder="Notes regarding room fixtures, ensuite features, or wandering boundaries..."
                   value={roomDesc}
                   onChange={(e) => setRoomDesc(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                 />
               </div>
 
@@ -839,7 +852,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                       type="number"
                       value={roomX}
                       onChange={(e) => setRoomX(Number(e.target.value))}
-                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center"
+                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -848,7 +861,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                       type="number"
                       value={roomY}
                       onChange={(e) => setRoomY(Number(e.target.value))}
-                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center"
+                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -857,7 +870,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                       type="number"
                       value={roomW}
                       onChange={(e) => setRoomW(Number(e.target.value))}
-                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center"
+                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -866,7 +879,7 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                       type="number"
                       value={roomH}
                       onChange={(e) => setRoomH(Number(e.target.value))}
-                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center"
+                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-center focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                 </div>
@@ -876,13 +889,13 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsRoomModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold cursor-pointer shadow-xs"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-emerald-500/20 transition cursor-pointer"
                 >
                   {editingRoom ? 'Save Changes' : 'Register Room'}
                 </button>

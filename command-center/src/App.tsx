@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Video } from 'lucide-react';
+import {
+  Video,
+  Radio,
+  Signal,
+  ShieldCheck,
+  Scan,
+  Building2,
+  DoorOpen,
+  MapPin,
+} from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/auth/LoginPage';
@@ -17,15 +26,41 @@ import { EmergencyFallAlert } from './components/falls/EmergencyFallAlert';
 import { FallsHistoryModal } from './components/falls/FallsHistoryModal';
 import { FallsView } from './components/falls/FallsView';
 import { BandsView } from './components/bands/BandsView';
+import { RadarPodsView } from './components/radar-pods/RadarPodsView';
+import { ChestPatchesView } from './components/chest-patches/ChestPatchesView';
 import { FacilityMapView } from './components/facility/FacilityMapView';
 import { FloorsView } from './components/facility/FloorsView';
 import { RoomsView } from './components/facility/RoomsView';
 import { BeaconsView } from './components/facility/BeaconsView';
 import { RecentFallsAndResidents } from './components/dashboard/RecentFallsAndResidents';
+import { FleetStatusCards } from './components/dashboard/FleetStatusCards';
 import commandCenterService from './services/commandCenterService';
-import { DashboardCounters, Vital, Resident, FallIncident } from './types';
+import {
+  DashboardCounters,
+  Vital,
+  Resident,
+  FallIncident,
+  BandCounters,
+  RadarPodCounters,
+  ChestPatchCounters,
+  BeaconCounters,
+  Floor,
+} from './types';
 
 const AUTO_REFRESH_INTERVAL_SECONDS = 60;
+
+const DEVICE_SUB_TABS: Array<{ id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'bands', label: 'Bands', icon: Radio },
+  { id: 'beacons', label: 'Beacons', icon: Signal },
+  { id: 'chest-patches', label: 'Chest Patches', icon: ShieldCheck },
+  { id: 'radar-pods', label: 'Radar Pods', icon: Scan },
+];
+
+const FACILITY_SUB_TABS: Array<{ id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'floors', label: 'Floors', icon: Building2 },
+  { id: 'rooms', label: 'Rooms', icon: DoorOpen },
+  { id: 'map', label: 'Facility Map', icon: MapPin },
+];
 
 const CommandCenterApp: React.FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -44,6 +79,13 @@ const CommandCenterApp: React.FC = () => {
   const [latestFall, setLatestFall] = useState<FallIncident | null>(null);
   const [unresolvedFallCount, setUnresolvedFallCount] = useState<number>(0);
   const [recentFalls, setRecentFalls] = useState<FallIncident[]>([]);
+
+  // Hardware Fleet Counters & Facility Topology States
+  const [bandCounters, setBandCounters] = useState<BandCounters | null>(null);
+  const [radarCounters, setRadarCounters] = useState<RadarPodCounters | null>(null);
+  const [patchCounters, setPatchCounters] = useState<ChestPatchCounters | null>(null);
+  const [beaconCounters, setBeaconCounters] = useState<BeaconCounters | null>(null);
+  const [floors, setFloors] = useState<Floor[]>([]);
 
   // Dashboard Data State
   const [counters, setCounters] = useState<DashboardCounters>({
@@ -66,11 +108,26 @@ const CommandCenterApp: React.FC = () => {
   const loadDashboardData = useCallback(async () => {
     setIsDataLoading(true);
     try {
-      const [summary, latestUnresolved, fallCounters, fallsListRes] = await Promise.all([
+      const [
+        summary,
+        latestUnresolved,
+        fallCounters,
+        fallsListRes,
+        bandCountersRes,
+        radarCountersRes,
+        patchCountersRes,
+        beaconCountersRes,
+        floorsRes,
+      ] = await Promise.all([
         commandCenterService.getDashboardSummary(),
         commandCenterService.getLatestUnresolvedFall(),
         commandCenterService.getFallCounters(),
         commandCenterService.getFalls({ skip: 0, limit: 5 }),
+        commandCenterService.getBandCounters().catch(() => null),
+        commandCenterService.getRadarPodCounters().catch(() => null),
+        commandCenterService.getChestPatchCounters().catch(() => null),
+        commandCenterService.getBeaconCounters().catch(() => null),
+        commandCenterService.getFacilityFloors().catch(() => []),
       ]);
       setCounters(summary.counters);
       setRecentVitals(summary.recentVitals);
@@ -79,6 +136,11 @@ const CommandCenterApp: React.FC = () => {
       setLatestFall(latestUnresolved);
       setUnresolvedFallCount(fallCounters?.unresolved || (latestUnresolved ? 1 : 0));
       setRecentFalls(fallsListRes.data || []);
+      setBandCounters(bandCountersRes);
+      setRadarCounters(radarCountersRes);
+      setPatchCounters(patchCountersRes);
+      setBeaconCounters(beaconCountersRes);
+      setFloors(floorsRes);
       setLastUpdated(new Date());
       setSecondsRemaining(AUTO_REFRESH_INTERVAL_SECONDS);
     } catch (error) {
@@ -155,7 +217,11 @@ const CommandCenterApp: React.FC = () => {
       case 'falls':
         return 'Kinematic impact telemetry, cognitive freeze-of-gait falls, and emergency dispatch';
       case 'bands':
-        return 'Hardware sensor pod fleet inventory, battery telemetry, and resident pairing';
+        return 'Wearable biometric pulse telemetry fleet, optical PPG dual-wavelength sensors, and resident pairing';
+      case 'radar-pods':
+        return '60-GHz contact-free FMCW radar pod fleet, ballistocardiography, and bedhead occupancy';
+      case 'chest-patches':
+        return 'Continuous single-lead ECG hydrogel patches, cardiopulmonary acoustics, and skin adhesion monitoring';
       case 'residents':
         return 'Care recipient registry and cognitive/physiological baseline configurations';
       case 'users':
@@ -199,13 +265,89 @@ const CommandCenterApp: React.FC = () => {
             }}
           />
 
+          {/* Devices Sub-navigation Tabs */}
+          {DEVICE_SUB_TABS.some((t) => t.id === activeTab) && (
+            <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mr-2 shrink-0">
+                Devices:
+              </span>
+              <div className="flex items-center gap-2">
+                {DEVICE_SUB_TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer shrink-0 ${
+                        isActive
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-xs'
+                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Facility Sub-navigation Tabs */}
+          {FACILITY_SUB_TABS.some((t) => t.id === activeTab) && (
+            <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mr-2 shrink-0">
+                Facility:
+              </span>
+              <div className="flex items-center gap-2">
+                {FACILITY_SUB_TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer shrink-0 ${
+                        isActive
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-xs'
+                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <>
               {/* Top Summary Tiles */}
               <section aria-label="Operational Summary Counters">
                 <OverviewTiles
                   counters={counters}
-                  onTileClick={(tab) => setActiveTab(tab as any)}
+                  bandCounters={bandCounters}
+                  radarCounters={radarCounters}
+                  patchCounters={patchCounters}
+                  beaconCounters={beaconCounters}
+                  unresolvedFallCount={unresolvedFallCount}
+                  totalFloors={floors.length || 3}
+                  totalRooms={floors.reduce((acc, f) => acc + (f.zones?.length || 0), 0) || 18}
+                  onTileClick={(tab) => setActiveTab(tab)}
+                />
+              </section>
+
+              {/* Multi-Modal Hardware Fleet Telemetry */}
+              <section aria-label="Multi-Modal Device Fleets">
+                <FleetStatusCards
+                  bandCounters={bandCounters}
+                  radarCounters={radarCounters}
+                  patchCounters={patchCounters}
+                  beaconCounters={beaconCounters}
+                  onNavigate={(tab) => setActiveTab(tab)}
                 />
               </section>
 
@@ -247,6 +389,14 @@ const CommandCenterApp: React.FC = () => {
               onLaunchTelemedicine={(id) => {
                 setSelectedResidentId(id);
                 setIsTelemedicineModalOpen(true);
+              }}
+              onViewResidentVitals={(id) => {
+                setSelectedResidentId(id);
+                setActiveTab('vitals');
+              }}
+              onNavigateToRooms={(floorId) => {
+                setSelectedFloorForRooms(floorId || 'all');
+                setActiveTab('rooms');
               }}
             />
           )}
@@ -298,6 +448,22 @@ const CommandCenterApp: React.FC = () => {
 
           {activeTab === 'bands' && (
             <BandsView
+              lastUpdated={lastUpdated}
+              residents={residents}
+              onFleetUpdated={loadDashboardData}
+            />
+          )}
+
+          {activeTab === 'radar-pods' && (
+            <RadarPodsView
+              lastUpdated={lastUpdated}
+              residents={residents}
+              onFleetUpdated={loadDashboardData}
+            />
+          )}
+
+          {activeTab === 'chest-patches' && (
+            <ChestPatchesView
               lastUpdated={lastUpdated}
               residents={residents}
               onFleetUpdated={loadDashboardData}

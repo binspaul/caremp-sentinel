@@ -11,3 +11,11 @@
     font-family: 'JetBrains Mono', monospace;
   }
 }
+
+/* Leaflet Custom DivIcon Clean Resets */
+.leaflet-div-icon.custom-resident-marker,
+.leaflet-div-icon.custom-beacon-marker {
+  background: transparent !important;
+  border: none !important;
+}
+

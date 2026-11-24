@@ -238,7 +238,7 @@ export const FallDetailDrawer: React.FC<FallDetailDrawerProps> = ({
                   <span className="font-mono text-emerald-600 dark:text-emerald-400">
                     {incident.band.serialNumber}
                   </span>{' '}
-                  <span className="text-slate-400">({incident.band.deviceType})</span>
+                  <span className="text-slate-400">({incident.band.model || 'Bio-Band'})</span>
                 </div>
               </div>
             )}

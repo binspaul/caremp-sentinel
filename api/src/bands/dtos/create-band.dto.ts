@@ -8,7 +8,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { BandStatus, BandDeviceType } from '../entities/band.entity';
+import { BandStatus } from '../entities/band.entity';
 
 export class CreateBandDto {
   @IsString()
@@ -22,10 +22,6 @@ export class CreateBandDto {
   @IsString()
   @IsOptional()
   model?: string;
-
-  @IsEnum(BandDeviceType)
-  @IsOptional()
-  deviceType?: BandDeviceType;
 
   @IsString()
   @IsOptional()
