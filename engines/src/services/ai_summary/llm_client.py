@@ -14,14 +14,14 @@ except ImportError:
 
 DEFAULT_MODEL = os.getenv("LLM_MODEL", "gemma-4-26b-a4b-it")
 
-SYSTEM_PROMPT = """You are a warm, supportive health assistant writing directly to an elder care resident.
+SYSTEM_PROMPT = """You are a warm, supportive health assistant writing directly to a memory care resident.
 Summarise the resident's current wellness state based on the structured data provided.
 
 STRICT GUIDELINES:
 - Warm, empathetic, and encouraging tone.
 - Speak directly to the resident ("you", "your").
-- NEVER use clinical jargon, medical abbreviations (e.g. "HR", "BP", "HRV", "SpO2"), or numerical vitals values.
-- Focus on how they are doing and simple, actionable self-care advice (e.g., resting, drinking water).
+- NEVER use clinical jargon, medical abbreviations (e.g. "HR", "BP", "HRV", "SpO2", "NEWS2"), or numerical vitals values.
+- If late-afternoon restlessness, nighttime activity, or sleep rhythm shifts are noted, offer gentle reassurance, grounding suggestions (soft lighting, calm music, a warm drink, resting feet), and reassurance that caregivers are nearby.
 - If a resident name is given, use it as a warm personal touch alongside that direct "you" address.
 
 Respond in EXACTLY this format, two lines, nothing else:
@@ -39,8 +39,20 @@ def generate_template_summary(context: Dict[str, Any]) -> str:
     name_str = f", {name}" if name else ""
     category = context.get("category", "Good")
     score = context.get("score", 85)
+    sundowning = context.get("sundowning_status")
+    wandering = context.get("wandering_status")
+    circadian = context.get("circadian_status")
 
-    if category in ("Excellent", "Good") or score >= 75:
+    if sundowning in ("AGITATED", "SURGE_ALERT", "RESTLESS"):
+        headline = f"Take a gentle, quiet moment to unwind{name_str}."
+        summary = "The late afternoon can feel a bit restless. Dimming bright lights, sipping a warm cup of herbal tea, and resting your feet will help your body settle peacefully."
+    elif wandering in ("PERIMETER_ALERT", "NOCTURNAL_BED_EXIT", "PACING_LOOP"):
+        headline = f"Checking in to keep you safe and comfortable{name_str}."
+        summary = "We noticed you've been on your feet and moving about. Remember to take your time, and let a caregiver assist you whenever you need comfort or companionship."
+    elif circadian in ("DAY_NIGHT_REVERSAL", "MODERATE_IRREGULARITY"):
+        headline = f"Gentle reminder for your daily rhythm{name_str}."
+        summary = "Spending a little time in the bright daylight and staying gently active today will help you enjoy a deep, soothing sleep tonight."
+    elif category in ("Excellent", "Good") or score >= 75:
         headline = f"You're doing wonderfully today{name_str}!"
         summary = "Your daily rhythms are steady and balanced, and your body is well-rested. Keep enjoying your day!"
     elif category in ("Fair", "Watch") or score >= 60:
@@ -61,12 +73,19 @@ def _build_user_prompt(context: Dict[str, Any]) -> str:
 
     lines.append(f"Wellness score: {context['score']}/100 ({context['category']})")
 
+    if context.get("sundowning_status") and context["sundowning_status"] != "CALM":
+        lines.append(f"Afternoon state: {context['sundowning_status']} (late-afternoon restlessness)")
+    if context.get("wandering_status") and context["wandering_status"] != "NORMAL":
+        lines.append(f"Mobility/Safety state: {context['wandering_status']}")
+    if context.get("circadian_status") and context["circadian_status"] != "OPTIMAL":
+        lines.append(f"Sleep rhythm state: {context['circadian_status']}")
+
     if context.get("triggered_rule_descriptions"):
         lines.append("Things flagged:")
         for description in context["triggered_rule_descriptions"]:
             lines.append(f"- {description}")
     else:
-        lines.append("Nothing flagged - everything is within normal range.")
+        lines.append("Nothing flagged - rhythms are steady and comfortable.")
 
     if context.get("trends"):
         lines.append("Recent trends:")

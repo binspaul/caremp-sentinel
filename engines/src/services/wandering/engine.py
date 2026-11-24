@@ -23,6 +23,7 @@ class WanderingEngine(BaseEngine):
         self._zone_history: Dict[int, List[Tuple[datetime, str, str]]] = {}
         # In-memory bed exit tracking: resident_id -> (exit_timestamp, bed_zone_name)
         self._night_bed_exit: Dict[int, Optional[Tuple[datetime, str]]] = {}
+        self._last_assessment: Dict[int, WanderingAssessment] = {}
 
     @property
     def name(self) -> str:
@@ -32,6 +33,7 @@ class WanderingEngine(BaseEngine):
         """Utility to reset resident memory tracking (useful in tests and shifts)."""
         self._zone_history.pop(resident_id, None)
         self._night_bed_exit.pop(resident_id, None)
+        self._last_assessment.pop(resident_id, None)
 
     def assess_movement(
         self,
@@ -56,7 +58,7 @@ class WanderingEngine(BaseEngine):
         if not is_safe_perimeter or zone_type == "restricted":
             factors.append(f"Immediate Perimeter Breach: resident detected in restricted zone '{current_zone}' (Risk Score = 100.0)")
             action_alert = f"🚨 IMMEDIATE DOOR ALERT: Resident is at restricted exit '{current_zone}'. Dispatch security/caregiver immediately to prevent elopement!"
-            return WanderingAssessment(
+            assessment = WanderingAssessment(
                 resident_id=resident_id,
                 wandering_status="PERIMETER_ALERT",
                 elopement_risk="CRITICAL",
@@ -69,6 +71,8 @@ class WanderingEngine(BaseEngine):
                 contributing_factors=factors,
                 action_alert=action_alert
             )
+            self._last_assessment[resident_id] = assessment
+            return assessment
 
         # =========================================================================
         # Safe Interior Analysis: Update State History
@@ -169,7 +173,7 @@ class WanderingEngine(BaseEngine):
             elopement_risk = "LOW"
             action_alert = None
 
-        return WanderingAssessment(
+        assessment = WanderingAssessment(
             resident_id=resident_id,
             wandering_status=status,
             elopement_risk=elopement_risk,
@@ -182,6 +186,11 @@ class WanderingEngine(BaseEngine):
             contributing_factors=factors,
             action_alert=action_alert
         )
+        self._last_assessment[resident_id] = assessment
+        return assessment
+
+    def get_current_assessment(self, resident_id: int) -> Optional[WanderingAssessment]:
+        return self._last_assessment.get(resident_id)
 
     def process_reading(self, reading: VitalReading) -> Dict[str, Any]:
         """BaseEngine interface implementation."""

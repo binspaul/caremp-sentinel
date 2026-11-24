@@ -25,6 +25,7 @@ class SundowningEngine(BaseEngine):
     ):
         self.baseline_engine = baseline_engine or BaselineEngine()
         self.trend_engine = trend_engine or TrendEngine()
+        self._last_assessment: Dict[int, SundowningAssessment] = {}
 
     @property
     def name(self) -> str:
@@ -126,7 +127,7 @@ class SundowningEngine(BaseEngine):
             interventions.append("Gently guide resident to a comfortable seating area near natural soft light.")
             interventions.append("Engage in a quiet, low-demand activity (folding soft towels or looking at picture books).")
 
-        return SundowningAssessment(
+        assessment = SundowningAssessment(
             resident_id=resident_id,
             agitation_index=final_index,
             status=status,
@@ -136,6 +137,11 @@ class SundowningEngine(BaseEngine):
             contributing_factors=factors,
             recommended_interventions=interventions
         )
+        self._last_assessment[resident_id] = assessment
+        return assessment
+
+    def get_current_assessment(self, resident_id: int) -> Optional[SundowningAssessment]:
+        return self._last_assessment.get(resident_id)
 
     def process_reading(self, reading: VitalReading) -> Dict[str, Any]:
         assessment = self.assess_reading(reading)

@@ -315,3 +315,32 @@ def map_wandering(wandering_engine: Any, reading: VitalReading, location_data: O
         "contributingFactors": assessment.contributing_factors,
         "actionAlert": assessment.action_alert
     }
+
+
+def map_circadian(circadian_engine: Any, reading: VitalReading, sleep_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Maps CircadianEngine assessment into twin payload."""
+    sleep = sleep_data or {}
+    day_sleep = sleep.get("daytimeMinutes", 60)
+    night_sleep = sleep.get("totalDuration") or reading.total_sleep_time or 360
+    awakenings = sleep.get("awakenings", 2)
+    deep = sleep.get("deep") or reading.deep_sleep_time or 45
+
+    assessment = circadian_engine.assess_circadian_rhythm(
+        resident_id=reading.resident_id,
+        daytime_sleep_minutes=day_sleep,
+        nighttime_sleep_minutes=night_sleep,
+        night_awakenings=awakenings,
+        deep_sleep_minutes=deep
+    )
+    return {
+        "circadianScore": assessment.circadian_score,
+        "status": assessment.status,
+        "severity": assessment.severity,
+        "daytimeSleepMinutes": assessment.daytime_sleep_minutes,
+        "nighttimeSleepMinutes": assessment.nighttime_sleep_minutes,
+        "dayNightRatio": assessment.day_night_ratio,
+        "nightAwakenings": assessment.night_awakenings,
+        "deepSleepMinutes": assessment.deep_sleep_minutes,
+        "contributingFactors": assessment.contributing_factors,
+        "actionableAdvice": assessment.actionable_advice
+    }
