@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -75,7 +76,7 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
 
   const isCritical = spo2 < 91 || hr > 120 || sbp < 90;
 
-  const handleSendQuery = (textToSend?: string) => {
+  const handleSendQuery = async (textToSend?: string) => {
     const q = textToSend || inputQuery;
     if (!q.trim()) return;
 
@@ -90,6 +91,36 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
     setInputQuery('');
     setIsTyping(true);
 
+    const agentUrl = (import.meta as any).env?.VITE_AGENT_API_URL || 'http://localhost:8000/api/chat';
+    const targetResidentId = resident?.id || 1;
+
+    try {
+      // 1. Attempt live query to careMP Sentinel AI Agent (Gemini 3.8 Flash)
+      const res = await axios.post<{ response: string; status: string }>(
+        agentUrl,
+        {
+          message: q,
+          resident_id: targetResidentId,
+        },
+        { timeout: 25000 }
+      );
+
+      if (res.data?.response) {
+        const copilotMsg: ChatMessage = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'copilot',
+          text: res.data.response,
+          timestamp: 'Just now',
+        };
+        setChatMessages((prev) => [...prev, copilotMsg]);
+        setIsTyping(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Agent API unreachable, falling back to clinical rule copilot:', err);
+    }
+
+    // 2. Resilient local fallback if Agent server is offline
     setTimeout(() => {
       let reply = '';
       const lowerQ = q.toLowerCase();

@@ -38,6 +38,19 @@ from agent.tools.memory_tools import (
     update_short_term_memory,
     update_long_term_memory,
 )
+from agent.tools.genomics_tools import (
+    get_genomic_profile,
+    check_pharmacogenomics,
+)
+from agent.tools.telemedicine_tools import (
+    generate_telemedicine_brief,
+    get_deterioration_and_frailty,
+)
+from agent.tools.dementia_tools import (
+    get_sundowning_and_wandering,
+    get_circadian_sleep_profile,
+    generate_shift_handoff_brief,
+)
 from agent.memory.context_builder import build_additional_context
 
 logging.basicConfig(level=logging.INFO)
@@ -45,14 +58,24 @@ logger = logging.getLogger("caremp-sentinel.agent")
 
 app = FastAPI(
     title="careMP Sentinel Care Coach Agent API",
-    description="Conversational AI Care Coach with Digital Twin and Clinical Memory Integration",
-    version="1.0.0",
+    description="Conversational AI Care Coach with Digital Twin, Dementia Memory Care, and Clinical Telemetry Integration",
+    version="2.0.0",
 )
 
-# Enable CORS for local web dashboard and hosted frontend origins
+# Enable CORS for local web dashboard and hosted frontend origins (port 5173/5174/3000)
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:3000",
+    "*",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,6 +126,8 @@ def root():
             "/api/chat",
             "/api/twin/context/{resident_id}",
             "/api/twin/analytics/{resident_id}",
+            "/api/dementia/status/{resident_id}",
+            "/api/handoff/{resident_id}",
         ],
     }
 
@@ -127,6 +152,40 @@ def get_context(resident_id: str):
 def get_analytics(resident_id: str):
     res_id = int(resident_id) if resident_id.isdigit() else 1
     return get_twin_analytics(resident_id=res_id)
+
+
+@app.get("/api/dementia/status/{resident_id}")
+def get_dementia_status(resident_id: str):
+    """
+    Returns live sundowning agitation and spatial wandering metrics for dementia care monitoring.
+    """
+    res_id = int(resident_id) if resident_id.isdigit() else 1
+    sundowning = get_sundowning_and_wandering(resident_id=res_id)
+    circadian = get_circadian_sleep_profile(resident_id=res_id)
+    return {
+        "status": "success",
+        "residentId": res_id,
+        "sundowning": sundowning,
+        "circadian": circadian,
+        "agitationIndex": sundowning.get("agitationIndex", 76),
+        "alertLevel": sundowning.get("alertLevel", "SUNDOWNING_SURGE"),
+        "wanderingStatus": sundowning.get("wanderingStatus", "HALLWAY_PACING"),
+        "locationZone": sundowning.get("locationZone", "North Memory Corridor Gallery"),
+        "calmingSuggestions": sundowning.get("calmingSuggestions", []),
+        "circadianRegularityScore": circadian.get("circadianRegularityScore", 48),
+        "dayNightStatus": circadian.get("dayNightStatus", "MILD"),
+    }
+
+
+@app.get("/api/handoff/{resident_id}")
+@app.post("/api/handoff/{resident_id}")
+def post_shift_handoff(resident_id: str):
+    """
+    Generates a structured 60-second shift handoff briefing card for memory care nursing transitions.
+    """
+    res_id = int(resident_id) if resident_id.isdigit() else 1
+    brief = generate_shift_handoff_brief(resident_id=res_id)
+    return brief
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -157,6 +216,13 @@ def chat_endpoint(payload: ChatRequest):
                 get_twin_analytics,
                 update_short_term_memory,
                 update_long_term_memory,
+                get_genomic_profile,
+                check_pharmacogenomics,
+                generate_telemedicine_brief,
+                get_deterioration_and_frailty,
+                get_sundowning_and_wandering,
+                get_circadian_sleep_profile,
+                generate_shift_handoff_brief,
             ],
         }
         if "lite" not in MODEL_NAME:
