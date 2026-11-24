@@ -9,14 +9,14 @@ import { CreateFloorDto, UpdateFloorDto } from './dtos/floor.dto';
 import { CreateRoomZoneDto, UpdateRoomZoneDto } from './dtos/room-zone.dto';
 import { CreateBeaconDto, UpdateBeaconDto } from './dtos/beacon.dto';
 
-// Geographic anchor for careMP Sentinel Memory Care Facility (Brookline / Longwood Medical Campus)
+// Geographic anchor for careMP Sentinel Facility (Infopark Kochi, Kakkanad, Kerala, India)
 export const FACILITY_GEO_ANCHOR = {
-  lat: 42.3485,
-  lng: -71.1065,
+  lat: 10.0105,
+  lng: 76.3631,
   widthMeters: 60,
   heightMeters: 36,
   degLatPerMeter: 1 / 111111,
-  degLngPerMeter: 1 / (111111 * Math.cos(42.3485 * (Math.PI / 180))),
+  degLngPerMeter: 1 / (111111 * Math.cos(10.0105 * (Math.PI / 180))),
 };
 
 export function pixelToGeo(x: number, y: number, layoutWidth = 1000, layoutHeight = 600) {
@@ -695,7 +695,7 @@ export class FacilityService implements OnModuleInit {
     return {
       type: 'FeatureCollection',
       metadata: {
-        facility: 'careMP Sentinel Memory Care Campus',
+        facility: 'careMP Sentinel Campus (Infopark Kochi, India)',
         anchor: FACILITY_GEO_ANCHOR,
         activeLevel: floorNumber ? Number(floorNumber) : null,
         featureCount: features.length,

@@ -51,6 +51,11 @@ export const commandCenterService = {
     }
   },
 
+  async createResident(data: Partial<Resident> & Record<string, any>): Promise<Resident> {
+    const response = await apiClient.post<ApiResponse<Resident>>('/residents', data);
+    return response.data.data;
+  },
+
   // ==========================================
   // Vitals API
   // ==========================================

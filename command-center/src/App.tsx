@@ -491,12 +491,15 @@ const CommandCenterApp: React.FC = () => {
         <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
       </button>
 
-      {/* Vital Simulation Modal Dialog */}
+      {/* Test & Simulation Center Modal Dialog */}
       <SimulationModal
         isOpen={isSimulationModalOpen}
         onClose={() => setIsSimulationModalOpen(false)}
         onSimulated={handleVitalSimulated}
+        onMovementSimulated={loadDashboardData}
+        onFallSimulated={loadDashboardData}
         residents={residents}
+        floors={floors}
       />
 
       {/* AI Telemedicine Copilot Modal */}

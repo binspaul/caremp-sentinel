@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Activity, LogOut } from 'lucide-react';
+import { Sun, Moon, Zap, LogOut } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -101,15 +101,15 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Simulate Vitals Trigger (Icon Only) */}
+        {/* Simulation & Testing Center Trigger (Icon Only) */}
         {onOpenSimulation && (
           <button
             onClick={onOpenSimulation}
-            aria-label="Simulate Vitals"
-            title="Simulate Vital Conditions"
+            aria-label="Simulation & Testing Center"
+            title="Open Simulation & Testing Center (Vitals, Facility Movement, Geofence, Falls)"
             className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center"
           >
-            <Activity className="w-4 h-4" />
+            <Zap className="w-4 h-4" />
           </button>
         )}
 

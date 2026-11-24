@@ -11,15 +11,28 @@ import {
   Zap,
   RotateCcw,
   User,
+  Compass,
+  Footprints,
+  AlertTriangle,
+  Layers,
+  ShieldCheck,
+  ShieldAlert,
+  ArrowRight,
+  Flame,
+  Radio,
+  MapPin,
 } from 'lucide-react';
 import commandCenterService from '../../services/commandCenterService';
-import { Resident, Vital } from '../../types';
+import { Resident, Vital, Floor, RoomZone, FallSeverity } from '../../types';
 
 interface SimulationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSimulated?: (vital: Vital) => void;
+  onMovementSimulated?: () => void;
+  onFallSimulated?: () => void;
   residents?: Resident[];
+  floors?: Floor[];
 }
 
 interface ConditionOption {
@@ -176,63 +189,227 @@ const CONDITIONS: ConditionOption[] = [
   },
 ];
 
+interface MovementPreset {
+  id: string;
+  title: string;
+  residentId: number;
+  residentName: string;
+  targetZoneId: number;
+  targetZoneName: string;
+  isBreach: boolean;
+  badge: string;
+  badgeColor: string;
+}
+
+const MOVEMENT_PRESETS: MovementPreset[] = [
+  {
+    id: 'eleanor-stairwell',
+    title: '🚨 Trigger Egress Breach Alert',
+    residentId: 2,
+    residentName: 'Eleanor Vance',
+    targetZoneId: 214,
+    targetZoneName: 'Fire Stairwell B (Restricted)',
+    isBreach: true,
+    badge: 'Egress Breach',
+    badgeColor: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40',
+  },
+  {
+    id: 'eleanor-suite',
+    title: '✓ Return to Safe Baseline Suite',
+    residentId: 2,
+    residentName: 'Eleanor Vance',
+    targetZoneId: 204,
+    targetZoneName: 'Suite 204 (Private Memory Suite)',
+    isBreach: false,
+    badge: 'Safe Zone',
+    badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40',
+  },
+  {
+    id: 'marcus-calming',
+    title: '🌿 Transition to Calming Lounge',
+    residentId: 3,
+    residentName: 'Marcus Chen',
+    targetZoneId: 206,
+    targetZoneName: 'Snoezelen Calming Lounge',
+    isBreach: false,
+    badge: 'Safe Zone',
+    badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/40',
+  },
+  {
+    id: 'alex-garden',
+    title: '🌳 Outdoor Sensory Garden Visit',
+    residentId: 1,
+    residentName: 'Alex Rivera',
+    targetZoneId: 106,
+    targetZoneName: 'Sensory Garden (Ground Floor)',
+    isBreach: false,
+    badge: 'Safe Zone',
+    badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40',
+  },
+];
+
+interface FallPreset {
+  id: string;
+  title: string;
+  residentId: number;
+  residentName: string;
+  location: string;
+  severity: FallSeverity;
+  impactForceG: number;
+  orientationChangeDeg: number;
+  motionlessDurationSeconds: number;
+  clinicalDescription: string;
+}
+
+const FALL_PRESETS: FallPreset[] = [
+  {
+    id: 'fall-critical-bathroom',
+    title: '🚨 High-Impact Fall & Immobility',
+    residentId: 2,
+    residentName: 'Eleanor Vance',
+    location: 'Suite 204 Ensuite Bathroom',
+    severity: 'critical',
+    impactForceG: 3.8,
+    orientationChangeDeg: 84,
+    motionlessDurationSeconds: 45,
+    clinicalDescription: 'Sudden loss of postural balance while transferring in bathroom; acute 3.8g deceleration with prolonged immobility.',
+  },
+  {
+    id: 'fall-moderate-bedside',
+    title: '⚠️ Bedside Tumble with Disorientation',
+    residentId: 3,
+    residentName: 'Marcus Chen',
+    location: 'Suite 206 Bedside',
+    severity: 'moderate',
+    impactForceG: 2.3,
+    orientationChangeDeg: 62,
+    motionlessDurationSeconds: 22,
+    clinicalDescription: 'Unassisted night-time bed exit resulting in slide to carpet floor. Mild disorientation detected.',
+  },
+  {
+    id: 'fall-severe-ramp',
+    title: '⚠️ Slip on Sensory Garden Ramp',
+    residentId: 1,
+    residentName: 'Alex Rivera',
+    location: 'Sensory Garden West Ramp',
+    severity: 'severe',
+    impactForceG: 2.9,
+    orientationChangeDeg: 75,
+    motionlessDurationSeconds: 30,
+    clinicalDescription: 'Wet surface traction loss on garden transition ramp. Radar confirmed horizontal post-fall posture.',
+  },
+];
+
+type SimulationTab = 'vitals' | 'movement' | 'falls';
+
 export const SimulationModal: React.FC<SimulationModalProps> = ({
   isOpen,
   onClose,
   onSimulated,
+  onMovementSimulated,
+  onFallSimulated,
   residents: initialResidents,
+  floors: initialFloors,
 }) => {
+  const [activeTab, setActiveTab] = useState<SimulationTab>('vitals');
   const [residents, setResidents] = useState<Resident[]>(initialResidents || []);
-  const [isLoadingResidents, setIsLoadingResidents] = useState(false);
+  const [floors, setFloors] = useState<Floor[]>(initialFloors || []);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
+  // Vitals State
   const [selectedResidentId, setSelectedResidentId] = useState<number | null>(null);
   const [selectedConditionType, setSelectedConditionType] = useState<number>(2);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [simulatedResult, setSimulatedResult] = useState<Vital | null>(null);
+  const [isSubmittingVitals, setIsSubmittingVitals] = useState(false);
+  const [vitalsResult, setVitalsResult] = useState<Vital | null>(null);
+  const [vitalsError, setVitalsError] = useState<string | null>(null);
 
-  // Sync initial residents when prop updates
-  useEffect(() => {
-    if (initialResidents && initialResidents.length > 0) {
-      setResidents(initialResidents);
-      setSelectedResidentId((prev) =>
-        prev && initialResidents.some((r) => r.id === prev) ? prev : initialResidents[0].id,
-      );
-    }
-  }, [initialResidents]);
+  // Movement State
+  const [movementResidentId, setMovementResidentId] = useState<number | null>(null);
+  const [movementZoneId, setMovementZoneId] = useState<number | null>(null);
+  const [isSubmittingMovement, setIsSubmittingMovement] = useState(false);
+  const [movementResult, setMovementResult] = useState<{
+    success: boolean;
+    resident: string;
+    newLocation: string;
+    isSafePerimeter: boolean;
+    alertTriggered: boolean;
+    message: string;
+  } | null>(null);
+  const [movementError, setMovementError] = useState<string | null>(null);
 
-  // Load / refresh residents when modal opens
-  const fetchResidents = useCallback(async () => {
-    setIsLoadingResidents(true);
+  // Fall State
+  const [fallResidentId, setFallResidentId] = useState<number | null>(null);
+  const [fallLocation, setFallLocation] = useState<string>('Suite 204 Bathroom');
+  const [fallSeverity, setFallSeverity] = useState<FallSeverity>('critical');
+  const [fallImpactForce, setFallImpactForce] = useState<number>(3.8);
+  const [fallImmobilitySec, setFallImmobilitySec] = useState<number>(45);
+  const [isSubmittingFall, setIsSubmittingFall] = useState(false);
+  const [fallResult, setFallResult] = useState<string | null>(null);
+  const [fallError, setFallError] = useState<string | null>(null);
+
+  // Load / refresh residents & floors
+  const fetchData = useCallback(async () => {
+    setIsLoadingData(true);
     try {
-      const res = await commandCenterService.getResidents({ skip: 0, limit: 100 });
-      if (res.data && res.data.length > 0) {
-        setResidents(res.data);
+      const [resRes, floorsRes] = await Promise.all([
+        commandCenterService.getResidents({ skip: 0, limit: 100 }),
+        commandCenterService.getFacilityFloors().catch(() => []),
+      ]);
+
+      if (resRes.data && resRes.data.length > 0) {
+        setResidents(resRes.data);
         setSelectedResidentId((prev) =>
-          prev && res.data.some((r) => r.id === prev) ? prev : res.data[0].id,
+          prev && resRes.data.some((r) => r.id === prev) ? prev : resRes.data[0].id,
+        );
+        setMovementResidentId((prev) =>
+          prev && resRes.data.some((r) => r.id === prev) ? prev : resRes.data[0].id,
+        );
+        setFallResidentId((prev) =>
+          prev && resRes.data.some((r) => r.id === prev) ? prev : resRes.data[0].id,
         );
       }
+
+      if (floorsRes && floorsRes.length > 0) {
+        setFloors(floorsRes);
+        const firstZone = floorsRes[0]?.zones?.[0];
+        if (firstZone) {
+          setMovementZoneId(firstZone.id);
+        }
+      }
     } catch (err) {
-      console.error('Failed to load residents for simulation modal:', err);
+      console.error('Failed to load simulation data:', err);
     } finally {
-      setIsLoadingResidents(false);
+      setIsLoadingData(false);
     }
   }, []);
 
   useEffect(() => {
     if (isOpen) {
-      setError(null);
-      setSimulatedResult(null);
+      setVitalsError(null);
+      setVitalsResult(null);
+      setMovementError(null);
+      setMovementResult(null);
+      setFallError(null);
+      setFallResult(null);
 
       if (initialResidents && initialResidents.length > 0) {
         setResidents(initialResidents);
-        setSelectedResidentId((prev) =>
-          prev && initialResidents.some((r) => r.id === prev) ? prev : initialResidents[0].id,
-        );
+        const firstId = initialResidents[0].id;
+        setSelectedResidentId((prev) => prev ?? firstId);
+        setMovementResidentId((prev) => prev ?? firstId);
+        setFallResidentId((prev) => prev ?? firstId);
+      }
+      if (initialFloors && initialFloors.length > 0) {
+        setFloors(initialFloors);
+        const firstZone = initialFloors[0]?.zones?.[0];
+        if (firstZone) {
+          setMovementZoneId((prev) => prev ?? firstZone.id);
+        }
       }
 
-      fetchResidents();
+      fetchData();
     }
-  }, [isOpen, initialResidents, fetchResidents]);
+  }, [isOpen, initialResidents, initialFloors, fetchData]);
 
   // Handle escape key
   useEffect(() => {
@@ -250,39 +427,131 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
   const activeCondition = CONDITIONS.find((c) => c.type === selectedConditionType) || CONDITIONS[0];
   const selectedResident = residents.find((r) => r.id === selectedResidentId);
 
-  const handleRunSimulation = async () => {
+  const getResidentDisplayName = (r: Resident) => {
+    const name = `${r.firstName || ''} ${r.middleName ? `${r.middleName} ` : ''}${r.lastName || ''}`.trim();
+    return name || `Resident #${r.id}`;
+  };
+
+  // Flattened zones across all floors
+  const allZones: (RoomZone & { floorName: string; floorNum: number })[] = floors.flatMap((f) =>
+    (f.zones || []).map((z) => ({
+      ...z,
+      floorName: f.name,
+      floorNum: f.floorNumber,
+    })),
+  );
+
+  // 1. Trigger Vitals Simulation
+  const handleRunVitalsSimulation = async () => {
     if (!selectedResidentId) {
-      setError('Please select a resident to simulate telemetry for.');
+      setVitalsError('Please select a resident to simulate telemetry for.');
       return;
     }
 
-    setIsSubmitting(true);
-    setError(null);
+    setIsSubmittingVitals(true);
+    setVitalsError(null);
 
     try {
       const result = await commandCenterService.simulateVitals(
         selectedResidentId,
         selectedConditionType,
       );
-      setSimulatedResult(result);
+      setVitalsResult(result);
       if (onSimulated) {
         onSimulated(result);
       }
     } catch (err: any) {
       console.error('Simulation error:', err);
-      setError(
+      setVitalsError(
         err.response?.data?.message ||
           err.message ||
           'Failed to trigger telemetry simulation. Please try again.',
       );
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingVitals(false);
     }
   };
 
-  const getResidentDisplayName = (r: Resident) => {
-    const name = `${r.firstName || ''} ${r.middleName ? `${r.middleName} ` : ''}${r.lastName || ''}`.trim();
-    return name || `Resident #${r.id}`;
+  // 2. Trigger Movement Simulation
+  const handleRunMovementSimulation = async (resId?: number, zId?: number) => {
+    const rId = resId ?? movementResidentId;
+    const targetZ = zId ?? movementZoneId;
+
+    if (!rId || !targetZ) {
+      setMovementError('Please select both a resident and a target destination zone.');
+      return;
+    }
+
+    setIsSubmittingMovement(true);
+    setMovementError(null);
+
+    try {
+      const res = await commandCenterService.simulateResidentMovement(rId, targetZ);
+      setMovementResult(res);
+      if (onMovementSimulated) {
+        onMovementSimulated();
+      }
+    } catch (err: any) {
+      console.error('Movement simulation error:', err);
+      setMovementError(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to simulate resident movement. Please try again.',
+      );
+    } finally {
+      setIsSubmittingMovement(false);
+    }
+  };
+
+  // 3. Trigger Fall Simulation
+  const handleRunFallSimulation = async (preset?: FallPreset) => {
+    const rId = preset ? preset.residentId : fallResidentId;
+    if (!rId) {
+      setFallError('Please select a resident to simulate a fall incident for.');
+      return;
+    }
+
+    setIsSubmittingFall(true);
+    setFallError(null);
+
+    try {
+      const loc = preset ? preset.location : fallLocation;
+      const sev = preset ? preset.severity : fallSeverity;
+      const impact = preset ? preset.impactForceG : fallImpactForce;
+      const motionless = preset ? preset.motionlessDurationSeconds : fallImmobilitySec;
+      const desc = preset
+        ? preset.clinicalDescription
+        : `Simulated fall incident recorded at ${loc}. High deceleration impact (${impact}g) with motionless post-impact period (${motionless}s).`;
+
+      await commandCenterService.recordFall({
+        residentId: rId,
+        location: loc,
+        severity: sev,
+        impactForceG: impact,
+        motionlessDurationSeconds: motionless,
+        orientationChangeDeg: preset ? preset.orientationChangeDeg : 75,
+        clinicalDescription: desc,
+      });
+
+      const resObj = residents.find((r) => r.id === rId);
+      const name = resObj ? getResidentDisplayName(resObj) : `Resident #${rId}`;
+      setFallResult(
+        `🚨 Fall Incident Dispatched! ${sev.toUpperCase()} fall logged for ${name} at ${loc}. Emergency alert broadcast to all floor dashboards.`,
+      );
+
+      if (onFallSimulated) {
+        onFallSimulated();
+      }
+    } catch (err: any) {
+      console.error('Fall simulation error:', err);
+      setFallError(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to record simulated fall incident.',
+      );
+    } finally {
+      setIsSubmittingFall(false);
+    }
   };
 
   return createPortal(
@@ -303,211 +572,555 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                Simulate Vital Conditions
+                Test &amp; Simulation Center
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Inject synthetic physiological signals into the digital twin telemetry stream
+                Trigger synthetic hemodynamics, geofence movements, and emergency fall alerts
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
+            aria-label="Close Simulation Modal"
             className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Mode Navigation Tabs */}
+        <div className="flex items-center border-b border-slate-200 dark:border-slate-800 px-6 pt-3 bg-slate-50/40 dark:bg-slate-950/20 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('vitals')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'vitals'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Vital Telemetry</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('movement')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'movement'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Footprints className="w-4 h-4" />
+            <span>Facility Movement &amp; Geofence</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('falls')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'falls'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            <span>Emergency Falls</span>
+          </button>
+        </div>
+
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* Success Banner */}
-          {simulatedResult && (
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div className="flex-1 text-xs">
-                <p className="font-semibold text-emerald-900 dark:text-emerald-200">
-                  Telemetry Successfully Dispatched!
-                </p>
-                <p className="text-emerald-700 dark:text-emerald-400 mt-0.5">
-                  Log #{simulatedResult.id} recorded for{' '}
-                  <span className="font-semibold">
-                    {selectedResident ? getResidentDisplayName(selectedResident) : `Resident #${selectedResidentId}`}
-                  </span>{' '}
-                  ({activeCondition.name}). HR:{' '}
-                  {Math.round(simulatedResult.heartRate)} bpm, BP:{' '}
-                  {Math.round(simulatedResult.systolicBP)}/{Math.round(simulatedResult.diastolicBP)} mmHg, SpO2:{' '}
-                  {simulatedResult.oxygenSaturation}%.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Error Banner */}
-          {error && (
-            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 flex items-start gap-3">
-              <AlertOctagon className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-              <div className="text-xs">
-                <p className="font-semibold">Simulation Dispatch Failed</p>
-                <p className="mt-0.5 opacity-90">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Target Resident Selector */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-emerald-500" />
-                Target Care Recipient
-              </label>
-              {isLoadingResidents && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
-                  <RotateCcw className="w-2.5 h-2.5 animate-spin" />
-                  Loading...
-                </span>
+        <div className="p-5 sm:p-6 space-y-4 max-h-[65vh] overflow-y-auto">
+          {/* TAB 1: VITALS TELEMETRY */}
+          {activeTab === 'vitals' && (
+            <div className="space-y-4">
+              {/* Success Banner */}
+              {vitalsResult && (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs">
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-200">
+                      Telemetry Successfully Dispatched!
+                    </p>
+                    <p className="text-emerald-700 dark:text-emerald-400 mt-0.5">
+                      Log #{vitalsResult.id} recorded for{' '}
+                      <span className="font-semibold">
+                        {selectedResident ? getResidentDisplayName(selectedResident) : `Resident #${selectedResidentId}`}
+                      </span>{' '}
+                      ({activeCondition.name}). HR: {Math.round(vitalsResult.heartRate)} bpm, BP:{' '}
+                      {Math.round(vitalsResult.systolicBP)}/{Math.round(vitalsResult.diastolicBP)} mmHg, SpO2:{' '}
+                      {vitalsResult.oxygenSaturation}%.
+                    </p>
+                  </div>
+                </div>
               )}
-            </div>
 
-            <select
-              value={selectedResidentId ?? ''}
-              onChange={(e) => setSelectedResidentId(e.target.value ? Number(e.target.value) : null)}
-              disabled={isLoadingResidents && residents.length === 0}
-              className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:border-emerald-500 transition cursor-pointer disabled:opacity-50"
-            >
-              {residents.length === 0 ? (
-                <option value="" disabled>
-                  {isLoadingResidents ? 'Loading care recipients...' : 'No residents enrolled'}
-                </option>
-              ) : (
-                residents.map((r) => {
-                  const fullName = getResidentDisplayName(r);
-                  return (
-                    <option key={r.id} value={r.id}>
-                      {fullName} &bull; UHID: {r.uhid || `ID: ${r.id}`}
+              {/* Error Banner */}
+              {vitalsError && (
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 flex items-start gap-3">
+                  <AlertOctagon className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    <p className="font-semibold">Simulation Dispatch Failed</p>
+                    <p className="mt-0.5 opacity-90">{vitalsError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Target Resident Selector */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-emerald-500" />
+                    Target Care Recipient
+                  </label>
+                  {isLoadingData && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                      <RotateCcw className="w-2.5 h-2.5 animate-spin" />
+                      Loading...
+                    </span>
+                  )}
+                </div>
+
+                <select
+                  value={selectedResidentId ?? ''}
+                  onChange={(e) => setSelectedResidentId(e.target.value ? Number(e.target.value) : null)}
+                  disabled={isLoadingData && residents.length === 0}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-hidden focus:border-emerald-500 transition cursor-pointer disabled:opacity-50"
+                >
+                  {residents.length === 0 ? (
+                    <option value="" disabled>
+                      {isLoadingData ? 'Loading care recipients...' : 'No residents enrolled'}
                     </option>
-                  );
-                })
+                  ) : (
+                    residents.map((r) => {
+                      const fullName = getResidentDisplayName(r);
+                      return (
+                        <option key={r.id} value={r.id}>
+                          {fullName} &bull; UHID: {r.uhid || `ID: ${r.id}`}
+                        </option>
+                      );
+                    })
+                  )}
+                </select>
+              </div>
+
+              {/* Condition Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-emerald-500" />
+                  Condition Pattern
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                  {CONDITIONS.map((cond) => {
+                    const isSelected = selectedConditionType === cond.type;
+                    return (
+                      <button
+                        key={cond.type}
+                        type="button"
+                        onClick={() => setSelectedConditionType(cond.type)}
+                        className={`text-left p-3 rounded-2xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 dark:border-emerald-500/70 shadow-xs ring-1 ring-emerald-500/50'
+                            : 'bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span
+                            className={`text-xs font-bold leading-tight ${
+                              isSelected
+                                ? 'text-emerald-900 dark:text-emerald-300'
+                                : 'text-slate-800 dark:text-slate-200'
+                            }`}
+                          >
+                            {cond.name}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block ${cond.badgeColor}`}
+                        >
+                          {cond.badge}
+                        </span>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">
+                          {cond.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Simulated Hemodynamic Projection Tiles */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                <div className="text-[11px] font-mono uppercase text-slate-400 font-semibold mb-2">
+                  Simulated Hemodynamic Projections
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Heart className="w-3.5 h-3.5 text-rose-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Heart Rate</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeCondition.metrics.hr}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Activity className="w-3.5 h-3.5 text-purple-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">HRV (SDNN)</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeCondition.metrics.hrv}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Zap className="w-3.5 h-3.5 text-amber-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Blood Pressure</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeCondition.metrics.bp}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Wind className="w-3.5 h-3.5 text-cyan-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Oxygen (SpO2)</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeCondition.metrics.spo2}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1">
+                    <Thermometer className="w-3.5 h-3.5 text-orange-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Body Temp</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeCondition.metrics.temp}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: FACILITY MOVEMENT & GEOFENCING */}
+          {activeTab === 'movement' && (
+            <div className="space-y-4">
+              {/* Movement Result Banner */}
+              {movementResult && (
+                <div
+                  className={`p-3.5 rounded-2xl border flex items-start gap-3 ${
+                    movementResult.alertTriggered
+                      ? 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                  }`}
+                >
+                  {movementResult.alertTriggered ? (
+                    <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 text-xs">
+                    <p className="font-semibold">{movementResult.message}</p>
+                    <p className="mt-0.5 opacity-90">
+                      {movementResult.resident} &rarr; {movementResult.newLocation} ({movementResult.isSafePerimeter ? 'Safe Perimeter' : 'Restricted Egress Zone'})
+                    </p>
+                  </div>
+                </div>
               )}
-            </select>
-          </div>
 
-          {/* Condition Selector */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-emerald-500" />
-              Condition Pattern
-            </label>
+              {/* Movement Error Banner */}
+              {movementError && (
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 flex items-start gap-3">
+                  <AlertOctagon className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    <p className="font-semibold">Movement Simulation Failed</p>
+                    <p className="mt-0.5 opacity-90">{movementError}</p>
+                  </div>
+                </div>
+              )}
 
-            <select
-              value={selectedConditionType}
-              onChange={(e) => setSelectedConditionType(Number(e.target.value))}
-              className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-            >
-              {CONDITIONS.map((cond) => (
-                <option key={cond.type} value={cond.type}>
-                  {cond.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              {/* Quick Preset Movement Scenarios */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5 text-amber-500" />
+                  Quick Movement Scenarios
+                </label>
 
-          {/* Condition Context & Description Badge */}
-          <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-3 text-xs">
-            <span className="text-slate-600 dark:text-slate-400 line-clamp-1">
-              {activeCondition.description}
-            </span>
-            <span
-              className={`shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${activeCondition.badgeColor}`}
-            >
-              {activeCondition.badge}
-            </span>
-          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {MOVEMENT_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      disabled={isSubmittingMovement}
+                      onClick={() => handleRunMovementSimulation(preset.residentId, preset.targetZoneId)}
+                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 hover:bg-slate-100/80 dark:hover:bg-slate-900 transition text-left cursor-pointer group disabled:opacity-50"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                          {preset.title}
+                        </span>
+                      </div>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block ${preset.badgeColor}`}>
+                        {preset.badge}
+                      </span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        {preset.residentName} &rarr; {preset.targetZoneName}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* Simulated Hemodynamic Projection Tiles */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 font-semibold">
-                Simulated Hemodynamic Projections
-              </span>
-              <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                Pattern #{activeCondition.type}
-              </span>
+              {/* Custom Movement Simulator */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                  <Footprints className="w-3.5 h-3.5 text-emerald-500" />
+                  Custom Resident &amp; Zone Transition
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                      Resident
+                    </label>
+                    <select
+                      value={movementResidentId ?? ''}
+                      onChange={(e) => setMovementResidentId(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 transition cursor-pointer"
+                    >
+                      {residents.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {getResidentDisplayName(r)} (ID: {r.id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                      Target Destination Zone
+                    </label>
+                    <select
+                      value={movementZoneId ?? ''}
+                      onChange={(e) => setMovementZoneId(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 transition cursor-pointer"
+                    >
+                      {allZones.map((z) => (
+                        <option key={z.id} value={z.id}>
+                          {z.floorName} &bull; Room {z.roomNumber} ({z.name}) {z.isSafePerimeter ? '✓ Safe' : '🚨 Restricted'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Heart className="w-3.5 h-3.5 text-rose-500 mx-auto mb-1" />
-                <div className="text-[10px] text-slate-400">Heart Rate</div>
-                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                  {activeCondition.metrics.hr}
+          {/* TAB 3: EMERGENCY FALL INCIDENTS */}
+          {activeTab === 'falls' && (
+            <div className="space-y-4">
+              {/* Fall Result Banner */}
+              {fallResult && (
+                <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-700 dark:text-rose-300 flex items-start gap-3">
+                  <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs">
+                    <p className="font-semibold text-rose-900 dark:text-rose-200">
+                      Emergency Incident Dispatched!
+                    </p>
+                    <p className="mt-0.5">{fallResult}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Fall Error Banner */}
+              {fallError && (
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 flex items-start gap-3">
+                  <AlertOctagon className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    <p className="font-semibold">Fall Simulation Failed</p>
+                    <p className="mt-0.5 opacity-90">{fallError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Fall Presets */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+                  Emergency Fall Scenario Presets
+                </label>
+
+                <div className="space-y-2">
+                  {FALL_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      disabled={isSubmittingFall}
+                      onClick={() => handleRunFallSimulation(preset)}
+                      className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-rose-500/50 hover:bg-rose-500/5 dark:hover:bg-rose-950/20 transition text-left cursor-pointer group flex items-center justify-between gap-3 disabled:opacity-50"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400">
+                            {preset.title}
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 uppercase font-bold">
+                            {preset.severity}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {preset.residentName} &bull; {preset.location} ({preset.impactForceG}g deceleration, {preset.motionlessDurationSeconds}s immobility)
+                        </p>
+                      </div>
+
+                      <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 shrink-0 flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                        Dispatch &rarr;
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Activity className="w-3.5 h-3.5 text-emerald-500 mx-auto mb-1" />
-                <div className="text-[10px] text-slate-400">HRV (rMSSD)</div>
-                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                  {activeCondition.metrics.hrv}
+              {/* Custom Fall Builder */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-rose-500" />
+                  Custom Fall Incident Dispatcher
                 </div>
-              </div>
 
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Wind className="w-3.5 h-3.5 text-cyan-500 mx-auto mb-1" />
-                <div className="text-[10px] text-slate-400">Blood Pressure</div>
-                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                  {activeCondition.metrics.bp}
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                      Resident
+                    </label>
+                    <select
+                      value={fallResidentId ?? ''}
+                      onChange={(e) => setFallResidentId(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-rose-500 transition cursor-pointer"
+                    >
+                      {residents.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {getResidentDisplayName(r)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Activity className="w-3.5 h-3.5 text-blue-500 mx-auto mb-1" />
-                <div className="text-[10px] text-slate-400">Oxygen Saturation</div>
-                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                  {activeCondition.metrics.spo2}
-                </div>
-              </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                      Severity Rating
+                    </label>
+                    <select
+                      value={fallSeverity}
+                      onChange={(e) => setFallSeverity(e.target.value as FallSeverity)}
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-rose-500 transition cursor-pointer"
+                    >
+                      <option value="critical">🚨 Critical (Deceleration &gt;3.5g, Immobility &gt;30s)</option>
+                      <option value="severe">⚠️ Severe (Deceleration 2.5-3.5g)</option>
+                      <option value="moderate">ℹ️ Moderate (Controlled bed tumble or slide)</option>
+                    </select>
+                  </div>
 
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1">
-                <Thermometer className="w-3.5 h-3.5 text-orange-500 mx-auto mb-1" />
-                <div className="text-[10px] text-slate-400">Body Temp</div>
-                <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                  {activeCondition.metrics.temp}
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                      Fall Location (Room / Area)
+                    </label>
+                    <input
+                      type="text"
+                      value={fallLocation}
+                      onChange={(e) => setFallLocation(e.target.value)}
+                      placeholder="e.g. Suite 204 Bathroom, Corridor 4B, Sensory Garden Ramp"
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-rose-500 transition"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Modal Footer */}
-        <div className="p-5 sm:p-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 bg-slate-50/70 dark:bg-slate-950/40">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="px-4 py-2.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-          >
-            Close
-          </button>
+        <div className="p-5 sm:p-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-950/40">
+          <span className="text-[11px] font-mono text-slate-400">
+            {activeTab === 'vitals' && 'Mode: Physiological Stream Injection'}
+            {activeTab === 'movement' && 'Mode: BLE Anchor Spatial Relocation'}
+            {activeTab === 'falls' && 'Mode: High-G Emergency Dispatch'}
+          </span>
 
-          <button
-            type="button"
-            onClick={handleRunSimulation}
-            disabled={isSubmitting || !selectedResidentId || residents.length === 0}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
-          >
-            {isSubmitting ? (
-              <>
-                <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-                <span>Simulating...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-3.5 h-3.5" />
-                <span>Trigger Simulation</span>
-              </>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmittingVitals || isSubmittingMovement || isSubmittingFall}
+              className="px-4 py-2.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            >
+              Close
+            </button>
+
+            {activeTab === 'vitals' && (
+              <button
+                type="button"
+                onClick={handleRunVitalsSimulation}
+                disabled={isSubmittingVitals || !selectedResidentId || residents.length === 0}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+              >
+                {isSubmittingVitals ? (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Simulating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Trigger Vitals Simulation</span>
+                  </>
+                )}
+              </button>
             )}
-          </button>
+
+            {activeTab === 'movement' && (
+              <button
+                type="button"
+                onClick={() => handleRunMovementSimulation()}
+                disabled={isSubmittingMovement || !movementResidentId || !movementZoneId}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+              >
+                {isSubmittingMovement ? (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Relocating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Footprints className="w-3.5 h-3.5" />
+                    <span>Simulate Movement</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {activeTab === 'falls' && (
+              <button
+                type="button"
+                onClick={() => handleRunFallSimulation()}
+                disabled={isSubmittingFall || !fallResidentId}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/25 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+              >
+                {isSubmittingFall ? (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Dispatching...</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Dispatch Fall Incident</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>,

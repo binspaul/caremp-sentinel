@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { RoomZone, Floor, ResidentPresence } from '../../types';
 import { Badge } from '../common/Badge';
-import { pixelToGeo } from '../../utils/facilityGeo';
 import {
   X,
   DoorOpen,
@@ -68,14 +67,13 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = ({
   const isOccupied = roomOccupants.length > 0;
   const hasBreach = roomOccupants.some((p) => !p.isSafePerimeter) || !zone.isSafePerimeter;
 
-  // Calculate GPS coordinates
+  // Blueprint placement metrics
   const zX = Number(zone.x ?? 40);
   const zY = Number(zone.y ?? 40);
   const zW = Number(zone.width ?? 160);
   const zH = Number(zone.height ?? 140);
   const layoutW = Number(floor?.layoutWidth || 1000);
   const layoutH = Number(floor?.layoutHeight || 600);
-  const centerGeo = pixelToGeo(zX + zW / 2, zY + zH / 2, layoutW, layoutH);
 
   // Zone type styling & icon resolution
   const getZoneTypeDetails = (zoneType: string) => {
@@ -449,31 +447,31 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = ({
               )}
             </div>
 
-            {/* Physical Dimensions & World GPS Coordinates */}
+            {/* Blueprint Dimensions & Placement */}
             <div className="space-y-3">
               <h3 className="text-xs font-mono uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Compass className="w-4 h-4 text-amber-500" />
-                <span>Indoor &amp; Geographic Coordinates</span>
+                <Compass className="w-4 h-4 text-emerald-500" />
+                <span>Blueprint Dimensions &amp; Placement</span>
               </h3>
 
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs font-mono">
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-slate-400 font-sans">Blueprint Canvas:</span>
+                  <span className="text-slate-400 font-sans">Canvas Placement:</span>
                   <span>
-                    X: {zX}px, Y: {zY}px ({zW} × {zH}px)
+                    X: {zX}px, Y: {zY}px
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-slate-400 font-sans">OpenStreetMap Lat:</span>
-                  <span>{centerGeo.lat.toFixed(7)}° N</span>
+                  <span className="text-slate-400 font-sans">Dimensions:</span>
+                  <span>{zW}px × {zH}px</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-slate-400 font-sans">OpenStreetMap Lng:</span>
-                  <span>{centerGeo.lng.toFixed(7)}° W</span>
+                  <span className="text-slate-400 font-sans">Floor Area:</span>
+                  <span>{(zW * zH).toLocaleString()} sq px</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/60 dark:border-slate-800">
-                  <span className="text-slate-400 font-sans">Campus Anchor:</span>
-                  <span>Brookline Health Campus</span>
+                  <span className="text-slate-400 font-sans">Facility Level:</span>
+                  <span>{floorName} (Canvas: {layoutW} × {layoutH}px)</span>
                 </div>
               </div>
             </div>
