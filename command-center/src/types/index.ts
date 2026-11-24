@@ -62,6 +62,7 @@ export interface Resident {
   referenceOxygenSaturation?: number;
   referenceBodyTemperature?: number;
   fallRiskScore?: number;
+  healthScore?: number;
   hasFallHistory?: boolean;
   roomNumber?: string;
   createdAt: string;

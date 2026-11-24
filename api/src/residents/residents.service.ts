@@ -277,6 +277,7 @@ export class ResidentsService {
         specialNotes: dto.specialNotes?.trim() || '',
         status: dto.status ?? 1,
         fallRiskScore: dto.fallRiskScore ?? 25,
+        healthScore: dto.healthScore ?? 85,
         hasFallHistory: dto.hasFallHistory ?? false,
         roomNumber: dto.roomNumber?.trim() || null,
         referenceHeartRate: dto.referenceHeartRate ?? 75.0,

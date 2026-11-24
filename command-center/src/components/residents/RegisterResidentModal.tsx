@@ -50,6 +50,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
 
   const [fallRiskScore, setFallRiskScore] = useState<number>(35);
   const [hasFallHistory, setHasFallHistory] = useState<boolean>(false);
+  const [healthScore, setHealthScore] = useState<number>(85);
 
   const [referenceHeartRate, setReferenceHeartRate] = useState<number>(74);
   const [referenceSystolicBP, setReferenceSystolicBP] = useState<number>(120);
@@ -154,6 +155,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
         zoneId: selectedZoneId !== '' ? Number(selectedZoneId) : undefined,
         fallRiskScore: Number(fallRiskScore),
         hasFallHistory,
+        healthScore: Number(healthScore),
         referenceHeartRate: Number(referenceHeartRate) || 75,
         referenceSystolicBP: Number(referenceSystolicBP) || 120,
         referenceDiastolicBP: Number(referenceDiastolicBP) || 80,
@@ -444,6 +446,33 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      Overall Health Score: <span className="font-mono font-bold">{healthScore}/100</span>
+                    </label>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                        healthScore >= 80
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          : healthScore >= 60
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                          : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                      }`}
+                    >
+                      {healthScore >= 80 ? 'Optimal' : healthScore >= 60 ? 'Moderate' : 'Critical Attention'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={healthScore}
+                    onChange={(e) => setHealthScore(Number(e.target.value))}
+                    className="w-full accent-emerald-600 cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                       Fall Risk Assessment Score: <span className="font-mono font-bold">{fallRiskScore}/100</span>
                     </label>
                     <span
@@ -464,21 +493,21 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                     max="100"
                     value={fallRiskScore}
                     onChange={(e) => setFallRiskScore(Number(e.target.value))}
-                    className="w-full accent-emerald-600 cursor-pointer"
+                    className="w-full accent-rose-500 cursor-pointer"
                   />
                 </div>
+              </div>
 
-                <div className="flex items-center pt-2">
-                  <label className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={hasFallHistory}
-                      onChange={(e) => setHasFallHistory(e.target.checked)}
-                      className="w-4 h-4 rounded text-emerald-600 border-slate-300 dark:border-slate-700 focus:ring-emerald-500"
-                    />
-                    <span className="font-medium">Documented Prior Fall Incident History</span>
-                  </label>
-                </div>
+              <div className="flex items-center pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+                <label className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hasFallHistory}
+                    onChange={(e) => setHasFallHistory(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600 border-slate-300 dark:border-slate-700 focus:ring-emerald-500"
+                  />
+                  <span className="font-medium">Documented Prior Fall Incident History</span>
+                </label>
               </div>
 
               {/* Baseline Vital Inputs */}

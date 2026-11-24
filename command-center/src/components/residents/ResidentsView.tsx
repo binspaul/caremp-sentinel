@@ -404,18 +404,34 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Status */}
+                      {/* Status & Health */}
                       <td className="px-4 py-3">
-                        {r.status === 1 ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Active Monitoring
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 text-[11px]">
-                            Discharged
-                          </span>
-                        )}
+                        <div className="flex flex-col gap-1 items-start">
+                          {r.status === 1 ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Active Monitoring
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 text-[11px]">
+                              Discharged
+                            </span>
+                          )}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-medium">Health:</span>
+                            <span
+                              className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                                (r.healthScore ?? 85) >= 80
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : (r.healthScore ?? 85) >= 60
+                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                  : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                              }`}
+                            >
+                              {r.healthScore ?? 85}/100
+                            </span>
+                          </div>
+                        </div>
                       </td>
 
                       {/* Actions */}

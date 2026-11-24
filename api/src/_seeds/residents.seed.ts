@@ -419,6 +419,8 @@ export async function seedSingleResident(
       weight: item.resident.weight,
       weightUnit: WeightUnit.KG,
       status: 1,
+      healthScore: 88,
+      fallRiskScore: 25,
       isActive: true,
       isDeleted: false,
       userId: user.id,

@@ -80,6 +80,12 @@ export class CreateResidentDto {
   @Max(100)
   fallRiskScore?: number;
 
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(100)
+  healthScore?: number;
+
   @IsBoolean()
   @IsOptional()
   hasFallHistory?: boolean;

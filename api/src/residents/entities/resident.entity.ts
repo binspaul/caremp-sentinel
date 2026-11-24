@@ -276,6 +276,9 @@ export class Resident {
   @Column({ type: 'integer', nullable: true, default: 25 })
   fallRiskScore: number;
 
+  @Column({ type: 'integer', nullable: true, default: 85 })
+  healthScore: number;
+
   @Column({ type: 'boolean', default: false })
   hasFallHistory: boolean;
 

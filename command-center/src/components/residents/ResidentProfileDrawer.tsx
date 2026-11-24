@@ -118,30 +118,47 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
           {/* Body Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Quick Demographics Cards */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
                 <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
                   Age
                 </span>
-                <p className="text-base font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
                   {resident.age ? `${resident.age} yrs` : 'N/A'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
                 <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
                   Gender
                 </span>
-                <p className="text-base font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
                   {genderLabel}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
+                  Health Score
+                </span>
+                <p
+                  className={`text-sm font-bold font-mono mt-0.5 ${
+                    (resident.healthScore ?? 85) >= 80
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : (resident.healthScore ?? 85) >= 60
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}
+                >
+                  {resident.healthScore ?? 85}/100
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
                 <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
                   Twin ID
                 </span>
-                <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
                   #{resident.id}
                 </p>
               </div>
