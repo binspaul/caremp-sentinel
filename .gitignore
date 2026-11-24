@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+
+# Environment variables
+.env
+*.env
+!.env.example
+
+# Dependencies & Build
+node_modules/
+dist/
+build/
+.DS_Store
+
+# Local runtime data
+.pgdata/
