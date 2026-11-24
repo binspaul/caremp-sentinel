@@ -30,6 +30,11 @@ from agent.tools.telemedicine_tools import (
     generate_telemedicine_brief,
     get_deterioration_and_frailty,
 )
+from agent.tools.dementia_tools import (
+    get_sundowning_and_wandering,
+    get_circadian_sleep_profile,
+    generate_shift_handoff_brief,
+)
 from agent.memory.context_builder import build_additional_context
 
 
@@ -115,8 +120,43 @@ def run_component_tests():
     print(f"  [OK] Generated 30s Telehealth Brief for: {brief['patientName']}")
     print(f"  [OK] Action Protocol: {brief['actionProtocol']}")
 
+    # 11. Test Dementia Sundowning & Wandering
+    print("\n[11] Testing get_sundowning_and_wandering()...")
+    sundowning = get_sundowning_and_wandering(resident_id=1)
+    assert "agitationIndex" in sundowning, "agitationIndex missing!"
+    assert sundowning["alertLevel"] in ("CALM", "RESTLESS", "SUNDOWNING_SURGE")
+    assert sundowning["wanderingStatus"] in ("SAFE_IN_ROOM", "HALLWAY_PACING", "NOCTURNAL_BED_EXIT", "PERIMETER_ALERT")
+    assert "locationZone" in sundowning
+    assert len(sundowning["calmingSuggestions"]) >= 1
+    print(f"  [OK] Agitation Index: {sundowning['agitationIndex']}/100 ({sundowning['alertLevel']})")
+    print(f"  [OK] Wandering Status: {sundowning['wanderingStatus']} at '{sundowning['locationZone']}'")
+    print(f"  [OK] Calming Anchor: {sundowning['calmingSuggestions'][0]}")
+
+    # 12. Test Circadian Sleep Profile
+    print("\n[12] Testing get_circadian_sleep_profile()...")
+    circadian = get_circadian_sleep_profile(resident_id=1)
+    assert "dayNapMinutes" in circadian
+    assert "nightSleepMinutes" in circadian
+    assert "sleepFragmentationEvents" in circadian
+    assert 0 <= circadian["circadianRegularityScore"] <= 100
+    assert circadian["dayNightStatus"] in ("NORMAL", "MILD", "SEVERE_REVERSAL")
+    print(f"  [OK] Circadian Regularity Score: {circadian['circadianRegularityScore']}/100 ({circadian['dayNightStatus']})")
+    print(f"  [OK] Day Nap: {circadian['dayNapMinutes']}m | Night Sleep: {circadian['nightSleepMinutes']}m | Awakenings: {circadian['sleepFragmentationEvents']}")
+
+    # 13. Test 60-Second Shift Handoff Card
+    print("\n[13] Testing generate_shift_handoff_brief()...")
+    handoff = generate_shift_handoff_brief(resident_id=1)
+    assert "vitalsSummary" in handoff
+    assert "behavioralObservations" in handoff
+    assert "mealsHydration" in handoff
+    assert "eveningWatchOuts" in handoff
+    assert len(handoff["eveningWatchOuts"]) >= 1
+    print(f"  [OK] Shift Handoff for: {handoff['residentName']} ({handoff['diagnosis']})")
+    print(f"  [OK] NEWS2 Score: {handoff['vitalsSummary'].get('news2Score')}")
+    print(f"  [OK] Evening Watch-out: {handoff['eveningWatchOuts'][0]}")
+
     print("\n" + "=" * 60)
-    print("  ALL SENTINEL COMPONENT TESTS PASSED SUCCESSFULLY! (10/10)")
+    print("  ALL SENTINEL COMPONENT TESTS PASSED SUCCESSFULLY! (13/13)")
     print("=" * 60)
 
 

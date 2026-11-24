@@ -18,6 +18,7 @@ class DeteriorationEngine(BaseEngine):
     def __init__(self):
         # In-memory cache of daytime systolic BP baselines for dipping calculations: resident_id -> float
         self._daytime_sbp_cache: Dict[int, float] = {}
+        self._last_assessment: Dict[int, DeteriorationAssessment] = {}
 
     @property
     def name(self) -> str:
@@ -62,13 +63,18 @@ class DeteriorationEngine(BaseEngine):
         else:
             priority = "ROUTINE"
 
-        return DeteriorationAssessment(
+        assessment = DeteriorationAssessment(
             resident_id=reading.resident_id,
             news2=news2,
             sepsis=sepsis,
             nocturnal=nocturnal,
             overall_clinical_priority=priority
         )
+        self._last_assessment[reading.resident_id] = assessment
+        return assessment
+
+    def get_current_assessment(self, resident_id: int) -> Optional[DeteriorationAssessment]:
+        return self._last_assessment.get(resident_id)
 
     def process_reading(self, reading: VitalReading) -> Dict[str, Any]:
         assessment = self.assess_reading(reading)

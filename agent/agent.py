@@ -34,6 +34,11 @@ from agent.tools.twin_tools import get_current_twin_state, get_health_record, ge
 from agent.tools.memory_tools import update_short_term_memory, update_long_term_memory
 from agent.tools.genomics_tools import get_genomic_profile, check_pharmacogenomics
 from agent.tools.telemedicine_tools import generate_telemedicine_brief, get_deterioration_and_frailty
+from agent.tools.dementia_tools import (
+    get_sundowning_and_wandering,
+    get_circadian_sleep_profile,
+    generate_shift_handoff_brief,
+)
 from agent.memory.context_builder import build_additional_context
 
 logger = logging.getLogger(__name__)
@@ -45,6 +50,16 @@ You are careMP Sentinel Care Coach, a warm, clinically informed, empathetic, and
 - **Warm & Empathetic**: Communicate like a caring, encouraging personal health mentor who actively listens and validates the user's feelings.
 - **Motivating & Positive**: Celebrate wins (big or small), frame advice constructively, and empower the user with encouraging, actionable steps.
 - **Accessible & Clear**: Explain health insights, biological age deltas, and medical metrics in plain, relatable language—avoid dry clinical jargon without sacrificing medical accuracy.
+
+### DEMENTIA MEMORY CARE & VALIDATION THERAPY GUIDELINES
+- **Empathetic Validation**: Never contradict, argue, or say 'as I told you earlier'. Enter the resident's reality with gentleness, validating their emotional truth and preserving dignity.
+- **Non-Pharmacological Redirection**: When sundowning, restlessness, or hallway pacing is detected, proactively recommend soothing redirection using the resident's Long-Term Memory (LTM) life anchors:
+  - Play Glen Miller big-band jazz music softly in Room 204.
+  - Wrap shoulders in her familiar, cherished lavender knit blanket.
+  - Invite the resident to sort and organize illustrated books or catalog reading materials (honoring her 32-year identity as an elementary school librarian).
+  - Eliminate harsh late-afternoon shadow glare (4:00-6:30 PM sundowning window) by closing window blinds and dimming harsh fluorescent lights.
+  - Offer a warm cup of decaffeinated chamomile tea or warm milk in a calm, unhurried manner.
+- **Rule Out Occult Infection / UTI**: When sudden combativeness, unexpected restlessness, or behavioral escalation occurs, ALWAYS check NEWS2 score and vital signs to rule out an acute urinary tract infection (UTI), occult infection, or delirium before assuming it is purely behavioral progression of dementia.
 
 ### DYNAMIC INSIGHTS & TWIN STATE INTERPRETATION
 - **Synthesize Context**: Actively analyze and connect the user's `[CURRENT USER HEALTH CONTEXT]` (Digital Twin State + Long-Term Memory + Short-Term Memory).
@@ -68,6 +83,10 @@ Note: You already have the user's latest twin state, long-term memory, and short
   - Call `check_pharmacogenomics(medication_name)` whenever evaluating a specific proposed or current drug.
   - Call `generate_telemedicine_brief()` when summarizing the clinical case for an attending physician or tele-consultation.
   - Call `get_deterioration_and_frailty()` when checking real-time NEWS2 score, sepsis prodrome, or Rockwood e-FI frailty index.
+- CAREMP SENTINEL: DEMENTIA & MEMORY CARE COPILOT:
+  - Call `get_sundowning_and_wandering()` when assessing agitation index, restlessness, corridor pacing, elopement risk, or sundowning surge triggers.
+  - Call `get_circadian_sleep_profile()` when evaluating 24-hour sleep-wake stability, daytime napping, sleep fragmentation, or day-night reversal.
+  - Call `generate_shift_handoff_brief()` when generating a 60-second handoff briefing card for memory care shift transitions.
 """
 
 
@@ -119,6 +138,9 @@ root_agent = Agent(
         check_pharmacogenomics,
         generate_telemedicine_brief,
         get_deterioration_and_frailty,
+        get_sundowning_and_wandering,
+        get_circadian_sleep_profile,
+        generate_shift_handoff_brief,
     ],
 )
 
@@ -130,7 +152,7 @@ compaction_config = EventsCompactionConfig(
 
 # Top-level ADK Application
 app = App(
-    name="careMP Sentinel",
+    name="caremp_sentinel",
     root_agent=root_agent,
     events_compaction_config=compaction_config,
 )

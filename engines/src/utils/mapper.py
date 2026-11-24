@@ -273,3 +273,74 @@ def map_frailty(frailty_engine: Any, reading: VitalReading, chronological_age: O
         "contributingFactors": assessment.contributing_factors,
         "longevityInterventions": assessment.longevity_interventions
     }
+
+
+def map_sundowning(sundowning_engine: Any, reading: VitalReading) -> Dict[str, Any]:
+    """Maps SundowningEngine assessment into twin payload."""
+    assessment = sundowning_engine.assess_reading(reading)
+    return {
+        "agitationIndex": assessment.agitation_index,
+        "status": assessment.status,
+        "severity": assessment.severity,
+        "isSundowningWindow": assessment.is_sundowning_window,
+        "advanceNoticeMinutes": assessment.advance_notice_minutes,
+        "contributingFactors": assessment.contributing_factors,
+        "recommendedInterventions": assessment.recommended_interventions
+    }
+
+
+def map_wandering(wandering_engine: Any, reading: VitalReading, location_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Maps WanderingEngine assessment into twin payload."""
+    location = location_data or {}
+    zone_name = location.get("zone") or location.get("currentZone") or location.get("name") or "North Memory Corridor Gallery"
+    zone_type = location.get("zoneType") or "corridor"
+    is_safe = location.get("isSafePerimeter", True)
+
+    assessment = wandering_engine.assess_movement(
+        resident_id=reading.resident_id,
+        current_zone=zone_name,
+        zone_type=zone_type,
+        is_safe_perimeter=is_safe,
+        reading=reading
+    )
+    return {
+        "wanderingStatus": assessment.wandering_status,
+        "elopementRisk": assessment.elopement_risk,
+        "riskScore": assessment.risk_score,
+        "currentLocation": assessment.current_location,
+        "isSafeZone": assessment.is_safe_zone,
+        "nightBedExit": assessment.night_bed_exit,
+        "pacingLoopCount": assessment.pacing_loop_count,
+        "minutesOutOfBed": assessment.minutes_out_of_bed,
+        "contributingFactors": assessment.contributing_factors,
+        "actionAlert": assessment.action_alert
+    }
+
+
+def map_circadian(circadian_engine: Any, reading: VitalReading, sleep_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Maps CircadianEngine assessment into twin payload."""
+    sleep = sleep_data or {}
+    day_sleep = sleep.get("daytimeMinutes", 60)
+    night_sleep = sleep.get("totalDuration") or reading.total_sleep_time or 360
+    awakenings = sleep.get("awakenings", 2)
+    deep = sleep.get("deep") or reading.deep_sleep_time or 45
+
+    assessment = circadian_engine.assess_circadian_rhythm(
+        resident_id=reading.resident_id,
+        daytime_sleep_minutes=day_sleep,
+        nighttime_sleep_minutes=night_sleep,
+        night_awakenings=awakenings,
+        deep_sleep_minutes=deep
+    )
+    return {
+        "circadianScore": assessment.circadian_score,
+        "status": assessment.status,
+        "severity": assessment.severity,
+        "daytimeSleepMinutes": assessment.daytime_sleep_minutes,
+        "nighttimeSleepMinutes": assessment.nighttime_sleep_minutes,
+        "dayNightRatio": assessment.day_night_ratio,
+        "nightAwakenings": assessment.night_awakenings,
+        "deepSleepMinutes": assessment.deep_sleep_minutes,
+        "contributingFactors": assessment.contributing_factors,
+        "actionableAdvice": assessment.actionable_advice
+    }

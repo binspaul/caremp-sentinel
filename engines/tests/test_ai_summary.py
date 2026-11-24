@@ -71,3 +71,51 @@ def test_ai_summary_generates_when_ready_without_key(monkeypatch):
     assert "headline" in result
     assert "summary" in result
     assert "Rose" in result["headline"]
+
+
+def test_ai_summary_dementia_sundowning_unwind():
+    """Verify that when late-afternoon restlessness is present, summary suggests quiet unwinding."""
+    context = {
+        "resident_name": "Eleanor",
+        "category": "Watch",
+        "score": 50,
+        "sundowning_status": "AGITATED"
+    }
+    text = generate_template_summary(context)
+    headline, summary = parse_summary(text)
+
+    assert "Eleanor" in headline
+    assert "unwind" in headline.lower() or "quiet" in headline.lower()
+    assert "rest" in summary.lower() or "tea" in summary.lower() or "lights" in summary.lower()
+
+
+def test_ai_summary_dementia_wandering_safety():
+    """Verify that wandering or nocturnal bed exit triggers comforting safety guidance."""
+    context = {
+        "resident_name": "George",
+        "category": "Watch",
+        "score": 55,
+        "wandering_status": "NOCTURNAL_BED_EXIT"
+    }
+    text = generate_template_summary(context)
+    headline, summary = parse_summary(text)
+
+    assert "George" in headline
+    assert "safe" in headline.lower() or "caregiver" in summary.lower()
+    assert "moving" in summary.lower() or "assist" in summary.lower()
+
+
+def test_ai_summary_dementia_circadian_rhythm():
+    """Verify that sleep inversion triggers gentle daylight rhythm guidance."""
+    context = {
+        "resident_name": "Clara",
+        "category": "Watch",
+        "score": 55,
+        "circadian_status": "DAY_NIGHT_REVERSAL"
+    }
+    text = generate_template_summary(context)
+    headline, summary = parse_summary(text)
+
+    assert "Clara" in headline
+    assert "rhythm" in headline.lower()
+    assert "daylight" in summary.lower() or "sleep" in summary.lower()

@@ -9,7 +9,10 @@ import logging
 import re
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None
 
 from .config import (
     USE_MOCK_API,
@@ -27,6 +30,7 @@ from .mock_data import (
     MOCK_STM_STORE,
     MOCK_GENOMICS_PROFILES,
     MOCK_DETERIORATION_PROFILES,
+    MOCK_DEMENTIA_PROFILES,
 )
 
 logger = logging.getLogger(__name__)
@@ -369,6 +373,178 @@ class ApiClient:
             "recommendedImmediateActions": sepsis.get("clinicalIndicators", [])
         }
         return brief
+
+    # --- careMP Sentinel: Dementia Memory Care & Validation Telemetry ---
+
+    def get_sundowning_and_wandering(self, resident_id: Any) -> Dict[str, Any]:
+        """
+        Retrieves real-time sundowning agitation metrics and wandering/spatial safety status.
+        Returns agitationIndex, alertLevel, wanderingStatus, locationZone, and calmingSuggestions.
+        """
+        res_id = parse_resident_id(resident_id)
+        if self.use_mock:
+            dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
+            sundowning = dementia.get("sundowning", {})
+            return {
+                "residentId": res_id,
+                "agitationIndex": sundowning.get("agitationIndex", 76),
+                "alertLevel": sundowning.get("alertLevel", "SUNDOWNING_SURGE"),
+                "wanderingStatus": sundowning.get("wanderingStatus", "HALLWAY_PACING"),
+                "locationZone": sundowning.get("locationZone", "North Memory Corridor Gallery"),
+                "isSundowningWindow": sundowning.get("isSundowningWindow", True),
+                "advanceNoticeMinutes": sundowning.get("advanceNoticeMinutes", 35),
+                "calmingSuggestions": sundowning.get("calmingSuggestions", []),
+            }
+
+        url = f"{ENGINES_API_URL}/pipeline"
+        twin = self.get_digital_twin(res_id)
+        try:
+            response = requests.post(url, json=twin, timeout=5)
+            if response.status_code == 200:
+                insights = response.json().get("healthInsights", {})
+                sundowning_data = insights.get("sundowning", {})
+                wandering_data = insights.get("wandering", {})
+                status_raw = sundowning_data.get("status", "SUNDOWNING_SURGE")
+                alert_level = status_raw if status_raw in ("CALM", "RESTLESS", "SUNDOWNING_SURGE") else "SUNDOWNING_SURGE"
+                return {
+                    "residentId": res_id,
+                    "agitationIndex": sundowning_data.get("agitationIndex", 76),
+                    "alertLevel": alert_level,
+                    "wanderingStatus": wandering_data.get("wanderingStatus", "HALLWAY_PACING"),
+                    "locationZone": wandering_data.get("currentLocation", "North Memory Corridor Gallery"),
+                    "isSundowningWindow": sundowning_data.get("isSundowningWindow", True),
+                    "advanceNoticeMinutes": sundowning_data.get("advanceNoticeMinutes", 35),
+                    "calmingSuggestions": sundowning_data.get("recommendedInterventions") or MOCK_DEMENTIA_PROFILES[1]["sundowning"]["calmingSuggestions"],
+                }
+        except Exception as e:
+            logger.warning(f"Sundowning/wandering query failed ({e}), using mock.")
+
+        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
+        sundowning = dementia.get("sundowning", {})
+        return {
+            "residentId": res_id,
+            "agitationIndex": sundowning.get("agitationIndex", 76),
+            "alertLevel": sundowning.get("alertLevel", "SUNDOWNING_SURGE"),
+            "wanderingStatus": sundowning.get("wanderingStatus", "HALLWAY_PACING"),
+            "locationZone": sundowning.get("locationZone", "North Memory Corridor Gallery"),
+            "isSundowningWindow": sundowning.get("isSundowningWindow", True),
+            "advanceNoticeMinutes": sundowning.get("advanceNoticeMinutes", 35),
+            "calmingSuggestions": sundowning.get("calmingSuggestions", []),
+        }
+
+    def get_circadian_sleep_profile(self, resident_id: Any) -> Dict[str, Any]:
+        """
+        Retrieves 24-hour circadian sleep-wake rhythm regularity and day-night reversal metrics.
+        Returns dayNapMinutes, nightSleepMinutes, sleepFragmentationEvents, circadianRegularityScore, and dayNightStatus.
+        """
+        res_id = parse_resident_id(resident_id)
+        if self.use_mock:
+            dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
+            circ = dementia.get("circadian", {})
+            return {
+                "residentId": res_id,
+                "dayNapMinutes": circ.get("dayNapMinutes", 110),
+                "nightSleepMinutes": circ.get("nightSleepMinutes", 290),
+                "sleepFragmentationEvents": circ.get("sleepFragmentationEvents", 5),
+                "circadianRegularityScore": circ.get("circadianRegularityScore", 48),
+                "dayNightStatus": circ.get("dayNightStatus", "MILD"),
+                "deepSleepMinutes": circ.get("deepSleepMinutes", 42),
+                "dayNightRatio": circ.get("dayNightRatio", 0.38),
+                "actionableAdvice": circ.get("actionableAdvice", []),
+            }
+
+        url = f"{ENGINES_API_URL}/circadian"
+        twin = self.get_digital_twin(res_id)
+        try:
+            response = requests.post(url, json=twin, timeout=5)
+            if response.status_code == 200:
+                insights = response.json().get("healthInsights", {})
+                circ_data = insights.get("circadian", {})
+                status_raw = circ_data.get("status", "MILD_DRIFT")
+                day_night_status = "MILD"
+                if "NORMAL" in status_raw:
+                    day_night_status = "NORMAL"
+                elif "SEVERE" in status_raw or "REVERSAL" in status_raw:
+                    day_night_status = "SEVERE_REVERSAL"
+                return {
+                    "residentId": res_id,
+                    "dayNapMinutes": circ_data.get("daytimeSleepMinutes", 110),
+                    "nightSleepMinutes": circ_data.get("nighttimeSleepMinutes", 290),
+                    "sleepFragmentationEvents": circ_data.get("nightAwakenings", 5),
+                    "circadianRegularityScore": circ_data.get("circadianScore", 48),
+                    "dayNightStatus": day_night_status,
+                    "deepSleepMinutes": circ_data.get("deepSleepMinutes", 42),
+                    "dayNightRatio": circ_data.get("dayNightRatio", 0.38),
+                    "actionableAdvice": circ_data.get("actionableAdvice", []),
+                }
+        except Exception as e:
+            logger.warning(f"Circadian query failed ({e}), using mock.")
+
+        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
+        circ = dementia.get("circadian", {})
+        return {
+            "residentId": res_id,
+            "dayNapMinutes": circ.get("dayNapMinutes", 110),
+            "nightSleepMinutes": circ.get("nightSleepMinutes", 290),
+            "sleepFragmentationEvents": circ.get("sleepFragmentationEvents", 5),
+            "circadianRegularityScore": circ.get("circadianRegularityScore", 48),
+            "dayNightStatus": circ.get("dayNightStatus", "MILD"),
+            "deepSleepMinutes": circ.get("deepSleepMinutes", 42),
+            "dayNightRatio": circ.get("dayNightRatio", 0.38),
+            "actionableAdvice": circ.get("actionableAdvice", []),
+        }
+
+    def generate_shift_handoff_brief(self, resident_id: Any) -> Dict[str, Any]:
+        """
+        Synthesizes a structured 60-second shift handoff card with vitalsSummary,
+        behavioralObservations, mealsHydration, and eveningWatchOuts.
+        """
+        res_id = parse_resident_id(resident_id)
+        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
+        handoff = dementia.get("shiftHandoff", {})
+        twin = self.get_digital_twin(res_id)
+
+        return {
+            "residentId": res_id,
+            "residentName": twin.get("name", "Eleanor Vance"),
+            "diagnosis": twin.get("diagnosis", "FAST Stage 5 Moderate Alzheimer's Disease"),
+            "handoffTimestamp": datetime.now(timezone.utc).isoformat(),
+            "vitalsSummary": handoff.get("vitalsSummary", {
+                "heartRate": 88,
+                "bloodPressure": "136/84 mmHg",
+                "respirationRate": 21,
+                "spo2": 95,
+                "bodyTemperature": 37.4,
+                "news2Score": 5,
+                "clinicalAlert": "MODERATE_ACUITY (NEWS2 = 5) - Monitor for occult infection / UTI"
+            }),
+            "behavioralObservations": handoff.get("behavioralObservations", {
+                "agitationIndex": 76,
+                "alertLevel": "SUNDOWNING_SURGE",
+                "wanderingStatus": "HALLWAY_PACING",
+                "location": "North Memory Corridor Gallery",
+                "mood": "Restless, looking for elementary school library keys, pacing hallway",
+                "validationTherapyResponse": "Responded positively to book sorting invitation and tactile blanket"
+            }),
+            "mealsHydration": handoff.get("mealsHydration", {
+                "breakfast": "Ate pureed oatmeal (85% consumed)",
+                "lunch": "Ate 70% of pureed chicken and vegetable soup; 400 mL fluids consumed",
+                "medicationAdherence": "Refused breakfast oral pills at 8:15 AM due to minor gum sensitivity; ate pureed oatmeal. Re-offered with soft applesauce."
+            }),
+            "eveningWatchOuts": handoff.get("eveningWatchOuts", [
+                "Sundowning surge window active (4:00-6:30 PM); close blinds against harsh shadow patterns",
+                "Hallway corridor pacing active; monitor egress beacons and fire exit doors",
+                "NEWS2 score of 5: rule out acute occult UTI or silent infection before attributing combativeness solely to dementia",
+                "Validate concerns gently—never argue, contradict, or say 'as I told you earlier'"
+            ]),
+            "summary": (
+                f"60-Second Shift Handover for {twin.get('name', 'Eleanor Vance')}: "
+                f"Experiencing late-afternoon sundowning surge (Agitation Index: 76) with corridor pacing. "
+                f"NEWS2 score of 5 warrants screening for occult UTI. "
+                f"Refused breakfast pills due to gum sensitivity; re-offered with applesauce. "
+                f"Non-pharmacological calming anchors: Glen Miller jazz, lavender blanket, and book sorting."
+            )
+        }
 
 
 # Global singleton instance

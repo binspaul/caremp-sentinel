@@ -2,6 +2,11 @@ from .twin_tools import get_current_twin_state, get_health_record, get_twin_anal
 from .memory_tools import update_short_term_memory, update_long_term_memory
 from .genomics_tools import get_genomic_profile, check_pharmacogenomics
 from .telemedicine_tools import generate_telemedicine_brief, get_deterioration_and_frailty
+from .dementia_tools import (
+    get_sundowning_and_wandering,
+    get_circadian_sleep_profile,
+    generate_shift_handoff_brief,
+)
 
 __all__ = [
     "get_current_twin_state",
@@ -13,4 +18,7 @@ __all__ = [
     "check_pharmacogenomics",
     "generate_telemedicine_brief",
     "get_deterioration_and_frailty",
+    "get_sundowning_and_wandering",
+    "get_circadian_sleep_profile",
+    "generate_shift_handoff_brief",
 ]
