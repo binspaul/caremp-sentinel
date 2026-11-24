@@ -40,3 +40,5 @@ class DigitalTwinPayload(BaseModel):
     genomics: Optional[Dict[str, Any]] = None
     deterioration: Optional[Dict[str, Any]] = None
     frailty: Optional[Dict[str, Any]] = None
+    sundowning: Optional[Dict[str, Any]] = None
+    wandering: Optional[Dict[str, Any]] = None

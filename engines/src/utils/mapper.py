@@ -273,3 +273,45 @@ def map_frailty(frailty_engine: Any, reading: VitalReading, chronological_age: O
         "contributingFactors": assessment.contributing_factors,
         "longevityInterventions": assessment.longevity_interventions
     }
+
+
+def map_sundowning(sundowning_engine: Any, reading: VitalReading) -> Dict[str, Any]:
+    """Maps SundowningEngine assessment into twin payload."""
+    assessment = sundowning_engine.assess_reading(reading)
+    return {
+        "agitationIndex": assessment.agitation_index,
+        "status": assessment.status,
+        "severity": assessment.severity,
+        "isSundowningWindow": assessment.is_sundowning_window,
+        "advanceNoticeMinutes": assessment.advance_notice_minutes,
+        "contributingFactors": assessment.contributing_factors,
+        "recommendedInterventions": assessment.recommended_interventions
+    }
+
+
+def map_wandering(wandering_engine: Any, reading: VitalReading, location_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Maps WanderingEngine assessment into twin payload."""
+    location = location_data or {}
+    zone_name = location.get("zone") or location.get("currentZone") or location.get("name") or "North Memory Corridor Gallery"
+    zone_type = location.get("zoneType") or "corridor"
+    is_safe = location.get("isSafePerimeter", True)
+
+    assessment = wandering_engine.assess_movement(
+        resident_id=reading.resident_id,
+        current_zone=zone_name,
+        zone_type=zone_type,
+        is_safe_perimeter=is_safe,
+        reading=reading
+    )
+    return {
+        "wanderingStatus": assessment.wandering_status,
+        "elopementRisk": assessment.elopement_risk,
+        "riskScore": assessment.risk_score,
+        "currentLocation": assessment.current_location,
+        "isSafeZone": assessment.is_safe_zone,
+        "nightBedExit": assessment.night_bed_exit,
+        "pacingLoopCount": assessment.pacing_loop_count,
+        "minutesOutOfBed": assessment.minutes_out_of_bed,
+        "contributingFactors": assessment.contributing_factors,
+        "actionAlert": assessment.action_alert
+    }
