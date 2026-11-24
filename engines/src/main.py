@@ -10,6 +10,8 @@ from .services.ai_summary import AISummaryEngine
 from .services.genomics import GenomicsEngine
 from .services.deterioration import DeteriorationEngine
 from .services.frailty import FrailtyEngine
+from .services.sundowning import SundowningEngine
+from .services.wandering import WanderingEngine
 from .utils import mapper
 from .config import settings
 
@@ -38,6 +40,8 @@ ai_summary_engine = AISummaryEngine(baseline_engine, trend_engine, correlation_e
 genomics_engine = GenomicsEngine()
 deterioration_engine = DeteriorationEngine()
 frailty_engine = FrailtyEngine()
+sundowning_engine = SundowningEngine(baseline_engine, trend_engine)
+wandering_engine = WanderingEngine(baseline_engine)
 
 # Pre-seed Resident 1 (Alex Rivera) with clinically grounded Biotech & Genomic profile
 genomics_engine.register_profile(
@@ -67,7 +71,7 @@ def health_check():
     return {
         "status": "ok",
         "app": settings.APP_NAME,
-        "sentinel_suite": ["baseline", "trend", "correlation", "healthy_ageing", "genomics", "deterioration", "frailty", "ai_summary"]
+        "sentinel_suite": ["baseline", "trend", "correlation", "healthy_ageing", "genomics", "deterioration", "frailty", "sundowning", "wandering", "ai_summary"]
     }
 
 
@@ -249,6 +253,51 @@ def run_frailty(twin: Dict[str, Any]) -> Dict[str, Any]:
     return updated_twin
 
 
+@app.post("/engines/sundowning")
+@app.post("/api/engines/sundowning")
+def run_sundowning(twin: Dict[str, Any]) -> Dict[str, Any]:
+    """Computes real-time Sundowning & Agitation Index (0-100) with 30-45 min advance warning."""
+    resident_id = _require_resident_id(twin)
+    reading = mapper.build_reading_from_twin(twin)
+
+    sundowning_data = mapper.map_sundowning(sundowning_engine, reading)
+    updated_twin = dict(twin)
+    existing_insights = twin.get("healthInsights") or {}
+    updated_twin["healthInsights"] = {**existing_insights, "sundowning": sundowning_data}
+
+    print(f"\n================ [SUNDOWNING & AGITATION] ================")
+    print(f"Resident ID: {resident_id}")
+    print(f"  • Agitation Index: {sundowning_data['agitationIndex']}/100 ({sundowning_data['status']})")
+    print(f"  • Severity: {sundowning_data['severity']}")
+    if sundowning_data.get('advanceNoticeMinutes'):
+        print(f"  • Advance Warning: {sundowning_data['advanceNoticeMinutes']} minutes ahead")
+    print("==========================================================")
+    return updated_twin
+
+
+@app.post("/engines/wandering")
+@app.post("/api/engines/wandering")
+def run_wandering(twin: Dict[str, Any]) -> Dict[str, Any]:
+    """Computes real-time Wandering & Egress Safety analytics with perimeter override."""
+    resident_id = _require_resident_id(twin)
+    reading = mapper.build_reading_from_twin(twin)
+    location_data = twin.get("location") or twin.get("facilityZone") or {}
+
+    wandering_data = mapper.map_wandering(wandering_engine, reading, location_data=location_data)
+    updated_twin = dict(twin)
+    existing_insights = twin.get("healthInsights") or {}
+    updated_twin["healthInsights"] = {**existing_insights, "wandering": wandering_data}
+
+    print(f"\n================= [WANDERING & SAFETY] =================")
+    print(f"Resident ID: {resident_id}")
+    print(f"  • Status: {wandering_data['wanderingStatus']} (Risk: {wandering_data['elopementRisk']}, Score: {wandering_data['riskScore']}/100)")
+    print(f"  • Location: {wandering_data['currentLocation']} (Safe Zone: {wandering_data['isSafeZone']})")
+    if wandering_data.get('actionAlert'):
+        print(f"  • Alert: {wandering_data['actionAlert']}")
+    print("=========================================================")
+    return updated_twin
+
+
 @app.post("/engines/ai-summary")
 @app.post("/api/engines/ai-summary")
 def run_ai_summary(twin: Dict[str, Any]) -> Dict[str, Any]:
@@ -276,14 +325,13 @@ def run_ai_summary(twin: Dict[str, Any]) -> Dict[str, Any]:
 @app.post("/engines/pipeline")
 @app.post("/api/engines/pipeline")
 def run_pipeline(twin: Dict[str, Any]) -> Dict[str, Any]:
-    """Runs the complete 8-engine careMP Sentinel pipeline sequentially."""
+    """Runs the dementia pipeline sequentially."""
     twin = run_baseline(twin)
     twin = run_trend(twin)
     twin = run_correlation(twin)
-    twin = run_healthy_ageing(twin)
-    twin = run_genomics(twin)
     twin = run_deterioration(twin)
-    twin = run_frailty(twin)
+    twin = run_sundowning(twin)
+    twin = run_wandering(twin)
     twin = run_ai_summary(twin)
     return twin
 
