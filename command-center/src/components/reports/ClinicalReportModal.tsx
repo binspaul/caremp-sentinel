@@ -30,8 +30,8 @@ export const ClinicalReportModal: React.FC<ClinicalReportModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const residentName = resident ? `${resident.firstName} ${resident.lastName}` : 'Alex Rivera';
-  const age = resident?.age ?? 72;
+  const residentName = resident ? `${resident.firstName} ${resident.lastName}` : 'Eleanor Vance';
+  const age = resident?.age ?? 78;
   const uhid = resident?.uhid ?? 'RES-001';
   const currentDate = new Date().toLocaleDateString('en-US', {
     month: 'long',

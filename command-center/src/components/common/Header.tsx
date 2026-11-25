@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Zap, LogOut } from 'lucide-react';
+import { Sun, Moon, Zap, LogOut, Sparkles } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -12,6 +12,7 @@ interface HeaderProps {
   onRefresh: () => void;
   onOpenSimulation?: () => void;
   onOpenTelemedicine?: () => void;
+  onOpenCopilot?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onOpenSimulation,
   onOpenTelemedicine,
+  onOpenCopilot,
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { logout } = useAuth();
@@ -100,6 +102,19 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Care Coach Copilot Trigger */}
+        {onOpenCopilot && (
+          <button
+            onClick={onOpenCopilot}
+            aria-label="Care Coach Copilot"
+            title="Open Dementia Care Coach Copilot (Gemini 3.8 Flash)"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Care Coach</span>
+          </button>
+        )}
 
         {/* Simulation & Testing Center Trigger (Icon Only) */}
         {onOpenSimulation && (

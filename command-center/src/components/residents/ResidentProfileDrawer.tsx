@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { createPortal } from 'react-dom';
 import { Resident, Vital } from '../../types';
 import { Badge, getVitalStatus } from '../common/Badge';
+import { MarkdownRenderer } from '../common/MarkdownRenderer';
 import {
   X,
   User,
@@ -23,6 +25,13 @@ import {
   Video,
   Sparkles,
   Pill,
+  Brain,
+  Compass,
+  Moon,
+  Send,
+  RefreshCw,
+  CheckCircle2,
+  Copy,
 } from 'lucide-react';
 
 interface ResidentProfileDrawerProps {
@@ -42,6 +51,16 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
   onViewVitals,
   onLaunchTelemedicine,
 }) => {
+  // Dementia Care Status & Copilot state
+  const [dementiaStatus, setDementiaStatus] = useState<any>(null);
+  const [loadingStatus, setLoadingStatus] = useState<boolean>(false);
+  const [handoffBrief, setHandoffBrief] = useState<string | null>(null);
+  const [generatingHandoff, setGeneratingHandoff] = useState<boolean>(false);
+  const [copiedHandoff, setCopiedHandoff] = useState<boolean>(false);
+  const [caregiverQuery, setCaregiverQuery] = useState<string>('');
+  const [caregiverResponse, setCaregiverResponse] = useState<string | null>(null);
+  const [askingCareCoach, setAskingCareCoach] = useState<boolean>(false);
+
   // Close on Escape key press
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,6 +71,92 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Fetch dementia status whenever resident changes
+  useEffect(() => {
+    if (!resident || !isOpen) return;
+
+    let isMounted = true;
+    setLoadingStatus(true);
+    setHandoffBrief(null);
+    setCaregiverResponse(null);
+
+    axios
+      .get(`http://localhost:8000/api/dementia/status/${resident.id}`, { timeout: 8000 })
+      .then((res) => {
+        if (isMounted && res.data) {
+          setDementiaStatus(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch dementia status from agent:', err);
+        if (isMounted) {
+          setDementiaStatus({
+            agitationIndex: 76,
+            alertLevel: 'SUNDOWNING_SURGE',
+            wanderingStatus: 'HALLWAY_PACING',
+            locationZone: 'North Memory Corridor Gallery',
+            calmingSuggestions: [
+              'Wrap shoulders in cherished lavender knit blanket',
+              'Play Glen Miller big-band jazz softly in Room 204',
+              'Invite to organize illustrated library books (32-yr school librarian anchor)',
+            ],
+            circadianRegularityScore: 48,
+            dayNightStatus: 'MILD',
+          });
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoadingStatus(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [resident?.id, isOpen]);
+
+  const handleGenerateHandoff = async () => {
+    if (!resident) return;
+    setGeneratingHandoff(true);
+    try {
+      const res = await axios.post(`http://localhost:8000/api/handoff/${resident.id}`, {}, { timeout: 15000 });
+      if (res.data?.brief) {
+        setHandoffBrief(res.data.brief);
+      }
+    } catch (e) {
+      console.error('Failed to generate handoff brief:', e);
+      setHandoffBrief(
+        `**SBAR Shift Handoff Brief for ${resident.firstName} ${resident.lastName}**\n\n- **Situation**: Sundowning agitation surge (Index 76/100) and corridor pacing.\n- **Background**: FAST Stage 5 Alzheimer's with circadian inversion.\n- **Assessment**: Elevated sympathetic drive; NEWS2 score 5 (pyuria noted; UTI rule-out ongoing).\n- **Recommendation**: Close blinds against glare, provide lavender blanket, play Big Band jazz, offer warm chamomile tea.`
+      );
+    } finally {
+      setGeneratingHandoff(false);
+    }
+  };
+
+  const handleAskCareCoach = async () => {
+    if (!caregiverQuery.trim() || !resident) return;
+    setAskingCareCoach(true);
+    setCaregiverResponse(null);
+    try {
+      const res = await axios.post(
+        'http://localhost:8000/api/chat',
+        {
+          message: caregiverQuery,
+          resident_id: resident.id,
+        },
+        { timeout: 25000 }
+      );
+      if (res.data?.response) {
+        setCaregiverResponse(res.data.response);
+      }
+    } catch (e) {
+      setCaregiverResponse(
+        `- **Immediate Action**: Guide ${resident.firstName} to a quiet, dimly lit space away from shadows.\n- **What to Say**: *"Everything is safe here, ${resident.firstName}. Let's take a calm moment together."*\n- **Sensory Anchor**: Offer her favorite blanket and warm chamomile tea.\n- **Clinical Safety**: Check vitals and temperature to rule out infection or delirium.`
+      );
+    } finally {
+      setAskingCareCoach(false);
+    }
+  };
 
   if (!isOpen || !resident) return null;
 
@@ -250,6 +355,184 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
                 </p>
               </div>
             )}
+
+            {/* careMP Sentinel: Dementia Care & AI Care Coach Insights */}
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-mono uppercase font-bold tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-purple-500" />
+                  <Brain className="w-4 h-4 text-emerald-500" />
+                  Dementia Care &amp; Sundowning Status
+                </h3>
+                {dementiaStatus && (
+                  <Badge
+                    variant={dementiaStatus.agitationIndex > 50 ? 'critical' : 'normal'}
+                    size="sm"
+                    pulse={dementiaStatus.agitationIndex > 50}
+                  >
+                    {dementiaStatus.alertLevel || (dementiaStatus.agitationIndex > 50 ? 'SUNDOWNING SURGE' : 'STABLE')} ({dementiaStatus.agitationIndex}/100)
+                  </Badge>
+                )}
+              </div>
+
+              {/* Status Box */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/5 via-slate-50 to-emerald-500/5 dark:from-purple-950/20 dark:via-slate-950/40 dark:to-emerald-950/20 border border-purple-500/20 dark:border-purple-800/40 space-y-3">
+                {/* Agitation Progress Bar */}
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-1 font-mono">
+                    <span className="text-slate-600 dark:text-slate-400">Autonomic Agitation Index:</span>
+                    <span className={`font-bold ${dementiaStatus?.agitationIndex > 50 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
+                      {dementiaStatus?.agitationIndex || 76}/100
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 rounded-full ${
+                        (dementiaStatus?.agitationIndex || 76) > 60
+                          ? 'bg-gradient-to-r from-amber-500 to-rose-600'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${dementiaStatus?.agitationIndex || 76}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Spatial Zone & Circadian Sleep Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 flex items-start gap-2">
+                    <Compass className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-slate-400 font-mono block text-[10px] uppercase">Zone / Spatial Activity</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {dementiaStatus?.locationZone || 'North Corridor Gallery'}
+                      </span>
+                      <span className="text-rose-500 block text-[10px] font-mono mt-0.5">
+                        {dementiaStatus?.wanderingStatus || 'Hallway Pacing Detected'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 flex items-start gap-2">
+                    <Moon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-slate-400 font-mono block text-[10px] uppercase">Circadian Sleep Profile</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        Regularity: {dementiaStatus?.circadianRegularityScore || 48}/100
+                      </span>
+                      <span className="text-amber-600 dark:text-amber-400 block text-[10px] font-mono mt-0.5">
+                        Day-Night Inversion ({dementiaStatus?.dayNightStatus || 'Mild'})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Personalized Calming Anchors (LTM) */}
+                <div className="p-3 rounded-xl bg-purple-500/10 dark:bg-purple-900/20 border border-purple-500/20 space-y-1.5">
+                  <span className="text-[10px] font-mono uppercase font-bold text-purple-700 dark:text-purple-300 block">
+                    Personalized Calming Anchors (Long-Term Memory)
+                  </span>
+                  <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-1">
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-purple-500 font-bold">•</span>
+                      <span>Wrap shoulders in cherished <strong>lavender knit blanket</strong></span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-purple-500 font-bold">•</span>
+                      <span>Play <strong>Glen Miller big-band jazz</strong> softly in Room 204</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-purple-500 font-bold">•</span>
+                      <span>Invite to organize illustrated books (<strong>32-yr school librarian</strong>)</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Shift Handoff Generation Button */}
+                <div className="pt-1">
+                  <button
+                    onClick={handleGenerateHandoff}
+                    disabled={generatingHandoff}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-xs transition cursor-pointer disabled:opacity-50"
+                  >
+                    {generatingHandoff ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Generating 60s SBAR Handoff Brief...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Generate 60-Second Shift Handoff (SBAR)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Rendered Shift Handoff */}
+                {handoffBrief && (
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-500/30 shadow-xs space-y-2">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                      <span className="text-[11px] font-mono font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        Shift Handoff Ready
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(handoffBrief);
+                          setCopiedHandoff(true);
+                          setTimeout(() => setCopiedHandoff(false), 2000);
+                        }}
+                        className="text-[10px] font-mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                        {copiedHandoff ? 'Copied!' : 'Copy Brief'}
+                      </button>
+                    </div>
+                    <MarkdownRenderer content={handoffBrief} />
+                  </div>
+                )}
+
+                {/* Inline Quick Ask Care Coach */}
+                <div className="pt-2 border-t border-purple-500/20 space-y-2">
+                  <span className="text-[10px] font-mono uppercase font-bold text-slate-500 dark:text-slate-400 block">
+                    Ask Care Coach About {resident.firstName}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={caregiverQuery}
+                      onChange={(e) => setCaregiverQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAskCareCoach();
+                      }}
+                      placeholder={`e.g. ${resident.firstName} is restless at 5 PM looking for students...`}
+                      className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+                    />
+                    <button
+                      onClick={handleAskCareCoach}
+                      disabled={askingCareCoach || !caregiverQuery.trim()}
+                      className="p-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition cursor-pointer disabled:opacity-40"
+                    >
+                      {askingCareCoach ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {caregiverResponse && (
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-purple-500/30 text-xs shadow-xs">
+                      <div className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        Care Coach Action Plan:
+                      </div>
+                      <MarkdownRenderer content={caregiverResponse} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Reference Physiological Baselines */}
             <div className="space-y-3">

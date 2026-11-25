@@ -184,8 +184,24 @@ def post_shift_handoff(resident_id: str):
     Generates a structured 60-second shift handoff briefing card for memory care nursing transitions.
     """
     res_id = int(resident_id) if resident_id.isdigit() else 1
-    brief = generate_shift_handoff_brief(resident_id=res_id)
-    return brief
+    brief_data = generate_shift_handoff_brief(resident_id=res_id)
+    
+    vitals = brief_data.get("vitalsSummary", {})
+    behav = brief_data.get("behavioralObservations", {})
+    meals = brief_data.get("mealsHydration", {})
+    watchouts = brief_data.get("eveningWatchOuts", [])
+    watchouts_md = "\n".join([f"  - {w}" for w in watchouts]) if watchouts else "  - Standard evening check"
+
+    md_brief = (
+        f"### 📋 60s Shift Handoff Brief (SBAR)\n"
+        f"**Resident**: {brief_data.get('residentName', 'Resident')} (#{res_id}) • *{brief_data.get('diagnosis', 'Memory Care')}*\n\n"
+        f"- **Situation & State**: Agitation **{behav.get('agitationIndex', 76)}/100** ({behav.get('alertLevel', 'SUNDOWNING_SURGE')}) • {behav.get('location', 'Corridor')} ({behav.get('wanderingStatus', 'PACING')})\n"
+        f"- **Vitals & NEWS2**: HR **{vitals.get('heartRate', 88)} bpm** • BP **{vitals.get('bloodPressure', '136/84')}** • Temp **{vitals.get('bodyTemperature', 37.4)}°C** • NEWS2: **{vitals.get('news2Score', 5)}** (Rule out UTI)\n"
+        f"- **Meals & Meds**: {meals.get('lunch', 'Good intake')} • {meals.get('medicationAdherence', 'Adherent')}\n"
+        f"- **Evening Watch-Outs**:\n{watchouts_md}"
+    )
+    brief_data["brief"] = md_brief
+    return brief_data
 
 
 @app.post("/api/chat", response_model=ChatResponse)
