@@ -8,6 +8,7 @@ import {
   Building2,
   DoorOpen,
   MapPin,
+  Sparkles,
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -21,6 +22,7 @@ import { VitalsView } from './components/vitals/VitalsView';
 import { UsersView } from './components/users/UsersView';
 import { SimulationModal } from './components/simulation/SimulationModal';
 import { TelemedicineModal } from './components/telemedicine/TelemedicineModal';
+import { CareCoachCopilotModal } from './components/copilot/CareCoachCopilotModal';
 import { BandsManagementModal } from './components/bands/BandsManagementModal';
 import { EmergencyFallAlert } from './components/falls/EmergencyFallAlert';
 import { FallsHistoryModal } from './components/falls/FallsHistoryModal';
@@ -52,6 +54,21 @@ import {
 
 const AUTO_REFRESH_INTERVAL_SECONDS = 60;
 
+const DEFAULT_ELEANOR_VANCE: Resident = {
+  id: 1,
+  uhid: 'RES-001',
+  firstName: 'Eleanor',
+  lastName: 'Vance',
+  emailAddress: 'eleanor.vance@caremp.ai',
+  phoneNumber: '+1-555-019-2831',
+  age: 78,
+  gender: 2,
+  status: 1,
+  description: "Resident with FAST Stage 5 Moderate Alzheimer's Disease, sundowning agitation, and circadian sleep inversion. Former elementary school librarian for 32 years.",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
 const DEVICE_SUB_TABS: Array<{ id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'bands', label: 'Bands', icon: Radio },
   { id: 'beacons', label: 'Beacons', icon: Signal },
@@ -74,9 +91,10 @@ const CommandCenterApp: React.FC = () => {
   const [mapTargetRoom, setMapTargetRoom] = useState<string | null>(null);
   const [selectedFloorForRooms, setSelectedFloorForRooms] = useState<number | 'all'>('all');
 
-  // Simulation, Telemedicine, Bands Fleet & Falls Modal States
+  // Simulation, Telemedicine, Care Coach Copilot, Bands Fleet & Falls Modal States
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isTelemedicineModalOpen, setIsTelemedicineModalOpen] = useState(false);
+  const [isCopilotModalOpen, setIsCopilotModalOpen] = useState(false);
   const [isBandsModalOpen, setIsBandsModalOpen] = useState(false);
   const [isFallsModalOpen, setIsFallsModalOpen] = useState(false);
   const [latestFall, setLatestFall] = useState<FallIncident | null>(null);
@@ -260,6 +278,7 @@ const CommandCenterApp: React.FC = () => {
           onOpenSimulation={() => setIsSimulationModalOpen(true)}
           onOpenNotifications={() => setActiveTab('notifications')}
           unreadNotificationCount={notificationCounters?.unread ?? 0}
+          onOpenCopilot={() => setIsCopilotModalOpen(true)}
         />
 
         <main className="flex-1 px-8 py-8 overflow-y-auto w-full space-y-8">
@@ -537,11 +556,19 @@ const CommandCenterApp: React.FC = () => {
         floors={floors}
       />
 
+      {/* Dementia Care Coach Copilot Slide-over Modal */}
+      <CareCoachCopilotModal
+        isOpen={isCopilotModalOpen}
+        onClose={() => setIsCopilotModalOpen(false)}
+        residents={residents.length > 0 ? residents : [DEFAULT_ELEANOR_VANCE]}
+        initialResidentId={selectedResidentId || 1}
+      />
+
       {/* AI Telemedicine Copilot Modal */}
       <TelemedicineModal
         isOpen={isTelemedicineModalOpen}
         onClose={() => setIsTelemedicineModalOpen(false)}
-        resident={residentsMap[selectedResidentId || 1] || residents[0]}
+        resident={residentsMap[selectedResidentId || 1] || residents.find((r) => r.id === 1) || DEFAULT_ELEANOR_VANCE}
         recentVital={recentVitals[0]}
       />
 
