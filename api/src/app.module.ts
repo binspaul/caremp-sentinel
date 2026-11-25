@@ -65,6 +65,10 @@ import { DigitalTwinModule } from './digital-twin/digital-twin.module';
 import { Vital } from './vitals/entities/vital.entity';
 import { VitalsModule } from './vitals/vitals.module';
 
+// Notifications
+import { Notification } from './notifications/entities/notification.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+
 import { ShortTermMemory } from './short-term-memory/entities/short-term-memory.entity';
 import { ShortTermMemoryModule } from './short-term-memory/short-term-memory.module';
 
@@ -108,6 +112,7 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
           LongTermMemory,
           User,
           Vital,
+          Notification,
         ],
         autoLoadEntities: true,
         synchronize: false,
@@ -140,6 +145,7 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
     LongTermMemoryModule,
     UsersModule,
     VitalsModule,
+    NotificationsModule,
 
     VitalsSchedulerModule,
   ],

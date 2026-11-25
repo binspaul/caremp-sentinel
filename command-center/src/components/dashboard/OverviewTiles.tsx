@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   Building2,
   Cpu,
-  Activity,
   CheckCircle2,
 } from 'lucide-react';
 import {
@@ -54,177 +53,273 @@ export const OverviewTiles: React.FC<OverviewTilesProps> = ({
     (patchCounters?.active ?? 4) +
     (beaconCounters?.active ?? 5);
 
+  const fleetOnlinePct = Math.round((activeFleetCount / Math.max(1, totalFleetCount)) * 100);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-      {/* Tile 1: Residents / Cognitive Cohort */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Tile 1: Residents */}
       <div
         onClick={() => onTileClick?.('residents')}
-        className="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-gradient-to-b dark:from-slate-900/90 dark:to-slate-900/50 p-5 shadow-xs hover:border-emerald-500/50 hover:shadow-emerald-500/10 transition-all duration-200 cursor-pointer"
+        className="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs hover:border-emerald-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
       >
-        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+        <div className="flex items-center justify-between">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            Memory Care
-          </span>
+          <div className="flex items-center gap-1 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">View</span>
+            <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
         </div>
 
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Monitored Residents
           </p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
               {counters.residentsTotal.toLocaleString()}
             </span>
-            <span className="text-xs text-slate-500 font-mono">
-              ({counters.residentsActive} active in care)
+
+            {/* Mini SVG Sparkline */}
+            <svg className="w-16 h-7 text-emerald-500" viewBox="0 0 64 24" fill="none">
+              <path
+                d="M 2 20 Q 16 18, 24 14 T 44 8 T 62 4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 2 20 Q 16 18, 24 14 T 44 8 T 62 4 L 62 24 L 2 24 Z"
+                fill="currentColor"
+                opacity="0.1"
+              />
+            </svg>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{counters.residentsActive} Active in Care</span>
+            </span>
+            <span className="font-mono text-[11px] text-slate-400">
+              100% Monitored
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-            <span className="truncate">Cognitive Cohort &bull; Memory &amp; MCI</span>
-          </p>
         </div>
       </div>
 
       {/* Tile 2: Multi-Modal Hardware Fleet */}
       <div
         onClick={() => onTileClick?.('bands')}
-        className="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-gradient-to-b dark:from-slate-900/90 dark:to-slate-900/50 p-5 shadow-xs hover:border-emerald-500/50 hover:shadow-emerald-500/10 transition-all duration-200 cursor-pointer"
+        className="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs hover:border-cyan-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
       >
-        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="p-2.5 rounded-xl bg-teal-500/10 dark:bg-teal-500/15 border border-teal-500/20 text-teal-600 dark:text-teal-400">
+        <div className="flex items-center justify-between">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
             <Cpu className="w-5 h-5" />
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-teal-700 dark:text-teal-400 font-semibold px-2 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20">
-            4 Sensor Fleets
-          </span>
+          <div className="flex items-center gap-1 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[11px] font-medium text-cyan-600 dark:text-cyan-400">View</span>
+            <ArrowUpRight className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+          </div>
         </div>
 
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Multi-Modal Devices
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Active Sensor Fleet
           </p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
-              {totalFleetCount} Units
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
+              {activeFleetCount}
+              <span className="text-base text-slate-400 font-normal ml-1">/ {totalFleetCount}</span>
             </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
-              ({activeFleetCount} active online)
+
+            {/* Mini SVG Sparkline */}
+            <svg className="w-16 h-7 text-cyan-500" viewBox="0 0 64 24" fill="none">
+              <path
+                d="M 2 16 Q 18 10, 32 12 T 62 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 2 16 Q 18 10, 32 12 T 62 6 L 62 24 L 2 24 Z"
+                fill="currentColor"
+                opacity="0.1"
+              />
+            </svg>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+            <span className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-cyan-500" />
+              <span>4 Hardware Fleets</span>
+            </span>
+            <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+              {fleetOnlinePct}% Online
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-teal-500 shrink-0" />
-            <span className="truncate">Bands &bull; Radar &bull; Patches &bull; Beacons</span>
-          </p>
         </div>
       </div>
 
       {/* Tile 3: Fall Safety & Emergency Dispatch */}
       <div
         onClick={() => onTileClick?.('falls')}
-        className={`group relative overflow-hidden rounded-2xl border p-5 shadow-xs transition-all duration-200 cursor-pointer ${
+        className={`group relative overflow-hidden rounded-2xl border p-5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between ${
           unresolvedFallCount > 0
-            ? 'border-rose-500/40 bg-rose-50/20 dark:bg-rose-950/20 hover:border-rose-500 hover:shadow-rose-500/10'
-            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-gradient-to-b dark:from-slate-900/90 dark:to-slate-900/50 hover:border-emerald-500/50 hover:shadow-emerald-500/10'
+            ? 'border-rose-500/40 bg-rose-50/10 dark:bg-rose-950/20 hover:border-rose-500'
+            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-500/50'
         }`}
       >
-        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowUpRight
-            className={`w-4 h-4 ${
-              unresolvedFallCount > 0
-                ? 'text-rose-500'
-                : 'text-emerald-600 dark:text-emerald-400'
-            }`}
-          />
-        </div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <div
-            className={`p-2.5 rounded-xl border ${
+            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
               unresolvedFallCount > 0
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-500'
-                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                ? 'bg-rose-500/15 text-rose-500'
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
             }`}
           >
-            <AlertTriangle className={`w-5 h-5 ${unresolvedFallCount > 0 ? 'animate-pulse' : ''}`} />
+            {unresolvedFallCount > 0 ? (
+              <AlertTriangle className="w-5 h-5 animate-pulse" />
+            ) : (
+              <ShieldCheck className="w-5 h-5" />
+            )}
           </div>
-          <span
-            className={`text-[10px] font-mono uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full border ${
-              unresolvedFallCount > 0
-                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 animate-pulse'
-                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-            }`}
-          >
-            {unresolvedFallCount > 0 ? 'Emergency Alert' : 'Surveillance Active'}
-          </span>
+          <div className="flex items-center gap-1 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span
+              className={`text-[11px] font-medium ${
+                unresolvedFallCount > 0
+                  ? 'text-rose-500'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
+              View
+            </span>
+            <ArrowUpRight
+              className={`w-4 h-4 ${
+                unresolvedFallCount > 0
+                  ? 'text-rose-500'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }`}
+            />
+          </div>
         </div>
 
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Fall &amp; Immobility
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Fall &amp; Safety Alerts
           </p>
-          <div className="flex items-baseline gap-2 mt-1">
+          <div className="flex items-baseline justify-between mt-1">
             <span
-              className={`text-2xl font-extrabold tracking-tight font-mono ${
+              className={`text-3xl font-extrabold tracking-tight font-mono ${
                 unresolvedFallCount > 0
                   ? 'text-rose-600 dark:text-rose-400'
                   : 'text-slate-900 dark:text-white'
               }`}
             >
-              {unresolvedFallCount > 0 ? `${unresolvedFallCount} Pending` : 'All Clear'}
+              {unresolvedFallCount > 0 ? `${unresolvedFallCount} Pending` : '0 Active'}
             </span>
-            <span className="text-xs text-slate-500 font-mono">
-              Kinematics Active
+
+            {/* Mini SVG Sparkline */}
+            <svg
+              className={`w-16 h-7 ${
+                unresolvedFallCount > 0 ? 'text-rose-500' : 'text-emerald-500'
+              }`}
+              viewBox="0 0 64 24"
+              fill="none"
+            >
+              {unresolvedFallCount > 0 ? (
+                <path
+                  d="M 2 20 L 24 20 L 32 4 L 40 20 L 62 20"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              ) : (
+                <path
+                  d="M 2 12 Q 32 10, 62 12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              )}
+            </svg>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+            <span
+              className={`inline-flex items-center gap-1.5 font-medium ${
+                unresolvedFallCount > 0
+                  ? 'text-rose-600 dark:text-rose-400 font-semibold'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  unresolvedFallCount > 0
+                    ? 'bg-rose-500 animate-ping'
+                    : 'bg-emerald-500'
+                }`}
+              />
+              <span>{unresolvedFallCount > 0 ? 'Action Required' : 'All Clear'}</span>
+            </span>
+            <span className="font-mono text-[11px] text-slate-400">
+              Live Radar &amp; Accelerometer
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-            <span className="truncate">Auto-dispatch &bull; Tele-consult ready</span>
-          </p>
         </div>
       </div>
 
       {/* Tile 4: Facility & Spatial Geofence */}
       <div
         onClick={() => onTileClick?.('floors')}
-        className="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-gradient-to-b dark:from-slate-900/90 dark:to-slate-900/50 p-5 shadow-xs hover:border-emerald-500/50 hover:shadow-emerald-500/10 transition-all duration-200 cursor-pointer"
+        className="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs hover:border-indigo-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
       >
-        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="p-2.5 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+        <div className="flex items-center justify-between">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
             <Building2 className="w-5 h-5" />
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-700 dark:text-indigo-400 font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-            Indoor Topology
-          </span>
+          <div className="flex items-center gap-1 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">View</span>
+            <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          </div>
         </div>
 
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Facility &amp; Geofencing
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Facility Infrastructure
           </p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
-              {totalRooms} Rooms
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
+              {totalRooms}
+              <span className="text-base text-slate-400 font-normal ml-1">Suites</span>
             </span>
-            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-mono font-semibold">
-              ({totalFloors} Floor Levels)
+
+            {/* Mini SVG Sparkline */}
+            <svg className="w-16 h-7 text-indigo-500" viewBox="0 0 64 24" fill="none">
+              <path
+                d="M 2 18 Q 24 16, 40 10 T 62 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 2 18 Q 24 16, 40 10 T 62 6 L 62 24 L 2 24 Z"
+                fill="currentColor"
+                opacity="0.1"
+              />
+            </svg>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+            <span className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              <span>{totalFloors} Building Levels</span>
+            </span>
+            <span className="font-mono text-[11px] text-slate-400">
+              BLE Geofenced
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-            <span className="truncate">100% Perimeter Safe &bull; 0 Egress Breaches</span>
-          </p>
         </div>
       </div>
     </div>

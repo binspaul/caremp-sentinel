@@ -32,8 +32,10 @@ import { FacilityMapView } from './components/facility/FacilityMapView';
 import { FloorsView } from './components/facility/FloorsView';
 import { RoomsView } from './components/facility/RoomsView';
 import { BeaconsView } from './components/facility/BeaconsView';
+import { NotificationsView } from './components/notifications/NotificationsView';
 import { RecentFallsAndResidents } from './components/dashboard/RecentFallsAndResidents';
 import { FleetStatusCards } from './components/dashboard/FleetStatusCards';
+import { DashboardCharts } from './components/dashboard/DashboardCharts';
 import commandCenterService from './services/commandCenterService';
 import {
   DashboardCounters,
@@ -45,6 +47,7 @@ import {
   ChestPatchCounters,
   BeaconCounters,
   Floor,
+  NotificationCounters,
 } from './types';
 
 const AUTO_REFRESH_INTERVAL_SECONDS = 60;
@@ -85,6 +88,7 @@ const CommandCenterApp: React.FC = () => {
   const [radarCounters, setRadarCounters] = useState<RadarPodCounters | null>(null);
   const [patchCounters, setPatchCounters] = useState<ChestPatchCounters | null>(null);
   const [beaconCounters, setBeaconCounters] = useState<BeaconCounters | null>(null);
+  const [notificationCounters, setNotificationCounters] = useState<NotificationCounters | null>(null);
   const [floors, setFloors] = useState<Floor[]>([]);
 
   // Dashboard Data State
@@ -117,6 +121,7 @@ const CommandCenterApp: React.FC = () => {
         radarCountersRes,
         patchCountersRes,
         beaconCountersRes,
+        notificationCountersRes,
         floorsRes,
       ] = await Promise.all([
         commandCenterService.getDashboardSummary(),
@@ -127,6 +132,7 @@ const CommandCenterApp: React.FC = () => {
         commandCenterService.getRadarPodCounters().catch(() => null),
         commandCenterService.getChestPatchCounters().catch(() => null),
         commandCenterService.getBeaconCounters().catch(() => null),
+        commandCenterService.getNotificationCounters().catch(() => null),
         commandCenterService.getFacilityFloors().catch(() => []),
       ]);
       setCounters(summary.counters);
@@ -140,6 +146,7 @@ const CommandCenterApp: React.FC = () => {
       setRadarCounters(radarCountersRes);
       setPatchCounters(patchCountersRes);
       setBeaconCounters(beaconCountersRes);
+      setNotificationCounters(notificationCountersRes);
       setFloors(floorsRes);
       setLastUpdated(new Date());
       setSecondsRemaining(AUTO_REFRESH_INTERVAL_SECONDS);
@@ -204,6 +211,8 @@ const CommandCenterApp: React.FC = () => {
     switch (tab) {
       case 'dashboard':
         return 'Cognitive surveillance, sundowning pre-agitation triage, and safe-zone geofencing';
+      case 'notifications':
+        return 'Real-time multi-modal incident triage, biometric anomaly alerts, and emergency dispatch';
       case 'map':
         return '2-Floor interactive BLE beacon indoor topology, memory care safe-zones, and resident tracking';
       case 'floors':
@@ -236,6 +245,7 @@ const CommandCenterApp: React.FC = () => {
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
         unresolvedFallCount={unresolvedFallCount}
+        unreadNotificationCount={notificationCounters?.unread ?? 0}
       />
 
       {/* Main Command View Area */}
@@ -248,6 +258,8 @@ const CommandCenterApp: React.FC = () => {
           isRefreshing={isDataLoading}
           onRefresh={loadDashboardData}
           onOpenSimulation={() => setIsSimulationModalOpen(true)}
+          onOpenNotifications={() => setActiveTab('notifications')}
+          unreadNotificationCount={notificationCounters?.unread ?? 0}
         />
 
         <main className="flex-1 px-8 py-8 overflow-y-auto w-full space-y-8">
@@ -340,13 +352,17 @@ const CommandCenterApp: React.FC = () => {
                 />
               </section>
 
-              {/* Multi-Modal Hardware Fleet Telemetry */}
-              <section aria-label="Multi-Modal Device Fleets">
-                <FleetStatusCards
+              {/* Visual Telemetry Trends & Health Distribution Charts */}
+              <section aria-label="Physiological Telemetry & Fleet Graphs">
+                <DashboardCharts
+                  vitals={recentVitals}
+                  residents={residents}
+                  residentsMap={residentsMap}
                   bandCounters={bandCounters}
                   radarCounters={radarCounters}
                   patchCounters={patchCounters}
                   beaconCounters={beaconCounters}
+                  lastUpdated={lastUpdated}
                   onNavigate={(tab) => setActiveTab(tab)}
                 />
               </section>
@@ -380,6 +396,25 @@ const CommandCenterApp: React.FC = () => {
                 />
               </section>
             </>
+          )}
+
+          {activeTab === 'notifications' && (
+            <NotificationsView
+              residentsMap={residentsMap}
+              onNavigateToMap={(roomNumber) => {
+                setMapTargetRoom(roomNumber || null);
+                setActiveTab('map');
+              }}
+              onNavigateToVitals={(residentId) => {
+                setSelectedResidentId(residentId || null);
+                setActiveTab('vitals');
+              }}
+              onLaunchTelemedicine={(residentId) => {
+                setSelectedResidentId(residentId);
+                setIsTelemedicineModalOpen(true);
+              }}
+              onNotificationsUpdated={loadDashboardData}
+            />
           )}
 
           {activeTab === 'map' && (

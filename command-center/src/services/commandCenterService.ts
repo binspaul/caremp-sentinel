@@ -19,6 +19,8 @@ import {
   BeaconCounters,
   ResidentPresence,
   FacilityGeoJson,
+  Notification,
+  NotificationCounters,
 } from '../types';
 
 export const commandCenterService = {
@@ -155,7 +157,7 @@ export const commandCenterService = {
     // Concurrently fetch counts & data
     const [residentsRes, vitalsRes, usersRes] = await Promise.all([
       this.getResidents({ skip: 0, limit: 100 }).catch(() => ({ data: [], total: 0 })),
-      this.getRecentVitals(10).catch(() => ({ data: [], total: 0 })),
+      this.getRecentVitals(40).catch(() => ({ data: [], total: 0 })),
       this.getUsers({ skip: 0, limit: 100 }).catch(() => ({ data: [], total: 0 })),
     ]);
 
@@ -597,6 +599,72 @@ export const commandCenterService = {
       residentId,
       targetZoneId,
     });
+    return response.data.data;
+  },
+
+  // ==========================================
+  // Notifications API
+  // ==========================================
+  async getNotifications(params?: {
+    skip?: number;
+    limit?: number;
+    type?: string;
+    priority?: string;
+    isRead?: boolean;
+    isDismissed?: boolean;
+    residentId?: number;
+    search?: string;
+  }): Promise<{ data: Notification[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<Notification[]>>('/notifications', {
+      params: {
+        skip: params?.skip ?? 0,
+        limit: params?.limit ?? 30,
+        type: params?.type,
+        priority: params?.priority,
+        isRead: params?.isRead,
+        isDismissed: params?.isDismissed,
+        residentId: params?.residentId,
+        search: params?.search,
+      },
+    });
+
+    return {
+      data: response.data.data || [],
+      total: response.data.pagination?.total ?? response.data.data?.length ?? 0,
+    };
+  },
+
+  async getNotificationCounters(): Promise<NotificationCounters | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<NotificationCounters>>('/notifications/counters');
+      return response.data.data || null;
+    } catch {
+      return null;
+    }
+  },
+
+  async markNotificationAsRead(id: number): Promise<Notification> {
+    const response = await apiClient.patch<ApiResponse<Notification>>(`/notifications/${id}/read`);
+    return response.data.data;
+  },
+
+  async markAllNotificationsAsRead(): Promise<{ success: boolean; count: number }> {
+    const response = await apiClient.patch<ApiResponse<{ success: boolean; count: number }>>('/notifications/read-all');
+    return response.data.data;
+  },
+
+  async dismissNotification(id: number): Promise<Notification> {
+    const response = await apiClient.patch<ApiResponse<Notification>>(`/notifications/${id}/dismiss`);
+    return response.data.data;
+  },
+
+  async deleteNotification(id: number): Promise<any> {
+    const response = await apiClient.delete<ApiResponse<any>>(`/notifications/${id}`);
+    return response.data.data;
+  },
+
+  async createNotification(data: Partial<Notification>): Promise<Notification> {
+    const response = await apiClient.post<ApiResponse<Notification>>('/notifications', data);
     return response.data.data;
   },
 };

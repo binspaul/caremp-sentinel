@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Zap, LogOut } from 'lucide-react';
+import { Sun, Moon, Zap, LogOut, Bell } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -12,6 +12,8 @@ interface HeaderProps {
   onRefresh: () => void;
   onOpenSimulation?: () => void;
   onOpenTelemedicine?: () => void;
+  onOpenNotifications?: () => void;
+  unreadNotificationCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onOpenSimulation,
   onOpenTelemedicine,
+  onOpenNotifications,
+  unreadNotificationCount = 0,
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { logout } = useAuth();
@@ -110,6 +114,23 @@ export const Header: React.FC<HeaderProps> = ({
             className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center"
           >
             <Zap className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Notifications Trigger */}
+        {onOpenNotifications && (
+          <button
+            onClick={onOpenNotifications}
+            aria-label="Notifications Center"
+            title="Open Notifications Center"
+            className="relative p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/40 transition cursor-pointer shadow-xs flex items-center justify-center"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white font-mono text-[9px] font-bold flex items-center justify-center animate-pulse">
+                {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+              </span>
+            )}
           </button>
         )}
 
