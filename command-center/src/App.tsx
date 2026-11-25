@@ -14,6 +14,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { Sidebar, NavTab } from './components/common/Sidebar';
 import { Header } from './components/common/Header';
+import { PageTransitionLoader } from './components/common/PageTransitionLoader';
 import { OverviewTiles } from './components/dashboard/OverviewTiles';
 import { RecentVitalsTable } from './components/dashboard/RecentVitalsTable';
 import { ResidentsView } from './components/residents/ResidentsView';
@@ -250,6 +251,9 @@ const CommandCenterApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors duration-200">
+      {/* Heartbeat Page Transition Loading Indicator */}
+      <PageTransitionLoader activeTab={activeTab} />
+
       {/* Navigation Sidebar */}
       <Sidebar
         activeTab={activeTab}
