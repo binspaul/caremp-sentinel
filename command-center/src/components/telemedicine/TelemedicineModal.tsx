@@ -24,6 +24,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { MarkdownRenderer } from '../common/MarkdownRenderer';
 import { Resident, Vital } from '../../types';
 import { ClinicalReportModal } from '../reports/ClinicalReportModal';
 
@@ -372,10 +373,14 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
                       className={`max-w-[90%] p-3 rounded-2xl text-xs leading-relaxed ${
                         msg.sender === 'physician'
                           ? 'bg-emerald-600 text-white rounded-br-none shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 rounded-bl-none whitespace-pre-line shadow-2xs'
+                          : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 rounded-bl-none shadow-2xs'
                       }`}
                     >
-                      {msg.text}
+                      {msg.sender === 'copilot' ? (
+                        <MarkdownRenderer content={msg.text} />
+                      ) : (
+                        <span className="whitespace-pre-line">{msg.text}</span>
+                      )}
                     </div>
                     <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1 px-1">
                       {msg.timestamp}

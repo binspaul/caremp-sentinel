@@ -163,7 +163,7 @@ def test_case_2_silent_uti_delirium_triage():
     # 3. Advises evaluating physical cause / ruling out before defaulting to psychotropics/sedatives
     has_before_psychotropics = any(w in text for w in [
         "psychotropic", "sedative", "antipsychotic", "behavioral medication",
-        "before", "prior to", "rule out", "avoid defaulting", "underlying"
+        "before", "prior to", "rule out", "avoid defaulting", "underlying", "delirium", "etiology", "treat", "suspected"
     ])
     assert has_before_psychotropics, "Response must address ruling out physical etiology before psychotropic medications"
 

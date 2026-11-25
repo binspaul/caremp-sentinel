@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Video } from 'lucide-react';
+import { Video, Sparkles } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/auth/LoginPage';
@@ -12,6 +12,7 @@ import { VitalsView } from './components/vitals/VitalsView';
 import { UsersView } from './components/users/UsersView';
 import { SimulationModal } from './components/simulation/SimulationModal';
 import { TelemedicineModal } from './components/telemedicine/TelemedicineModal';
+import { CareCoachCopilotModal } from './components/copilot/CareCoachCopilotModal';
 import { BandsManagementModal } from './components/bands/BandsManagementModal';
 import { EmergencyFallAlert } from './components/falls/EmergencyFallAlert';
 import { FallsHistoryModal } from './components/falls/FallsHistoryModal';
@@ -36,9 +37,10 @@ const CommandCenterApp: React.FC = () => {
   const [mapTargetRoom, setMapTargetRoom] = useState<string | null>(null);
   const [selectedFloorForRooms, setSelectedFloorForRooms] = useState<number | 'all'>('all');
 
-  // Simulation, Telemedicine, Bands Fleet & Falls Modal States
+  // Simulation, Telemedicine, Care Coach Copilot, Bands Fleet & Falls Modal States
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isTelemedicineModalOpen, setIsTelemedicineModalOpen] = useState(false);
+  const [isCopilotModalOpen, setIsCopilotModalOpen] = useState(false);
   const [isBandsModalOpen, setIsBandsModalOpen] = useState(false);
   const [isFallsModalOpen, setIsFallsModalOpen] = useState(false);
   const [latestFall, setLatestFall] = useState<FallIncident | null>(null);
@@ -182,6 +184,7 @@ const CommandCenterApp: React.FC = () => {
           isRefreshing={isDataLoading}
           onRefresh={loadDashboardData}
           onOpenSimulation={() => setIsSimulationModalOpen(true)}
+          onOpenCopilot={() => setIsCopilotModalOpen(true)}
         />
 
         <main className="flex-1 px-8 py-8 overflow-y-auto w-full space-y-8">
@@ -315,15 +318,33 @@ const CommandCenterApp: React.FC = () => {
         </main>
       </div>
 
-      {/* Floating Action Button (FAB): AI Tele-Consult available across all screens */}
-      <button
-        onClick={() => setIsTelemedicineModalOpen(true)}
-        aria-label="Open AI Telemedicine Copilot"
-        title="Launch AI Telemedicine Consultation & Clinical Brief"
-        className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-900/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
-      >
-        <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-      </button>
+      {/* Floating Action Buttons: Care Coach Copilot & AI Tele-Consult */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+        {/* Secondary FAB: AI Telemedicine Consultation */}
+        <button
+          onClick={() => setIsTelemedicineModalOpen(true)}
+          aria-label="Open AI Telemedicine Copilot"
+          title="Launch AI Telemedicine Consultation & Clinical Brief"
+          className="w-11 h-11 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-950/40 hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
+        >
+          <Video className="w-4 h-4 group-hover:scale-110 transition-transform" />
+        </button>
+
+        {/* Primary FAB: Care Coach AI Copilot */}
+        <button
+          onClick={() => setIsCopilotModalOpen(true)}
+          aria-label="Open Dementia Care Coach Copilot"
+          title="Launch Frontline Dementia Care Coach Copilot"
+          className="relative px-4 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white flex items-center gap-2 shadow-xl shadow-purple-900/30 dark:shadow-purple-950/60 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-purple-400/40 group font-semibold text-xs"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-300 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+          </span>
+          <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+          <span>Care Coach AI</span>
+        </button>
+      </div>
 
       {/* Vital Simulation Modal Dialog */}
       <SimulationModal
@@ -331,6 +352,14 @@ const CommandCenterApp: React.FC = () => {
         onClose={() => setIsSimulationModalOpen(false)}
         onSimulated={handleVitalSimulated}
         residents={residents}
+      />
+
+      {/* Dementia Care Coach Copilot Slide-over Modal */}
+      <CareCoachCopilotModal
+        isOpen={isCopilotModalOpen}
+        onClose={() => setIsCopilotModalOpen(false)}
+        residents={residents}
+        initialResidentId={selectedResidentId}
       />
 
       {/* AI Telemedicine Copilot Modal */}
