@@ -170,9 +170,6 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
             <Building2 className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
             Floors
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Facility architectural levels, building wings, elevation topology, and floor blueprints
-          </p>
         </div>
 
         <button

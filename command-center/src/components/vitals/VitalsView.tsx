@@ -176,9 +176,6 @@ export const VitalsView: React.FC<VitalsViewProps> = ({
             <HeartPulse className="w-6 h-6 text-cyan-500 dark:text-cyan-400" />
             Vitals
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            High-frequency physiological telemetry stream, vitals baselines, hemodynamic thresholds, and clinical anomaly detection
-          </p>
         </div>
       </div>
 

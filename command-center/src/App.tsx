@@ -221,31 +221,31 @@ const CommandCenterApp: React.FC = () => {
   const getPageSubtitle = (tab: NavTab) => {
     switch (tab) {
       case 'dashboard':
-        return 'Cognitive surveillance, sundowning pre-agitation triage, and safe-zone geofencing';
+        return '';
       case 'notifications':
-        return 'Real-time multi-modal incident triage, biometric anomaly alerts, and emergency dispatch';
+        return '';
       case 'map':
-        return '2-Floor interactive BLE beacon indoor topology, memory care safe-zones, and resident tracking';
+        return '';
       case 'floors':
-        return 'Facility architectural topology, elevation floor levels, building wings, and blueprints';
+        return '';
       case 'rooms':
-        return 'Resident suites, micro-location zones, capacity, safe-perimeter geofencing, and room anchors';
+        return '';
       case 'beacons':
-        return 'BLE location beacon inventory, battery telemetry, RSSI calibration, and room anchor pairing';
+        return '';
       case 'vitals':
-        return 'Continuous physiological signals, 60-GHz radar sleep restlessness, and autonomic stress feeds';
+        return '';
       case 'falls':
-        return 'Kinematic impact telemetry, cognitive freeze-of-gait falls, and emergency dispatch';
+        return '';
       case 'bands':
-        return 'Wearable biometric pulse telemetry fleet, optical PPG dual-wavelength sensors, and resident pairing';
+        return '';
       case 'radar-pods':
-        return '60-GHz contact-free FMCW radar pod fleet, ballistocardiography, and bedhead occupancy';
+        return '';
       case 'chest-patches':
-        return 'Continuous single-lead ECG hydrogel patches, cardiopulmonary acoustics, and skin adhesion monitoring';
+        return '';
       case 'residents':
-        return 'Care recipient registry and cognitive/physiological baseline configurations';
+        return '';
       case 'users':
-        return 'User administration, role management, and access controls';
+        return '';
     }
   };
 

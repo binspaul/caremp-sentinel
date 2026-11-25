@@ -100,9 +100,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ lastUpdated }) => {
             <UserCheck className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             Users
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            User accounts, clinician credentials, RBAC authorization, and access controls
-          </p>
         </div>
       </div>
 

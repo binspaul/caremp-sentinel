@@ -183,9 +183,6 @@ export const FallsView: React.FC<FallsViewProps> = ({
             <AlertTriangle className="w-6 h-6 text-rose-500" />
             Falls
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Cognitive freeze-of-gait falls, nocturnal wandering bed exits, kinematic impact telemetry, and emergency dispatch logs
-          </p>
         </div>
       </div>
 

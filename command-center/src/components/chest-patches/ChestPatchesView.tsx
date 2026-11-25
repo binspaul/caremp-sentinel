@@ -251,13 +251,7 @@ export const ChestPatchesView: React.FC<ChestPatchesViewProps> = ({
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
             <HeartPulse className="w-6 h-6 text-rose-500 dark:text-rose-400" />
             <span>Chest Patches</span>
-            <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-              Hydrogel ECG Bio-Patch
-            </span>
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Continuous single-lead ECG hydrogel patches, cardiopulmonary acoustics, 7-day wear cycle tracking, and skin adhesion monitoring
-          </p>
         </div>
 
         <button

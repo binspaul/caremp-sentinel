@@ -238,9 +238,6 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
             <Radio className="w-6 h-6 text-amber-500" />
             Beacons
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Indoor BLE location beacon anchors, battery telemetry, signal calibration, and spatial room pairing
-          </p>
         </div>
         <button
           onClick={handleOpenRegister}

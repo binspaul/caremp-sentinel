@@ -217,13 +217,7 @@ export const BandsView: React.FC<BandsViewProps> = ({
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
             <Radio className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
             <span>Bands</span>
-            <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-              Dual-Wavelength PPG
-            </span>
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Wearable biometric pulse telemetry fleet, optical PPG dual-wavelength sensors, battery health, and resident pairing
-          </p>
         </div>
 
         <button

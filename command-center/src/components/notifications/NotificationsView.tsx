@@ -191,16 +191,13 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
             <Bell className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
-            <span>Notifications &amp; Clinical Dispatch</span>
+            <span>Notifications</span>
             {counters && counters.unread > 0 && (
               <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white animate-pulse">
                 {counters.unread} unread
               </span>
             )}
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time fall triggers, physiological anomaly breaches, BLE geofence warnings, and fleet telemetry events
-          </p>
         </div>
 
         {/* Global Actions */}

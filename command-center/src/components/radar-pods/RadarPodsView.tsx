@@ -242,13 +242,7 @@ export const RadarPodsView: React.FC<RadarPodsViewProps> = ({
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
             <Scan className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
             <span>Radar Pods</span>
-            <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
-              60-GHz FMCW mmWave
-            </span>
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Contact-free mmWave radar fleet, continuous ballistocardiography, nocturnal sleep apnea surveillance, and bedhead occupancy
-          </p>
         </div>
 
         <button

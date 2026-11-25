@@ -118,9 +118,6 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({
             <Users className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
             Residents
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Care recipient registry, continuous telemetry enrollment, demographic baselines, and clinical risk profiles
-          </p>
         </div>
 
         <button

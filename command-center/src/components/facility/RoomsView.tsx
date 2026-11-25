@@ -232,9 +232,6 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
             <DoorOpen className="w-6 h-6 text-teal-500 dark:text-teal-400" />
             Rooms
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Suites, micro-location zones, capacity, safe-perimeter geofencing, and beacon room anchors
-          </p>
         </div>
 
         <button
