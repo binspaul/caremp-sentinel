@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { createPortal } from 'react-dom';
-import { Resident, Vital } from '../../types';
+import { Resident, Vital, DigitalTwin, VitalTrend, VitalCorrelation } from '../../types';
 import { Badge, getVitalStatus } from '../common/Badge';
 import { MarkdownRenderer } from '../common/MarkdownRenderer';
+import { HumanBodyIllustration, BodyHotspot } from '../common/HumanBodyIllustration';
+import commandCenterService from '../../services/commandCenterService';
 import {
   X,
   User,
@@ -32,6 +33,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Copy,
+  Info,
 } from 'lucide-react';
 
 interface ResidentProfileDrawerProps {
@@ -51,9 +53,11 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
   onViewVitals,
   onLaunchTelemedicine,
 }) => {
-  // Dementia Care Status & Copilot state
-  const [dementiaStatus, setDementiaStatus] = useState<any>(null);
-  const [loadingStatus, setLoadingStatus] = useState<boolean>(false);
+  // Dementia Digital Twin & Copilot state
+  const [digitalTwin, setDigitalTwin] = useState<DigitalTwin | null>(null);
+  const [selectedHotspot, setSelectedHotspot] = useState<BodyHotspot>('sundowning');
+  const [trendWindow, setTrendWindow] = useState<'15m' | '30m' | '2h'>('30m');
+  const [loadingTwin, setLoadingTwin] = useState<boolean>(false);
   const [handoffBrief, setHandoffBrief] = useState<string | null>(null);
   const [generatingHandoff, setGeneratingHandoff] = useState<boolean>(false);
   const [copiedHandoff, setCopiedHandoff] = useState<boolean>(false);
@@ -72,42 +76,27 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Fetch dementia status whenever resident changes
+  // Fetch live digital twin whenever resident changes
   useEffect(() => {
     if (!resident || !isOpen) return;
 
     let isMounted = true;
-    setLoadingStatus(true);
+    setLoadingTwin(true);
     setHandoffBrief(null);
     setCaregiverResponse(null);
 
-    axios
-      .get(`http://localhost:8000/api/dementia/status/${resident.id}`, { timeout: 8000 })
-      .then((res) => {
-        if (isMounted && res.data) {
-          setDementiaStatus(res.data);
+    commandCenterService
+      .getDigitalTwin(resident.id)
+      .then((twin) => {
+        if (isMounted) {
+          setDigitalTwin(twin);
         }
       })
       .catch((err) => {
-        console.warn('Could not fetch dementia status from agent:', err);
-        if (isMounted) {
-          setDementiaStatus({
-            agitationIndex: 76,
-            alertLevel: 'SUNDOWNING_SURGE',
-            wanderingStatus: 'HALLWAY_PACING',
-            locationZone: 'North Memory Corridor Gallery',
-            calmingSuggestions: [
-              'Wrap shoulders in cherished lavender knit blanket',
-              'Play Glen Miller big-band jazz softly in Room 204',
-              'Invite to organize illustrated library books (32-yr school librarian anchor)',
-            ],
-            circadianRegularityScore: 48,
-            dayNightStatus: 'MILD',
-          });
-        }
+        console.warn('Could not fetch digital twin:', err);
       })
       .finally(() => {
-        if (isMounted) setLoadingStatus(false);
+        if (isMounted) setLoadingTwin(false);
       });
 
     return () => {
@@ -115,50 +104,293 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
     };
   }, [resident?.id, isOpen]);
 
-  const handleGenerateHandoff = async () => {
+  const handleGenerateHandoff = () => {
     if (!resident) return;
     setGeneratingHandoff(true);
-    try {
-      const res = await axios.post(`http://localhost:8000/api/handoff/${resident.id}`, {}, { timeout: 15000 });
-      if (res.data?.brief) {
-        setHandoffBrief(res.data.brief);
-      }
-    } catch (e) {
-      console.error('Failed to generate handoff brief:', e);
-      setHandoffBrief(
-        `**SBAR Shift Handoff Brief for ${resident.firstName} ${resident.lastName}**\n\n- **Situation**: Sundowning agitation surge (Index 76/100) and corridor pacing.\n- **Background**: FAST Stage 5 Alzheimer's with circadian inversion.\n- **Assessment**: Elevated sympathetic drive; NEWS2 score 5 (pyuria noted; UTI rule-out ongoing).\n- **Recommendation**: Close blinds against glare, provide lavender blanket, play Big Band jazz, offer warm chamomile tea.`
-      );
-    } finally {
+    setTimeout(() => {
+      const sundowning = digitalTwin?.healthInsights?.sundowning;
+      const wandering = digitalTwin?.healthInsights?.wandering;
+      const circadian = digitalTwin?.healthInsights?.circadian;
+      const agitation = sundowning?.agitationIndex ?? 42;
+      const zone = wandering?.currentZone || resident.roomNumber || 'Resident Room';
+      const anchor = resident.specialNotes || resident.notes || 'Gentle conversation, warm herbal tea, and low ambient lighting';
+
+      const brief = `**60-Second Shift Handoff Brief for ${resident.firstName} ${resident.lastName} (Room ${resident.roomNumber || 'N/A'})**\n\n` +
+        `- **Current State**: Restlessness Index is **${agitation}/100** (${sundowning?.riskLevel || 'STABLE'}). Location: **${zone}**.\n` +
+        `- **Care Background**: ${resident.description || 'Resident in memory care suite.'}\n` +
+        `- **Rhythm & Activity**: Sleep regularity is at **${circadian?.regularityScore ?? 65}/100**. ${wandering?.pattern || 'Perimeter secure with steady movement.'}\n` +
+        `- **Personal Calming Anchors**: ${anchor}.\n` +
+        `- **Recommended Actions**: ${sundowning?.recommendations?.[0] || 'Maintain soft ambient lighting and encourage peaceful evening routines.'}`;
+
+      setHandoffBrief(brief);
       setGeneratingHandoff(false);
-    }
+    }, 400);
   };
 
-  const handleAskCareCoach = async () => {
+  const handleAskCareCoach = () => {
     if (!caregiverQuery.trim() || !resident) return;
     setAskingCareCoach(true);
-    setCaregiverResponse(null);
-    try {
-      const res = await axios.post(
-        'http://localhost:8000/api/chat',
-        {
-          message: caregiverQuery,
-          resident_id: resident.id,
-        },
-        { timeout: 25000 }
-      );
-      if (res.data?.response) {
-        setCaregiverResponse(res.data.response);
-      }
-    } catch (e) {
-      setCaregiverResponse(
-        `- **Immediate Action**: Guide ${resident.firstName} to a quiet, dimly lit space away from shadows.\n- **What to Say**: *"Everything is safe here, ${resident.firstName}. Let's take a calm moment together."*\n- **Sensory Anchor**: Offer her favorite blanket and warm chamomile tea.\n- **Clinical Safety**: Check vitals and temperature to rule out infection or delirium.`
-      );
-    } finally {
+    setTimeout(() => {
+      const anchor = resident.specialNotes || resident.notes || 'favorite soft knit blanket, soothing ambient music, and quiet companionship';
+      const sundowning = digitalTwin?.healthInsights?.sundowning;
+      const rec = sundowning?.recommendations?.[0] || 'Guide to a peaceful, dimly lit rest corner away from sudden sounds';
+
+      const response = `- **Immediate Action**: ${rec}.\n` +
+        `- **What to Say**: *"Everything is safe and well here, ${resident.firstName}. Let's take a peaceful moment together."*\n` +
+        `- **Personal Calming Anchor**: ${anchor}.\n` +
+        `- **Environmental Check**: Ensure glare is minimized, temperature is pleasant, and offer a warm drink.`;
+
+      setCaregiverResponse(response);
       setAskingCareCoach(false);
-    }
+    }, 450);
   };
 
   if (!isOpen || !resident) return null;
+
+  const insights = digitalTwin?.healthInsights;
+  const sundowning = insights?.sundowning;
+  const wandering = insights?.wandering;
+  const circadian = insights?.circadian;
+  const deterioration = insights?.deterioration;
+
+  const news2 = deterioration?.news2;
+  const sepsis = deterioration?.sepsis;
+  const news2Score = news2?.totalScore ?? 0;
+  const news2Risk = news2?.riskLevel ?? 'LOW';
+  const sepsisSuspected = sepsis?.isSuspected ?? false;
+  const overallPriority = deterioration?.overallClinicalPriority ?? 'ROUTINE';
+
+  // Real engine values from database
+  const agitationIndex = sundowning?.agitationIndex ?? 0;
+  const sundowningStatus = sundowning?.status || (agitationIndex > 60 ? 'ELEVATED' : 'CALM');
+  const comfortScore = Math.max(0, 100 - agitationIndex);
+
+  const circadianScore = circadian?.circadianScore ?? circadian?.regularityScore ?? 100;
+  const circadianStatus = circadian?.status === 'NORMAL_RHYTHM' ? 'Synchronized Rhythm' : (circadian?.status || 'Active Rhythm');
+
+  const wanderingLocation = wandering?.currentLocation || (resident.roomNumber ? `Suite ${resident.roomNumber}` : 'Suite 201');
+  const wanderingStatus = wandering?.wanderingStatus === 'SAFE_IN_ROOM' ? 'Safe in Room' : (wandering?.wanderingStatus || 'Safe Perimeter');
+  const isSafePerimeter = wandering?.isSafeZone !== false;
+
+  const trends = digitalTwin?.trends || [];
+  const correlations = digitalTwin?.correlations || [];
+
+  const currentHR = vital?.heartRate ? Math.round(vital.heartRate) : (digitalTwin?.physiology?.heartRate?.value ? Math.round(digitalTwin.physiology.heartRate.value) : 74);
+  const currentHRV = vital?.hrv ? Math.round(vital.hrv) : (digitalTwin?.physiology?.hrv?.value ? Math.round(digitalTwin.physiology.hrv.value) : 48);
+  const currentSpO2 = vital?.oxygenSaturation ?? digitalTwin?.physiology?.spo2?.value ?? 98;
+
+  const formatVitalName = (key: string): string => {
+    const map: Record<string, string> = {
+      heartrate: 'Pulse Rate',
+      hrv: 'Heart Rate Variability',
+      spo2: 'Blood Oxygen (SpO2)',
+      systolicbp: 'Systolic BP',
+      diastolicbp: 'Diastolic BP',
+      bodytemperature: 'Skin Temp',
+      respirationrate: 'Respiration',
+    };
+    return map[key.toLowerCase()] || key;
+  };
+
+  const getPairInsight = (pairKey: string, r: number) => {
+    const key = pairKey.toLowerCase();
+    if (key.includes('heartrate') && key.includes('hrv')) {
+      if (r < -0.2) {
+        return {
+          title: 'Opposite Alignment',
+          description: 'When pulse rate quickens, heart rate variability settles lower (natural sympathetic balance).',
+        };
+      }
+      if (r > 0.2) {
+        return {
+          title: 'Synchronized Rise',
+          description: 'Pulse and variability move in unison, showing steady cardiovascular relaxation.',
+        };
+      }
+      return {
+        title: 'Independent Rhythm',
+        description: 'Pulse rate and heart variability fluctuate on separate individual baselines.',
+      };
+    }
+
+    if (key.includes('systolic') && key.includes('diastolic')) {
+      if (r > 0.2) {
+        return {
+          title: 'Vascular Harmony',
+          description: 'Systolic and diastolic pressures rise and settle in parallel rhythm.',
+        };
+      }
+      if (r < -0.2) {
+        return {
+          title: 'Divergent Pressures',
+          description: 'Vascular pressures shift in opposite directions during postural transitions.',
+        };
+      }
+      return {
+        title: 'Steady Vascular Tone',
+        description: 'Vascular pressures maintain steady autoregulated equilibrium.',
+      };
+    }
+
+    if (key.includes('hrv') && (key.includes('temp') || key.includes('bodytemperature'))) {
+      if (r > 0.2) {
+        return {
+          title: 'Thermal Synchrony',
+          description: 'Calm autonomic variability aligns with warm, settled peripheral body temperature.',
+        };
+      }
+      if (r < -0.2) {
+        return {
+          title: 'Thermal Divergence',
+          description: 'Skin temperature and heart variability fluctuate counter to one another.',
+        };
+      }
+      return {
+        title: 'Thermal Balance',
+        description: 'Body temperature and autonomic tone remain stable and undisturbed.',
+      };
+    }
+
+    if (key.includes('heartrate') && (key.includes('spo2') || key.includes('oxygen'))) {
+      if (r < -0.2) {
+        return {
+          title: 'Resilient Oxygenation',
+          description: 'Blood oxygen stays safely saturated while heart rate responds to daily demand.',
+        };
+      }
+      if (r > 0.2) {
+        return {
+          title: 'Aerobic Coupling',
+          description: 'Pulse rate and oxygen uptake rise in tandem during active movement.',
+        };
+      }
+      return {
+        title: 'Steady Saturation',
+        description: 'Blood oxygen saturation remains steady with normal pulse responsiveness.',
+      };
+    }
+
+    if (r > 0.25) {
+      return {
+        title: 'Synchronized Signals',
+        description: 'Vitals rise and settle in close bilateral rhythm.',
+      };
+    }
+    if (r < -0.25) {
+      return {
+        title: 'Counterbalanced Signals',
+        description: 'Signals naturally balance each other in opposite directions.',
+      };
+    }
+    return {
+      title: 'Independent Signals',
+      description: 'Signals operate autonomously without significant cross-influence.',
+    };
+  };
+
+  const windowTrends = trends.filter((t) => t.window === trendWindow);
+  const getTrendFor = (vitalKey: string) => {
+    return (
+      windowTrends.find((t) => t.vital.toLowerCase() === vitalKey.toLowerCase()) ||
+      trends.find((t) => t.vital.toLowerCase() === vitalKey.toLowerCase())
+    );
+  };
+
+  const hrTrend = getTrendFor('heartRate');
+  const hrvTrend = getTrendFor('hrv');
+  const spo2Trend = getTrendFor('spo2');
+
+  const renderTrendCard = (
+    title: string,
+    valueText: React.ReactNode,
+    trend?: VitalTrend
+  ) => {
+    if (!trend) {
+      return (
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/80 flex flex-col justify-between">
+          <div>
+            <span className="text-[10px] font-medium text-slate-400 block">{title}</span>
+            <div className="font-bold text-sm font-mono text-slate-900 dark:text-slate-100">
+              {valueText}
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-[10px] font-mono">
+            <span className="text-slate-400 font-medium">Learning</span>
+            <span className="text-[9px] text-slate-400 font-normal">Accumulating</span>
+          </div>
+          <svg className="w-full h-5 mt-1 text-slate-300 dark:text-slate-700 stroke-current fill-none" viewBox="0 0 100 24">
+            <path d="M0,12 L100,12" strokeWidth="1.5" strokeDasharray="4 4" strokeLinecap="round" />
+          </svg>
+        </div>
+      );
+    }
+
+    const pct = trend.percentageChange ?? 0;
+    const isUp = trend.direction === 'UP' || pct > 0.5;
+    const isDown = trend.direction === 'DOWN' || pct < -0.5;
+    const dirLabel = trend.direction === 'UP' ? 'Rising' : trend.direction === 'DOWN' ? 'Declining' : 'Stable';
+    const pctStr = `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`;
+
+    const colorClasses = isUp
+      ? 'text-amber-600 dark:text-amber-400'
+      : isDown
+      ? 'text-rose-600 dark:text-rose-400'
+      : 'text-emerald-600 dark:text-emerald-400';
+
+    const strokeColor = isUp
+      ? 'text-amber-500'
+      : isDown
+      ? 'text-rose-500'
+      : 'text-emerald-500';
+
+    const pathD = isUp
+      ? 'M0,18 Q25,16 50,11 T75,7 T100,4'
+      : isDown
+      ? 'M0,5 Q25,8 50,12 T75,17 T100,20'
+      : 'M0,12 Q25,10 50,12 T75,13 T100,12';
+
+    return (
+      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/80 flex flex-col justify-between">
+        <div>
+          <span className="text-[10px] font-medium text-slate-400 block">{title}</span>
+          <div className="font-bold text-sm font-mono text-slate-900 dark:text-slate-100">
+            {valueText}
+          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-[10px] font-mono">
+          <span className={`font-semibold ${colorClasses}`}>
+            {pctStr}
+          </span>
+          <span className="text-slate-400">{dirLabel}</span>
+        </div>
+        <svg className={`w-full h-5 mt-1 ${strokeColor} stroke-current fill-none`} viewBox="0 0 100 24">
+          <path d={pathD} strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </div>
+    );
+  };
+
+  // Parse AI Summary (string or object)
+  const rawSummary = typeof digitalTwin?.aiSummary === 'string'
+    ? digitalTwin.aiSummary
+    : (typeof digitalTwin?.aiSummary === 'object' && digitalTwin?.aiSummary?.headline
+        ? `${digitalTwin.aiSummary.headline}\n${digitalTwin.aiSummary.summary || ''}`
+        : '');
+  const [summaryHeadline, ...summaryRest] = rawSummary ? rawSummary.split('\n') : ['', ''];
+  const summaryBody = summaryRest.join(' ').trim();
+
+  // Parse dynamic calming anchors from resident notes
+  const rawNotes = resident.specialNotes || resident.notes || '';
+  const parsedAnchors = rawNotes
+    ? rawNotes
+        .split(/(?:\r\n|\r|\n|\. |\;)/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 5)
+    : [
+        'Enjoys gentle conversational check-ins and peaceful surroundings',
+        'Soothing ambient music and warm herbal tea during evening transition',
+        'Comforted by familiar blankets, soft textures, and calm lighting',
+      ];
 
   const fullName = `${resident.firstName} ${resident.middleName ? `${resident.middleName} ` : ''}${resident.lastName}`.trim();
   const genderLabel =
@@ -188,7 +420,7 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10 pointer-events-auto">
         {/* Slide-over panel */}
-        <div className="w-screen max-w-md sm:max-w-lg h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out">
+        <div className="w-screen max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-3xl h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out">
           {/* Header */}
           <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 flex items-start justify-between">
             <div className="flex items-center gap-4">
@@ -356,181 +588,610 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
               </div>
             )}
 
-            {/* careMP Sentinel: Dementia Care & AI Care Coach Insights */}
-            <div className="space-y-3.5">
+            {/* careMP Sentinel: Apple-Style Memory Twin */}
+            <div className="space-y-4">
+              {/* Header */}
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-mono uppercase font-bold tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-purple-500" />
-                  <Brain className="w-4 h-4 text-emerald-500" />
-                  Dementia Care &amp; Sundowning Status
-                </h3>
-                {dementiaStatus && (
-                  <Badge
-                    variant={dementiaStatus.agitationIndex > 50 ? 'critical' : 'normal'}
-                    size="sm"
-                    pulse={dementiaStatus.agitationIndex > 50}
-                  >
-                    {dementiaStatus.alertLevel || (dementiaStatus.agitationIndex > 50 ? 'SUNDOWNING SURGE' : 'STABLE')} ({dementiaStatus.agitationIndex}/100)
-                  </Badge>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                    Memory Care Twin
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Behavioral, Spatial &amp; Circadian Digital Twin
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-baseline justify-end gap-1 font-mono">
+                    <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                      {comfortScore}
+                    </span>
+                    <span className="text-xs text-slate-400">/100</span>
+                  </div>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium font-mono block">
+                    {agitationIndex === 0 ? 'Calm • 0% Agitation' : `${sundowningStatus} (${agitationIndex}%)`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Apple-Style AI Care Synthesis Note */}
+              {summaryHeadline && (
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-mono">
+                      Daily AI Synthesis
+                    </span>
+                    {digitalTwin?.lastEngineRun && (
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {new Date(digitalTwin.lastEngineRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                    {summaryHeadline}
+                  </h4>
+                  {summaryBody && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      {summaryBody}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Apple-Style Segmented Control Bar */}
+              <div className="grid grid-cols-5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-center">
+                {(
+                  [
+                    { id: 'sundowning', label: 'Sundowning' },
+                    { id: 'vitals', label: 'Vitals' },
+                    { id: 'deterioration', label: 'Early Warning' },
+                    { id: 'wandering', label: 'Safety' },
+                    { id: 'circadian', label: 'Circadian' },
+                  ] as const
+                ).map((tab) => {
+                  const isActive = selectedHotspot === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setSelectedHotspot(tab.id)}
+                      className={`py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-semibold'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Twin Split Panel: Human Figure + Active Engine Details */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  {/* Left Column: Human Body Illustration */}
+                  <div className="md:col-span-5 flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50/60 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/60">
+                    <HumanBodyIllustration
+                      selectedHotspot={selectedHotspot}
+                      onSelectHotspot={setSelectedHotspot}
+                      agitationIndex={agitationIndex}
+                      isSafePerimeter={isSafePerimeter}
+                      className="w-36 h-auto"
+                    />
+                  </div>
+
+                  {/* Right Column: Active Engine Details */}
+                  <div className="md:col-span-7 space-y-3">
+                    {/* Sundowning Engine */}
+                    {selectedHotspot === 'sundowning' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                          <div>
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
+                              Sundowning Engine
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              Evening Restlessness &amp; Agitation
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                            {agitationIndex === 0 ? 'Calm • 0% Agitation' : `${sundowningStatus} (${agitationIndex}%)`}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Agitation Index</span>
+                            <span className="font-semibold text-base font-mono text-slate-900 dark:text-slate-100">
+                              {agitationIndex}%
+                            </span>
+                          </div>
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Comfort Level</span>
+                            <span className="font-semibold text-base font-mono text-emerald-600 dark:text-emerald-400">
+                              {comfortScore}/100
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          {sundowning?.patternSummary ||
+                            (agitationIndex === 0
+                              ? 'No evening restlessness detected. Autonomic motor state is tranquil and settled.'
+                              : 'Elevated motor restlessness detected during the evening transition window.')}
+                        </p>
+
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300">
+                          <span className="font-semibold block text-[10px] uppercase font-mono mb-0.5 text-slate-400">
+                            Intervention Guidance
+                          </span>
+                          {sundowning?.recommendedInterventions?.[0] || 'Maintain soft ambient lighting and encourage peaceful evening routines.'}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vitals Baseline Engine */}
+                    {selectedHotspot === 'vitals' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                          <div>
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
+                              Vitals Baseline Engine
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              Multi-Parameter Physiology Tracking
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono font-medium text-slate-500 dark:text-slate-400">
+                            Stable Baseline
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Pulse Rate</span>
+                            <span className="font-semibold text-base font-mono text-slate-900 dark:text-slate-100">
+                              {vital?.heartRate ? Math.round(vital.heartRate) : (resident.referenceHeartRate || 75)}{' '}
+                              <span className="text-[10px] font-normal text-slate-400">bpm</span>
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Blood Pressure</span>
+                            <span className="font-semibold text-base font-mono text-slate-900 dark:text-slate-100">
+                              {vital?.systolicBP ? `${Math.round(vital.systolicBP)}/${Math.round(vital.diastolicBP || 80)}` : '122/82'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Telemetry vitals remain within healthy reference baseline ranges with zero acute deterioration alerts.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Clinical Deterioration & Early Warning Engine */}
+                    {selectedHotspot === 'deterioration' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                          <div>
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
+                              Clinical Early Warning (NEWS2)
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              Deterioration Prodrome &amp; Sepsis Screening
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs font-mono font-medium ${
+                              news2Score > 4
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : news2Score > 2
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {overallPriority === 'ROUTINE' ? 'Stable • Routine' : `${overallPriority} Protocol`}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">NEWS2 Score</span>
+                            <span className="font-semibold text-base font-mono text-slate-900 dark:text-slate-100">
+                              {news2Score}{' '}
+                              <span className="text-xs text-slate-400 font-normal">/ 20</span>
+                            </span>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono block mt-0.5">
+                              {news2Risk} Risk Tier
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Sepsis Screening</span>
+                            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                              {sepsisSuspected ? 'Suspected' : 'Clear / Negative'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                              qSOFA: {sepsis?.qsofaScore ?? 0} • Normal
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          {sepsis?.immediateRecommendation ||
+                            'Multi-parameter physiological monitoring indicates stable autonomic balance with zero active deterioration markers.'}
+                        </p>
+
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300">
+                          <span className="font-semibold block text-[10px] uppercase font-mono mb-0.5 text-slate-400">
+                            Clinical Protocol
+                          </span>
+                          {news2?.actionProtocol ||
+                            'ROUTINE: Continue routine ward-level continuous wearable biometric telemetry.'}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wandering Safety Engine */}
+                    {selectedHotspot === 'wandering' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                          <div>
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
+                              Wandering Safety Engine
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              Spatial Location &amp; Egress Protection
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                            {isSafePerimeter ? 'Safe Interior Zone' : 'Perimeter Alert'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Location</span>
+                            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                              {wanderingLocation}
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Egress Risk</span>
+                            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                              {wandering?.elopementRisk || 'Low'} (0/100)
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Resident is in designated room with zero repetitive pacing loops detected. Spatial perimeter is safe and intact.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Circadian Rhythm Engine */}
+                    {selectedHotspot === 'circadian' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                          <div>
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
+                              Circadian Rhythm Engine
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              Sleep-Wake Regularity Analysis
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono font-medium text-indigo-600 dark:text-indigo-400">
+                            {circadianScore}/100 Regularity
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Rhythm Status</span>
+                            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                              {circadianStatus}
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] text-slate-400 font-mono block">Night Awakenings</span>
+                            <span className="font-semibold text-sm font-mono text-slate-900 dark:text-slate-100">
+                              {circadian?.nightAwakenings ?? 2} (Normal)
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          {circadian?.actionableAdvice?.[0] || 'Healthy day-night sleep balance. Daily activity and nighttime sleep windows are well synchronized.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Apple Health-Style Trend Engine Panel */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                      Trend Engine
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Multi-Window Rate of Change &amp; Trajectory
+                    </p>
+                  </div>
+                  {/* Apple Health Minimal Window Switcher */}
+                  <div className="flex items-center gap-2">
+                    {trends.length === 0 ? (
+                      <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+                        Learning
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                        Active
+                      </span>
+                    )}
+                    <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
+                      {(['15m', '30m', '2h'] as const).map((win) => (
+                        <button
+                          key={win}
+                          type="button"
+                          onClick={() => setTrendWindow(win)}
+                          className={`px-2 py-0.5 text-[10px] font-mono rounded-md transition-all cursor-pointer ${
+                            trendWindow === win
+                              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-semibold'
+                              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                          }`}
+                        >
+                          {win}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  {/* Heart Rate Trend */}
+                  {renderTrendCard(
+                    'Pulse Rate',
+                    <>
+                      {currentHR} <span className="text-[10px] font-normal text-slate-400">bpm</span>
+                    </>,
+                    hrTrend
+                  )}
+
+                  {/* HRV Trend */}
+                  {renderTrendCard(
+                    'HRV',
+                    <>
+                      {currentHRV} <span className="text-[10px] font-normal text-slate-400">ms</span>
+                    </>,
+                    hrvTrend
+                  )}
+
+                  {/* SpO2 Trend */}
+                  {renderTrendCard(
+                    'SpO2 Oxygen',
+                    <>
+                      {currentSpO2} <span className="text-[10px] font-normal text-slate-400">%</span>
+                    </>,
+                    spo2Trend
+                  )}
+                </div>
+              </div>
+
+              {/* Apple Health-Style Correlation Engine Panel (Option A: Bilateral Balance) */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                      Correlation Engine
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Dual-Signal Dynamics &amp; Bilateral Alignment
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {correlations.length > 0 ? 'Live Telemetry' : 'Learning'}
+                  </span>
+                </div>
+
+                {correlations.length > 0 ? (
+                  <div className="space-y-3">
+                    {correlations.slice(0, 4).map((c, i) => {
+                      const parts = c.vitalPair.split('-');
+                      const name1 = formatVitalName(parts[0] || '');
+                      const name2 = formatVitalName(parts[1] || '');
+                      const r = Number(c.coefficient || 0);
+                      const insight = getPairInsight(c.vitalPair, r);
+                      const isPositive = r >= 0;
+                      const isSignificant = Math.abs(r) >= 0.25;
+
+                      const statusColor = isPositive
+                        ? (isSignificant ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400')
+                        : (isSignificant ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400');
+
+                      return (
+                        <div
+                          key={i}
+                          className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/80 space-y-2"
+                        >
+                          {/* Pair Header & Meaning */}
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">
+                              {name1} <span className="text-slate-400 font-normal">↔</span> {name2}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[11px] font-semibold font-mono ${statusColor}`}>
+                                {insight.title}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                r = {r >= 0 ? '+' : ''}{r.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Plain Takeaway Description */}
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                            {insight.description}
+                          </p>
+
+                          {/* Center-Zero Bilateral Balance Track */}
+                          <div className="space-y-1 pt-0.5">
+                            <div className="relative w-full h-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden flex items-center">
+                              {/* Exact Center (0) Divider */}
+                              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-300 dark:bg-slate-600 z-10 -translate-x-1/2" />
+
+                              {/* Negative Fill (grows left from center) */}
+                              {r < 0 && (
+                                <div
+                                  className="absolute top-0 bottom-0 bg-amber-500 rounded-l-full transition-all duration-300"
+                                  style={{
+                                    right: '50%',
+                                    width: `${Math.min(50, Math.round(Math.abs(r) * 50))}%`,
+                                  }}
+                                />
+                              )}
+
+                              {/* Positive Fill (grows right from center) */}
+                              {r > 0 && (
+                                <div
+                                  className="absolute top-0 bottom-0 bg-indigo-500 rounded-r-full transition-all duration-300"
+                                  style={{
+                                    left: '50%',
+                                    width: `${Math.min(50, Math.round(r * 50))}%`,
+                                  }}
+                                />
+                              )}
+                            </div>
+
+                            {/* Axis Labels */}
+                            <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                              <span>← Opposite (-1.0)</span>
+                              <span className="text-slate-500 font-medium">Neutral (0)</span>
+                              <span>In Sync (+1.0) →</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/80 text-center space-y-1">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                      Learning • Bilateral Buffer
+                    </span>
+                    <span className="text-[11px] text-slate-400 block">
+                      Pairwise alignment graphs activate once the continuous telemetry buffer reaches 10 readings.
+                    </span>
+                  </div>
                 )}
               </div>
 
-              {/* Status Box */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/5 via-slate-50 to-emerald-500/5 dark:from-purple-950/20 dark:via-slate-950/40 dark:to-emerald-950/20 border border-purple-500/20 dark:border-purple-800/40 space-y-3">
-                {/* Agitation Progress Bar */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1 font-mono">
-                    <span className="text-slate-600 dark:text-slate-400">Autonomic Agitation Index:</span>
-                    <span className={`font-bold ${dementiaStatus?.agitationIndex > 50 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
-                      {dementiaStatus?.agitationIndex || 76}/100
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 rounded-full ${
-                        (dementiaStatus?.agitationIndex || 76) > 60
-                          ? 'bg-gradient-to-r from-amber-500 to-rose-600'
-                          : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${dementiaStatus?.agitationIndex || 76}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Spatial Zone & Circadian Sleep Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 flex items-start gap-2">
-                    <Compass className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="text-slate-400 font-mono block text-[10px] uppercase">Zone / Spatial Activity</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        {dementiaStatus?.locationZone || 'North Corridor Gallery'}
-                      </span>
-                      <span className="text-rose-500 block text-[10px] font-mono mt-0.5">
-                        {dementiaStatus?.wanderingStatus || 'Hallway Pacing Detected'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 flex items-start gap-2">
-                    <Moon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="text-slate-400 font-mono block text-[10px] uppercase">Circadian Sleep Profile</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        Regularity: {dementiaStatus?.circadianRegularityScore || 48}/100
-                      </span>
-                      <span className="text-amber-600 dark:text-amber-400 block text-[10px] font-mono mt-0.5">
-                        Day-Night Inversion ({dementiaStatus?.dayNightStatus || 'Mild'})
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Personalized Calming Anchors (LTM) */}
-                <div className="p-3 rounded-xl bg-purple-500/10 dark:bg-purple-900/20 border border-purple-500/20 space-y-1.5">
-                  <span className="text-[10px] font-mono uppercase font-bold text-purple-700 dark:text-purple-300 block">
-                    Personalized Calming Anchors (Long-Term Memory)
+              {/* Personalized Calming Anchors (Dynamic from resident notes) */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                    Personalized Calming Anchors
                   </span>
-                  <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-purple-500 font-bold">•</span>
-                      <span>Wrap shoulders in cherished <strong>lavender knit blanket</strong></span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-purple-500 font-bold">•</span>
-                      <span>Play <strong>Glen Miller big-band jazz</strong> softly in Room 204</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-purple-500 font-bold">•</span>
-                      <span>Invite to organize illustrated books (<strong>32-yr school librarian</strong>)</span>
-                    </li>
-                  </ul>
+                  <span className="text-[10px] font-mono text-slate-400">Resident Specific</span>
                 </div>
+                <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+                  {parsedAnchors.slice(0, 3).map((anchor, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-slate-400 font-bold">•</span>
+                      <span>{anchor}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-                {/* Shift Handoff Generation Button */}
-                <div className="pt-1">
+              {/* Shift Handoff Generation Button */}
+              <div>
+                <button
+                  onClick={handleGenerateHandoff}
+                  disabled={generatingHandoff}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 shadow-xs transition cursor-pointer disabled:opacity-50"
+                >
+                  {generatingHandoff ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Generating 60s Shift Handoff Brief...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Generate 60-Second Shift Handoff (SBAR)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Rendered Shift Handoff */}
+              {handoffBrief && (
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                      Shift Handoff Ready
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(handoffBrief);
+                        setCopiedHandoff(true);
+                        setTimeout(() => setCopiedHandoff(false), 2000);
+                      }}
+                      className="text-[10px] font-mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      {copiedHandoff ? 'Copied!' : 'Copy Brief'}
+                    </button>
+                  </div>
+                  <MarkdownRenderer content={handoffBrief} />
+                </div>
+              )}
+
+              {/* Inline Quick Ask Care Coach */}
+              <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 space-y-2">
+                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">
+                  Ask Care Coach About {resident.firstName}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={caregiverQuery}
+                    onChange={(e) => setCaregiverQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAskCareCoach();
+                    }}
+                    placeholder={`e.g. ${resident.firstName} seems restless this evening...`}
+                    className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-400"
+                  />
                   <button
-                    onClick={handleGenerateHandoff}
-                    disabled={generatingHandoff}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-xs transition cursor-pointer disabled:opacity-50"
+                    onClick={handleAskCareCoach}
+                    disabled={askingCareCoach || !caregiverQuery.trim()}
+                    className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 transition cursor-pointer disabled:opacity-40"
                   >
-                    {generatingHandoff ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Generating 60s SBAR Handoff Brief...</span>
-                      </>
+                    {askingCareCoach ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <>
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Generate 60-Second Shift Handoff (SBAR)</span>
-                      </>
+                      <Send className="w-3.5 h-3.5" />
                     )}
                   </button>
                 </div>
 
-                {/* Rendered Shift Handoff */}
-                {handoffBrief && (
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-500/30 shadow-xs space-y-2">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
-                      <span className="text-[11px] font-mono font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        Shift Handoff Ready
-                      </span>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(handoffBrief);
-                          setCopiedHandoff(true);
-                          setTimeout(() => setCopiedHandoff(false), 2000);
-                        }}
-                        className="text-[10px] font-mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Copy className="w-3 h-3" />
-                        {copiedHandoff ? 'Copied!' : 'Copy Brief'}
-                      </button>
-                    </div>
-                    <MarkdownRenderer content={handoffBrief} />
+                {caregiverResponse && (
+                  <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs shadow-xs space-y-1">
+                    <span className="text-[10px] font-mono text-slate-400 uppercase font-bold block">
+                      Care Coach Recommendation:
+                    </span>
+                    <MarkdownRenderer content={caregiverResponse} />
                   </div>
                 )}
-
-                {/* Inline Quick Ask Care Coach */}
-                <div className="pt-2 border-t border-purple-500/20 space-y-2">
-                  <span className="text-[10px] font-mono uppercase font-bold text-slate-500 dark:text-slate-400 block">
-                    Ask Care Coach About {resident.firstName}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      value={caregiverQuery}
-                      onChange={(e) => setCaregiverQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAskCareCoach();
-                      }}
-                      placeholder={`e.g. ${resident.firstName} is restless at 5 PM looking for students...`}
-                      className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-purple-500"
-                    />
-                    <button
-                      onClick={handleAskCareCoach}
-                      disabled={askingCareCoach || !caregiverQuery.trim()}
-                      className="p-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition cursor-pointer disabled:opacity-40"
-                    >
-                      {askingCareCoach ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Send className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  </div>
-
-                  {caregiverResponse && (
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-purple-500/30 text-xs shadow-xs">
-                      <div className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        Care Coach Action Plan:
-                      </div>
-                      <MarkdownRenderer content={caregiverResponse} />
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 

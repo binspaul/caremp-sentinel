@@ -72,6 +72,7 @@ export class DigitalTwinService {
         ? {
           heartRate: physiology.heartRate,
           hrv: physiology.hrv,
+          spo2: physiology.spo2,
           systolicBP: physiology.systolicBP,
           diastolicBP: physiology.diastolicBP,
           bodyTemperature: physiology.bodyTemperature,
