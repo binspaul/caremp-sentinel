@@ -618,7 +618,7 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
         onClick={() => setIsSimulationOpen(true)}
         aria-label="Simulate Facility Movement & Geofence"
         title="Simulate Facility Movement & Geofence"
-        className="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center shadow-xl shadow-emerald-950/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
+        className="fixed bottom-6 right-6 z-[500] w-12 h-12 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center shadow-xl shadow-emerald-950/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
       >
         <Zap className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
       </button>
