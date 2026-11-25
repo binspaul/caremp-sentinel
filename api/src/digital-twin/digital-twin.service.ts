@@ -101,13 +101,11 @@ export class DigitalTwinService {
       correlations: correlations || [],
       healthInsights: healthInsights
         ? {
-          healthyAgeing: healthInsights.healthyAgeing
-            ? {
-              score: healthInsights.healthyAgeing.score,
-              category: healthInsights.healthyAgeing.category,
-              triggeredRules: healthInsights.healthyAgeing.triggeredRules || [],
-            }
-            : {},
+          ...healthInsights,
+          sundowning: healthInsights.sundowning || undefined,
+          wandering: healthInsights.wandering || undefined,
+          circadian: healthInsights.circadian || undefined,
+          deterioration: healthInsights.deterioration || undefined,
           predictions: healthInsights.predictions || [],
           recommendations: healthInsights.recommendations || [],
         }

@@ -250,22 +250,6 @@ class CorrelationResultDto {
   direction: 'POSITIVE' | 'NEGATIVE';
 }
 
-class HealthyAgeingDto {
-  @IsNumber()
-  @IsNotEmpty()
-  score: number;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['GOOD', 'WATCH', 'CONCERN'])
-  category: 'GOOD' | 'WATCH' | 'CONCERN';
-
-  @IsArray()
-  @IsString({ each: true })
-  @IsNotEmpty({ each: true })
-  triggeredRules: string[];
-}
-
 class PredictionDto {
   @IsString()
   @IsNotEmpty()
@@ -292,10 +276,20 @@ class RecommendationDto {
 
 class HealthInsightsDto {
   @IsObject()
-  @IsNotEmpty()
-  @ValidateNested()
-  @Type(() => HealthyAgeingDto)
-  healthyAgeing: HealthyAgeingDto;
+  @IsOptional()
+  sundowning?: Record<string, any>;
+
+  @IsObject()
+  @IsOptional()
+  wandering?: Record<string, any>;
+
+  @IsObject()
+  @IsOptional()
+  circadian?: Record<string, any>;
+
+  @IsObject()
+  @IsOptional()
+  deterioration?: Record<string, any>;
 
   @IsArray()
   @IsOptional()
