@@ -609,6 +609,13 @@ export const commandCenterService = {
   async getDigitalTwin(residentId: number): Promise<DigitalTwin | null> {
     try {
       const response = await apiClient.get<ApiResponse<DigitalTwin>>(`/digital-twin/resident/${residentId}`);
+      return response.data.data || null;
+    } catch {
+      return null;
+    }
+  },
+
+  // ==========================================
   // Notifications API
   // ==========================================
   async getNotifications(params?: {
