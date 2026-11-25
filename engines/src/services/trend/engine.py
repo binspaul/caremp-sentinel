@@ -63,12 +63,15 @@ class TrendEngine(BaseEngine):
 
         # 0. Reject duplicate/replayed readings
         last_processed_at = self._last_processed_at.get(resident_id)
-        if last_processed_at is not None and reading.generated_at <= last_processed_at:
-            return {
-                "resident_id": resident_id,
-                "trends": self.get_all_trends(resident_id),
-                "status": "skipped_duplicate"
-            }
+        if last_processed_at is not None and reading.generated_at is not None:
+            r_time = reading.generated_at.replace(tzinfo=None) if reading.generated_at.tzinfo else reading.generated_at
+            lp_time = last_processed_at.replace(tzinfo=None) if last_processed_at.tzinfo else last_processed_at
+            if r_time <= lp_time:
+                return {
+                    "resident_id": resident_id,
+                    "trends": self.get_all_trends(resident_id),
+                    "status": "skipped_duplicate"
+                }
         self._last_processed_at[resident_id] = reading.generated_at
 
         # 1. Update rolling window(s) with timestamp awareness

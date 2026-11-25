@@ -83,13 +83,13 @@ export class DigitalTwin implements IDigitalTwin {
 
     @Column({ type: 'jsonb' })
     healthInsights: {
-        healthyAgeing: {
-            score: number;
-            category: 'GOOD' | 'WATCH' | 'CONCERN';
-            triggeredRules: string[];
-        };
-        predictions: Prediction[];
-        recommendations: Recommendation[];
+        sundowning?: any;
+        wandering?: any;
+        circadian?: any;
+        deterioration?: any;
+        predictions?: Prediction[];
+        recommendations?: Recommendation[];
+        [key: string]: any;
     };
 
     @Column({ type: 'jsonb' })
