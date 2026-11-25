@@ -624,7 +624,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
         motionless,
       });
       setFallResult(
-        `🚨 Fall Incident Dispatched! ${sev.toUpperCase()} fall logged for ${name} at ${loc}. Emergency alert broadcast to all floor dashboards.`,
+        `🚨 Fall Incident Dispatched! ${sev.toUpperCase()} fall logged for ${name} at ${loc}. Emergency alert and notification created.`,
       );
 
       if (onFallSimulated) {
@@ -928,7 +928,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                       {movementResult.isSafePerimeter
                         ? 'Safe Perimeter Restored'
                         : 'Restricted Egress Breach Alert Logged'}
-                      ). Beacon coordinates and floor map updated.
+                      ). Beacon coordinates, floor map, and notification log updated.
                     </p>
                   </div>
                 </div>

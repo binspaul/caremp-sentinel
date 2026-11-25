@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,11 +13,18 @@ import {
 } from './entities/fall-incident.entity';
 import { Resident } from '../residents/entities/resident.entity';
 import { Band } from '../bands/entities/band.entity';
+import {
+  Notification,
+  NotificationType,
+  NotificationPriority,
+} from '../notifications/entities/notification.entity';
 import { CreateFallIncidentDto } from './dtos/create-fall-incident.dto';
 import { ResolveFallIncidentDto } from './dtos/resolve-fall-incident.dto';
 
 @Injectable()
 export class FallsService {
+  private readonly logger = new Logger(FallsService.name);
+
   constructor(
     @InjectRepository(FallIncident)
     private readonly fallRepository: Repository<FallIncident>,
@@ -26,6 +34,9 @@ export class FallsService {
 
     @InjectRepository(Band)
     private readonly bandRepository: Repository<Band>,
+
+    @InjectRepository(Notification)
+    private readonly notificationRepository: Repository<Notification>,
   ) {}
 
   async findAll(params?: {
@@ -163,7 +174,46 @@ export class FallsService {
       detectedAt: new Date(),
     });
 
-    return await this.fallRepository.save(incident);
+    const savedIncident = await this.fallRepository.save(incident);
+
+    // Auto-create a Notification record for the simulated/detected fall incident
+    try {
+      const isCritical =
+        savedIncident.severity === FallSeverity.CRITICAL ||
+        savedIncident.severity === FallSeverity.SEVERE;
+
+      const priority = isCritical
+        ? NotificationPriority.CRITICAL
+        : savedIncident.severity === FallSeverity.MODERATE
+        ? NotificationPriority.HIGH
+        : NotificationPriority.MEDIUM;
+
+      const residentName = `${resident.firstName} ${resident.lastName}`.trim();
+      const notification = this.notificationRepository.create({
+        residentId: savedIncident.residentId,
+        type: NotificationType.FALL,
+        priority,
+        title: 'Emergency Fall Alert Detected',
+        message: `${savedIncident.severity.toUpperCase()} fall incident detected for ${residentName} at ${savedIncident.location}. Kinematic impact: ${savedIncident.impactForceG}g, motionless duration: ${savedIncident.motionlessDurationSeconds}s.`,
+        data: {
+          fallId: savedIncident.id,
+          roomNumber: resident.roomNumber || undefined,
+          location: savedIncident.location,
+          impactG: savedIncident.impactForceG,
+          motionlessSeconds: savedIncident.motionlessDurationSeconds,
+          severity: savedIncident.severity,
+          scenario: savedIncident.clinicalDescription,
+        },
+        isRead: false,
+        isDismissed: false,
+      });
+
+      await this.notificationRepository.save(notification);
+    } catch (notifError) {
+      this.logger.error('Failed to auto-create notification for fall incident', notifError);
+    }
+
+    return savedIncident;
   }
 
   async resolve(id: number, dto: ResolveFallIncidentDto): Promise<FallIncident> {

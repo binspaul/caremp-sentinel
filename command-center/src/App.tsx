@@ -415,6 +415,7 @@ const CommandCenterApp: React.FC = () => {
                 setIsTelemedicineModalOpen(true);
               }}
               onNotificationsUpdated={loadDashboardData}
+              lastUpdated={lastUpdated}
             />
           )}
 

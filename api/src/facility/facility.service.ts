@@ -5,6 +5,11 @@ import { Floor } from './entities/floor.entity';
 import { RoomZone, ZoneType } from './entities/room-zone.entity';
 import { Beacon } from './entities/beacon.entity';
 import { Resident } from '../residents/entities/resident.entity';
+import {
+  Notification,
+  NotificationType,
+  NotificationPriority,
+} from '../notifications/entities/notification.entity';
 import { CreateFloorDto, UpdateFloorDto } from './dtos/floor.dto';
 import { CreateRoomZoneDto, UpdateRoomZoneDto } from './dtos/room-zone.dto';
 import { CreateBeaconDto, UpdateBeaconDto } from './dtos/beacon.dto';
@@ -74,6 +79,9 @@ export class FacilityService implements OnModuleInit {
 
     @InjectRepository(Resident)
     private readonly residentRepo: Repository<Resident>,
+
+    @InjectRepository(Notification)
+    private readonly notificationRepo: Repository<Notification>,
   ) {}
 
   async onModuleInit() {
@@ -1192,6 +1200,40 @@ export class FacilityService implements OnModuleInit {
         targetZone.currentResidentId = residentId;
         await this.zoneRepo.save(targetZone);
 
+        // Auto-create a Notification record for the simulated movement / geofence event
+        try {
+          const isBreach = !targetZone.isSafePerimeter;
+          const residentName = `${resident.firstName} ${resident.lastName}`.trim();
+          const priority = isBreach ? NotificationPriority.HIGH : NotificationPriority.MEDIUM;
+          const title = isBreach
+            ? 'Geofence Boundary Breach Warning'
+            : 'Resident Spatial Relocation';
+          const message = isBreach
+            ? `🚨 GEOFENCE ALERT: ${residentName} entered restricted zone ${targetZone.name} (Room ${targetZone.roomNumber || 'Boundary'}). Restricted egress perimeter breach detected.`
+            : `${residentName} relocated to ${targetZone.name} (Room ${targetZone.roomNumber || 'Safe Area'}). Within safe perimeter.`;
+
+          const notification = this.notificationRepo.create({
+            residentId: resident.id,
+            type: NotificationType.GEOFENCE,
+            priority,
+            title,
+            message,
+            data: {
+              roomNumber: targetZone.roomNumber || undefined,
+              zoneId: targetZone.id,
+              zoneName: targetZone.name,
+              floorNumber: targetZone.floor?.floorNumber || targetZone.floorId,
+              isSafePerimeter: targetZone.isSafePerimeter,
+              alertTriggered: isBreach,
+            },
+            isRead: false,
+            isDismissed: false,
+          });
+          await this.notificationRepo.save(notification);
+        } catch (notifErr) {
+          console.error('Failed to auto-create notification for movement event', notifErr);
+        }
+
         return {
           success: true,
           resident: `${resident.firstName} ${resident.lastName}`,
@@ -1209,7 +1251,36 @@ export class FacilityService implements OnModuleInit {
       console.warn('Simulate movement DB write failed, updating fallback:', err?.message);
     }
 
-    return this.simulateFallbackMovement(residentId, targetZoneId);
+    const fallbackResult = this.simulateFallbackMovement(residentId, targetZoneId);
+
+    // Auto-create notification in fallback mode if DB write failed
+    try {
+      const isBreach = fallbackResult.alertTriggered;
+      const priority = isBreach ? NotificationPriority.HIGH : NotificationPriority.MEDIUM;
+      const title = isBreach
+        ? 'Geofence Boundary Breach Warning'
+        : 'Resident Spatial Relocation';
+      const notification = this.notificationRepo.create({
+        residentId,
+        type: NotificationType.GEOFENCE,
+        priority,
+        title,
+        message: fallbackResult.message,
+        data: {
+          roomNumber: fallbackResult.roomNumber,
+          zoneName: fallbackResult.newLocation,
+          isSafePerimeter: fallbackResult.isSafePerimeter,
+          alertTriggered: isBreach,
+        },
+        isRead: false,
+        isDismissed: false,
+      });
+      await this.notificationRepo.save(notification);
+    } catch {
+      // ignore
+    }
+
+    return fallbackResult;
   }
 
   // ==========================================

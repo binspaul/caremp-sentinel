@@ -29,6 +29,7 @@ interface NotificationsViewProps {
   onNavigateToVitals?: (residentId?: number) => void;
   onLaunchTelemedicine?: (residentId: number) => void;
   onNotificationsUpdated?: () => void;
+  lastUpdated?: Date;
 }
 
 export const NotificationsView: React.FC<NotificationsViewProps> = ({
@@ -37,6 +38,7 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
   onNavigateToVitals,
   onLaunchTelemedicine,
   onNotificationsUpdated,
+  lastUpdated,
 }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [counters, setCounters] = useState<NotificationCounters | null>(null);
@@ -72,7 +74,7 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
 
   useEffect(() => {
     loadNotifications();
-  }, [loadNotifications]);
+  }, [loadNotifications, lastUpdated]);
 
   const handleMarkAsRead = async (id: number) => {
     try {
