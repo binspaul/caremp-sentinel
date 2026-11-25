@@ -19,6 +19,7 @@ import {
   BeaconCounters,
   ResidentPresence,
   FacilityGeoJson,
+  DigitalTwin,
 } from '../types';
 
 export const commandCenterService = {
@@ -598,6 +599,18 @@ export const commandCenterService = {
       targetZoneId,
     });
     return response.data.data;
+  },
+
+  // ==========================================
+  // Digital Twin API
+  // ==========================================
+  async getDigitalTwin(residentId: number): Promise<DigitalTwin | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<DigitalTwin>>(`/digital-twin/resident/${residentId}`);
+      return response.data.data || null;
+    } catch {
+      return null;
+    }
   },
 };
 

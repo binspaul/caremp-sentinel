@@ -48,6 +48,8 @@ export interface Resident {
   middleName?: string;
   lastName: string;
   description?: string;
+  notes?: string;
+  specialNotes?: string;
   emailAddress: string;
   phoneNumber: string;
   age: number;
@@ -440,6 +442,95 @@ export interface FacilityGeoJson {
   };
   features: FacilityGeoFeature[];
 }
+
+// ==========================================
+// Digital Twin & Memory Care Types
+// ==========================================
+
+export interface SundowningInsight {
+  agitationIndex?: number;
+  riskLevel?: string;
+  stage?: string;
+  patternSummary?: string;
+  confidence?: number;
+  recommendations?: string[];
+  [key: string]: any;
+}
+
+export interface WanderingInsight {
+  riskLevel?: string;
+  dwellMinutes?: number;
+  currentZone?: string;
+  zoneType?: string;
+  isSafePerimeter?: boolean;
+  pattern?: string;
+  recommendations?: string[];
+  [key: string]: any;
+}
+
+export interface CircadianInsight {
+  regularityScore?: number;
+  dayNightInversion?: boolean;
+  dayNightStatus?: string;
+  fragmentationIndex?: number;
+  recommendations?: string[];
+  [key: string]: any;
+}
+
+export interface DeteriorationInsight {
+  compositeScore?: number;
+  alertStatus?: string;
+  contributors?: string[];
+  [key: string]: any;
+}
+
+export interface DementiaHealthInsights {
+  sundowning?: SundowningInsight;
+  wandering?: WanderingInsight;
+  circadian?: CircadianInsight;
+  deterioration?: DeteriorationInsight;
+  [key: string]: any;
+}
+
+export interface AISummary {
+  headline?: string;
+  summary?: string;
+  focus_areas?: string[];
+  recommendations?: string[];
+  generated_at?: string;
+  [key: string]: any;
+}
+
+export interface VitalTrend {
+  vital: string;
+  window: string;
+  direction: string;
+  rateOfChange: number;
+  percentageChange: number;
+}
+
+export interface VitalCorrelation {
+  vitalPair: string;
+  coefficient: number;
+  strength: string;
+  direction: string;
+}
+
+export interface DigitalTwin {
+  id: number;
+  residentId: number;
+  physiology?: any;
+  vitalsSummary?: any;
+  baselines?: any;
+  trends?: VitalTrend[];
+  correlations?: VitalCorrelation[];
+  healthInsights?: DementiaHealthInsights;
+  aiSummary?: string | AISummary;
+  lastEngineRun?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 
 

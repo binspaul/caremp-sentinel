@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { Resident } from 'src/residents/entities/resident.entity';
 import { RoomZone } from 'src/facility/entities/room-zone.entity';
+import { Vital, TemperatureUnit } from 'src/vitals/entities/vital.entity';
 import { DigitalTwinService } from 'src/digital-twin/digital-twin.service';
 import { CreateDigitalTwinDto } from 'src/digital-twin/dtos/create-digital-twin.dto';
 
@@ -20,6 +21,9 @@ export class AnalyticsSchedulerService {
 
     @InjectRepository(RoomZone)
     private readonly roomZoneRepository: Repository<RoomZone>,
+
+    @InjectRepository(Vital)
+    private readonly vitalRepository: Repository<Vital>,
 
     private readonly digitalTwinService: DigitalTwinService,
     private readonly httpService: HttpService,
@@ -71,6 +75,57 @@ export class AnalyticsSchedulerService {
     if (!twin) {
       this.logger.debug(`No digital twin yet for resident ${residentId}. Skipping.`);
       return null;
+    }
+
+    // Attach latest live vital reading with fresh timestamp
+    const latestVital = await this.vitalRepository.findOne({
+      where: { residentId, isDeleted: false },
+      order: { generatedAt: 'DESC' },
+    });
+
+    if (latestVital) {
+      twin.physiology = {
+        heartRate: {
+          value: Number(latestVital.heartRate || 0),
+          unit: 'bpm',
+          timestamp: latestVital.generatedAt,
+        },
+        hrv: {
+          value: Number(latestVital.hrv || 0),
+          unit: 'ms',
+          timestamp: latestVital.generatedAt,
+        },
+        spo2: {
+          value: Number(latestVital.oxygenSaturation || 0),
+          unit: '%',
+          timestamp: latestVital.generatedAt,
+        },
+        systolicBP: {
+          value: Number(latestVital.systolicBP || 0),
+          unit: 'mmHg',
+          timestamp: latestVital.generatedAt,
+        },
+        diastolicBP: {
+          value: Number(latestVital.diastolicBP || 0),
+          unit: 'mmHg',
+          timestamp: latestVital.generatedAt,
+        },
+        bodyTemperature: {
+          value: Number(latestVital.bodyTemperature || 0),
+          unit: latestVital.temperatureUnit === TemperatureUnit.FAHRENHEIT ? '°F' : '°C',
+          timestamp: latestVital.generatedAt,
+        },
+        steps: {
+          value: Number(latestVital.payload?.steps || 0),
+          unit: 'steps',
+          timestamp: latestVital.generatedAt,
+        },
+        sleep: {
+          deep: Number(latestVital.deepSleepTime || 0),
+          light: Number(latestVital.lightSleepTime || 0),
+          rem: Number(latestVital.remSleepTime || 0),
+        },
+      };
     }
 
     // Attach real facility location/zone if available
