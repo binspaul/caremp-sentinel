@@ -542,7 +542,11 @@ const CommandCenterApp: React.FC = () => {
         isOpen={isTelemedicineModalOpen}
         onClose={() => setIsTelemedicineModalOpen(false)}
         resident={residentsMap[selectedResidentId || 1] || residents.find((r) => r.id === 1) || DEFAULT_ELEANOR_VANCE}
+        residents={residents.length > 0 ? residents : [DEFAULT_ELEANOR_VANCE]}
+        initialResidentId={selectedResidentId || 1}
         recentVital={recentVitals[0]}
+        recentVitals={recentVitals}
+        onSelectResident={(id) => setSelectedResidentId(id)}
       />
 
       {/* Hardware Bands & Sensor Pod Fleet Modal */}
