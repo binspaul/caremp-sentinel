@@ -146,21 +146,6 @@ const CONDITIONS: ConditionOption[] = [
     },
   },
   {
-    type: 7,
-    name: 'Nocturnal Sleep Restlessness & Wandering Egress',
-    badge: 'Safe-Zone Breach',
-    badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
-    severity: 'warning',
-    description: '60-GHz contact-free radar detects continuous sleep fragmentation, unassisted bed-exit, and doorway BLE safe-perimeter breach.',
-    metrics: {
-      hr: '~94 bpm',
-      hrv: '~22 ms',
-      bp: '~136/86 mmHg',
-      spo2: '~96%',
-      temp: '36.8°C',
-    },
-  },
-  {
     type: 8,
     name: 'Pharmacogenomics (PGx) Adverse Interaction',
     badge: 'CPIC High Risk Conflict',
@@ -173,21 +158,6 @@ const CONDITIONS: ConditionOption[] = [
       bp: '~152/94 mmHg',
       spo2: '~95%',
       temp: '37.4°C',
-    },
-  },
-  {
-    type: 9,
-    name: 'Freeze-of-Gait Fall & Post-Impact Immobility',
-    badge: '🚨 Cognitive Fall Detected',
-    badgeColor: 'bg-red-600/10 text-red-600 dark:text-red-400 border-red-600/30',
-    severity: 'critical',
-    description: 'High-g impact deceleration (>3.4g) with >80° orientation drop following motor freezing in advanced dementia. 45s immobility triggers immediate emergency dispatch.',
-    metrics: {
-      hr: '~118 bpm',
-      hrv: '~15 ms',
-      bp: '~92/58 mmHg',
-      spo2: '~96%',
-      temp: '36.8°C',
     },
   },
 ];
@@ -561,6 +531,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       if (onSimulated) {
         onSimulated(result);
       }
+      onClose();
     } catch (err: any) {
       console.error('Simulation error:', err);
       setVitalsError(
@@ -601,6 +572,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       if (onMovementSimulated) {
         onMovementSimulated();
       }
+      onClose();
     } catch (err: any) {
       console.error('Movement simulation error:', err);
       setMovementError(
@@ -658,6 +630,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       if (onFallSimulated) {
         onFallSimulated();
       }
+      onClose();
     } catch (err: any) {
       console.error('Fall simulation error:', err);
       setFallError(
@@ -671,7 +644,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
         onClick={onClose}
@@ -679,7 +652,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-10 transition-all my-8">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-20 transition-all my-8">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-950/40">
           <div className="flex items-center gap-3">
