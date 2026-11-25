@@ -307,19 +307,19 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
   ) => {
     if (!trend) {
       return (
-        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/80 flex flex-col justify-between">
+        <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/60 flex flex-col justify-between">
           <div>
-            <span className="text-[10px] font-medium text-slate-400 block">{title}</span>
-            <div className="font-bold text-sm font-mono text-slate-900 dark:text-slate-100">
+            <span className="text-[10px] font-medium text-slate-400 block tracking-wide">{title}</span>
+            <div className="font-bold text-sm font-mono text-slate-900 dark:text-slate-100 mt-0.5">
               {valueText}
             </div>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[10px] font-mono">
+          <div className="mt-2.5 flex items-center justify-between text-[10px] font-mono">
             <span className="text-slate-400 font-medium">Learning</span>
-            <span className="text-[9px] text-slate-400 font-normal">Accumulating</span>
+            <span className="text-[9px] text-slate-400/80 font-normal">Accumulating</span>
           </div>
           <svg className="w-full h-5 mt-1 text-slate-300 dark:text-slate-700 stroke-current fill-none" viewBox="0 0 100 24">
-            <path d="M0,12 L100,12" strokeWidth="1.5" strokeDasharray="4 4" strokeLinecap="round" />
+            <path d="M0,12 L100,12" strokeWidth="1.5" strokeDasharray="3 3" strokeLinecap="round" />
           </svg>
         </div>
       );
@@ -350,18 +350,18 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
       : 'M0,12 Q25,10 50,12 T75,13 T100,12';
 
     return (
-      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/80 flex flex-col justify-between">
+      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between">
         <div>
-          <span className="text-[10px] font-medium text-slate-400 block">{title}</span>
-          <div className="font-bold text-sm font-mono text-slate-900 dark:text-slate-100">
+          <span className="text-[10px] font-medium text-slate-400 block tracking-wide">{title}</span>
+          <div className="font-bold text-sm font-mono text-slate-900 dark:text-slate-100 mt-0.5">
             {valueText}
           </div>
         </div>
-        <div className="mt-2 flex items-center justify-between text-[10px] font-mono">
+        <div className="mt-2.5 flex items-center justify-between text-[10px] font-mono">
           <span className={`font-semibold ${colorClasses}`}>
             {pctStr}
           </span>
-          <span className="text-slate-400">{dirLabel}</span>
+          <span className="text-slate-400 text-[10px]">{dirLabel}</span>
         </div>
         <svg className={`w-full h-5 mt-1 ${strokeColor} stroke-current fill-none`} viewBox="0 0 100 24">
           <path d={pathD} strokeWidth="1.8" strokeLinecap="round" />
@@ -422,23 +422,29 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
         {/* Slide-over panel */}
         <div className="w-screen max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-3xl h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out">
           {/* Header */}
-          <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-400/30 shrink-0">
+          <div className="p-5 border-b border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md flex items-center justify-between">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-full border border-slate-200/80 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-semibold text-base flex items-center justify-center shrink-0">
                 {resident.firstName[0]}
                 {resident.lastName?.[0] || ''}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                  {fullName}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+                    {fullName}
+                  </h2>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Active Digital Twin Stream" />
+                </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                  <span className="font-mono text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/60">
                     UHID: {resident.uhid}
                   </span>
-                  <Badge variant={resident.status === 1 ? 'normal' : 'neutral'} size="sm">
-                    {resident.status === 1 ? 'ACTIVE TWIN' : 'INACTIVE'}
-                  </Badge>
+                  <span className="font-mono text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/60">
+                    Room {resident.roomNumber || '201'}
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                    {resident.status === 1 ? 'Live Sync' : 'Inactive'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -446,40 +452,40 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
             <button
               onClick={onClose}
               aria-label="Close Profile Drawer"
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Body Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Quick Demographics Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
-                <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {/* Quick Demographics Capsule Bar */}
+            <div className="grid grid-cols-4 p-2.5 rounded-2xl bg-slate-50/70 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800/60 divide-x divide-slate-200/60 dark:divide-slate-800/60 text-center">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-slate-400 block tracking-wider font-medium">
                   Age
                 </span>
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5 block">
                   {resident.age ? `${resident.age} yrs` : 'N/A'}
-                </p>
+                </span>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
-                <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-slate-400 block tracking-wider font-medium">
                   Gender
                 </span>
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5 block">
                   {genderLabel}
-                </p>
+                </span>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
-                <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
-                  Health Score
+              <div>
+                <span className="text-[10px] font-mono uppercase text-slate-400 block tracking-wider font-medium">
+                  Health
                 </span>
-                <p
-                  className={`text-sm font-bold font-mono mt-0.5 ${
+                <span
+                  className={`text-sm font-semibold font-mono mt-0.5 block ${
                     (resident.healthScore ?? 85) >= 80
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : (resident.healthScore ?? 85) >= 60
@@ -488,16 +494,16 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
                   }`}
                 >
                   {resident.healthScore ?? 85}/100
-                </p>
+                </span>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center">
-                <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-slate-400 block tracking-wider font-medium">
                   Twin ID
                 </span>
-                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 font-mono mt-0.5 block">
                   #{resident.id}
-                </p>
+                </span>
               </div>
             </div>
 
@@ -615,10 +621,10 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
 
               {/* Apple-Style AI Care Synthesis Note */}
               {summaryHeadline && (
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-1">
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 border-l-3 border-l-indigo-500 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-mono">
-                      Daily AI Synthesis
+                      Daily Care Synthesis
                     </span>
                     {digitalTwin?.lastEngineRun && (
                       <span className="text-[10px] font-mono text-slate-400">
@@ -638,7 +644,7 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
               )}
 
               {/* Apple-Style Segmented Control Bar */}
-              <div className="grid grid-cols-5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-center">
+              <div className="grid grid-cols-5 p-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 text-center">
                 {(
                   [
                     { id: 'sundowning', label: 'Sundowning' },
@@ -654,10 +660,10 @@ export const ResidentProfileDrawer: React.FC<ResidentProfileDrawerProps> = ({
                       key={tab.id}
                       type="button"
                       onClick={() => setSelectedHotspot(tab.id)}
-                      className={`py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
+                      className={`py-1.5 text-[11px] font-medium tracking-tight rounded-lg transition-all cursor-pointer ${
                         isActive
                           ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-semibold'
-                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                       }`}
                     >
                       {tab.label}

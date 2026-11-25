@@ -527,6 +527,11 @@ export interface DigitalTwin {
   healthInsights?: DementiaHealthInsights;
   aiSummary?: string | AISummary;
   lastEngineRun?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
 // Notification Types
 // ==========================================
 
