@@ -10,10 +10,12 @@ import {
   ChevronDown,
   Activity,
   Grid,
+  Zap,
 } from 'lucide-react';
 import { Floor, RoomZone, ResidentPresence } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
 import { RoomDetailDrawer } from './RoomDetailDrawer';
+import { SimulationModal } from '../simulation/SimulationModal';
 
 interface FacilityMapViewProps {
   lastUpdated?: Date;
@@ -21,6 +23,7 @@ interface FacilityMapViewProps {
   onViewResidentVitals?: (residentId: number) => void;
   onNavigateToRooms?: (floorId?: number) => void;
   targetRoomNumber?: string | null;
+  onMovementSimulated?: () => void;
 }
 
 export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
@@ -29,6 +32,7 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
   onViewResidentVitals,
   onNavigateToRooms,
   targetRoomNumber,
+  onMovementSimulated,
 }) => {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [presenceList, setPresenceList] = useState<ResidentPresence[]>([]);
@@ -38,6 +42,7 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
   const [selectedPresence, setSelectedPresence] = useState<ResidentPresence | null>(null);
   const [isRoomDrawerOpen, setIsRoomDrawerOpen] = useState(false);
   const [alertBanner, setAlertBanner] = useState<string | null>(null);
+  const [isSimulationOpen, setIsSimulationOpen] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -565,6 +570,28 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
         onLaunchTelemedicine={onLaunchTelemedicine}
         onViewResidentVitals={onViewResidentVitals}
         onNavigateToRooms={onNavigateToRooms}
+      />
+
+      {/* Floating Action Button (FAB): Facility Movement & Geofence Simulation */}
+      <button
+        onClick={() => setIsSimulationOpen(true)}
+        aria-label="Simulate Facility Movement & Geofence"
+        title="Simulate Facility Movement & Geofence"
+        className="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center shadow-xl shadow-emerald-950/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
+      >
+        <Zap className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+      </button>
+
+      {/* Facility Movement & Geofence Simulation Modal (Locked to Movement Alone) */}
+      <SimulationModal
+        isOpen={isSimulationOpen}
+        onClose={() => setIsSimulationOpen(false)}
+        lockedTab="movement"
+        floors={floors}
+        onMovementSimulated={async () => {
+          await loadData();
+          onMovementSimulated?.();
+        }}
       />
     </div>
   );

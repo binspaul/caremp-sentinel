@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Sun, Moon, Zap, LogOut, Bell, Sparkles } from 'lucide-react';
+import { Sun, Moon, Video, LogOut, Bell, Sparkles } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -11,7 +11,6 @@ interface HeaderProps {
   secondsRemaining: number;
   isRefreshing: boolean;
   onRefresh: () => void;
-  onOpenSimulation?: () => void;
   onOpenTelemedicine?: () => void;
   onOpenNotifications?: () => void;
   unreadNotificationCount?: number;
@@ -24,7 +23,6 @@ export const Header: React.FC<HeaderProps> = ({
   secondsRemaining,
   isRefreshing,
   onRefresh,
-  onOpenSimulation,
   onOpenTelemedicine,
   onOpenNotifications,
   unreadNotificationCount = 0,
@@ -132,15 +130,15 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Simulation & Testing Center Trigger (Icon Only) */}
-        {onOpenSimulation && (
+        {/* Telemedicine & AI Clinical Brief Trigger */}
+        {onOpenTelemedicine && (
           <button
-            onClick={onOpenSimulation}
-            aria-label="Simulation & Testing Center"
-            title="Open Simulation & Testing Center (Vitals, Facility Movement, Geofence, Falls)"
-            className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+            onClick={onOpenTelemedicine}
+            aria-label="Tele-Consultation"
+            title="Launch AI Telemedicine Consultation & Clinical Brief"
+            className="p-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center"
           >
-            <Zap className="w-4 h-4" />
+            <Video className="w-4 h-4" />
           </button>
         )}
 
@@ -190,12 +188,12 @@ export const Header: React.FC<HeaderProps> = ({
       {showSignOutConfirm &&
         createPortal(
           <div
-            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+            className="fixed inset-0 w-screen h-screen z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowSignOutConfirm(false);
             }}
           >
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                   <LogOut className="w-5 h-5" />

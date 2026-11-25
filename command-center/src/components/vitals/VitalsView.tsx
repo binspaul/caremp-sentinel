@@ -4,6 +4,7 @@ import commandCenterService from '../../services/commandCenterService';
 import { Badge, getVitalStatus } from '../common/Badge';
 import { VitalDetailDrawer } from './VitalDetailDrawer';
 import { ResidentProfileDrawer } from '../residents/ResidentProfileDrawer';
+import { SimulationModal } from '../simulation/SimulationModal';
 import {
   HeartPulse,
   Heart,
@@ -20,6 +21,7 @@ import {
   Users,
   Search,
   X,
+  Zap,
 } from 'lucide-react';
 
 interface VitalsViewProps {
@@ -54,6 +56,9 @@ export const VitalsView: React.FC<VitalsViewProps> = ({
   // Sliding Drawer State for Resident Profile
   const [selectedResidentForProfile, setSelectedResidentForProfile] = useState<Resident | null>(null);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+
+  // Vitals Simulation Modal State
+  const [isSimulationOpen, setIsSimulationOpen] = useState(false);
 
   // Sync prop changes into state
   useEffect(() => {
@@ -589,6 +594,27 @@ export const VitalsView: React.FC<VitalsViewProps> = ({
         onViewVitals={(id) => {
           setIsProfileDrawerOpen(false);
           handleResidentChange(id);
+        }}
+      />
+
+      {/* Floating Action Button (FAB): Vitals Telemetry Simulation */}
+      <button
+        onClick={() => setIsSimulationOpen(true)}
+        aria-label="Simulate Vitals Telemetry"
+        title="Simulate Vitals Telemetry"
+        className="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center shadow-xl shadow-emerald-950/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
+      >
+        <Zap className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+      </button>
+
+      {/* Vitals Telemetry Simulation Modal (Locked to Vitals Alone) */}
+      <SimulationModal
+        isOpen={isSimulationOpen}
+        onClose={() => setIsSimulationOpen(false)}
+        lockedTab="vitals"
+        residents={residents}
+        onSimulated={() => {
+          loadVitals();
         }}
       />
     </div>
