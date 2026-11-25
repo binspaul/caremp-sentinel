@@ -269,7 +269,13 @@ const CommandCenterApp: React.FC = () => {
           onOpenCopilot={() => setIsCopilotModalOpen(true)}
         />
 
-        <main className="flex-1 px-8 py-8 overflow-y-auto w-full space-y-8">
+        <main
+          className={`flex-1 w-full ${
+            activeTab === 'map'
+              ? 'px-6 py-3 overflow-hidden flex flex-col min-h-0 space-y-2'
+              : 'px-8 py-8 overflow-y-auto space-y-8'
+          }`}
+        >
           {/* Emergency Fall Alert Banner (Always Visible on Top when an Incident is Unresolved) */}
           <EmergencyFallAlert
             incident={latestFall}
@@ -402,22 +408,24 @@ const CommandCenterApp: React.FC = () => {
           )}
 
           {activeTab === 'map' && (
-            <FacilityMapView
-              lastUpdated={lastUpdated}
-              targetRoomNumber={mapTargetRoom}
-              onLaunchTelemedicine={(id) => {
-                setSelectedResidentId(id);
-                setIsTelemedicineModalOpen(true);
-              }}
-              onViewResidentVitals={(id) => {
-                setSelectedResidentId(id);
-                setActiveTab('vitals');
-              }}
-              onNavigateToRooms={(floorId) => {
-                setSelectedFloorForRooms(floorId || 'all');
-                setActiveTab('rooms');
-              }}
-            />
+            <div className="flex-1 min-h-0 w-full flex flex-col">
+              <FacilityMapView
+                lastUpdated={lastUpdated}
+                targetRoomNumber={mapTargetRoom}
+                onLaunchTelemedicine={(id) => {
+                  setSelectedResidentId(id);
+                  setIsTelemedicineModalOpen(true);
+                }}
+                onViewResidentVitals={(id) => {
+                  setSelectedResidentId(id);
+                  setActiveTab('vitals');
+                }}
+                onNavigateToRooms={(floorId) => {
+                  setSelectedFloorForRooms(floorId || 'all');
+                  setActiveTab('rooms');
+                }}
+              />
+            </div>
           )}
 
           {activeTab === 'floors' && (
