@@ -56,7 +56,7 @@ ai_summary_engine = AISummaryEngine(
     deterioration_engine=deterioration_engine,
 )
 
-# Pre-seed Resident 1 (Alex Rivera) with clinically grounded Biotech & Genomic profile
+# Pre-seed residents with clinically grounded Biotech & Genomic profiles
 genomics_engine.register_profile(
     resident_id=1,
     prs_inputs={"cad": 84.0, "t2d": 62.0, "alzheimers": 72.0, "sarcopenia": 58.0},
@@ -69,7 +69,46 @@ genomics_engine.register_profile(
     medications=["Atorvastatin", "Clopidogrel", "Lisinopril"]
 )
 deterioration_engine.set_daytime_baseline(1, 120.0)
-frailty_engine.set_chronological_age(1, 72)
+frailty_engine.set_chronological_age(1, 78)
+
+# Resident 2: Eleanor Vance (RES-002)
+genomics_engine.register_profile(
+    resident_id=2,
+    prs_inputs={"cad": 76.0, "t2d": 45.0, "alzheimers": 88.0, "sarcopenia": 65.0},
+    variants=[
+        {"gene": "CYP2D6", "diplotype": "*4/*4", "phenotype": "POOR"},
+        {"gene": "CYP2C19", "diplotype": "*1/*1", "phenotype": "NORMAL"}
+    ],
+    medications=["Metoprolol", "Donepezil", "Apixaban"]
+)
+deterioration_engine.set_daytime_baseline(2, 132.0)
+frailty_engine.set_chronological_age(2, 78)
+
+# Resident 3: Marcus Chen (RES-003)
+genomics_engine.register_profile(
+    resident_id=3,
+    prs_inputs={"cad": 82.0, "t2d": 79.0, "alzheimers": 35.0, "sarcopenia": 40.0},
+    variants=[
+        {"gene": "CYP2C9", "diplotype": "*1/*3", "phenotype": "INTERMEDIATE"},
+        {"gene": "VKORC1", "diplotype": "-1639G>A", "phenotype": "DECREASED"}
+    ],
+    medications=["Lisinopril", "Metformin", "Warfarin"]
+)
+deterioration_engine.set_daytime_baseline(3, 124.0)
+frailty_engine.set_chronological_age(3, 68)
+
+# Resident 4: Clara Oswald (RES-004)
+genomics_engine.register_profile(
+    resident_id=4,
+    prs_inputs={"cad": 42.0, "t2d": 38.0, "alzheimers": 85.0, "sarcopenia": 45.0},
+    variants=[
+        {"gene": "APOE", "diplotype": "e3/e4", "phenotype": "ELEVATED_RISK"},
+        {"gene": "CYP2D6", "diplotype": "*1/*1", "phenotype": "NORMAL"}
+    ],
+    medications=["Donepezil", "Calcium Citrate"]
+)
+deterioration_engine.set_daytime_baseline(4, 120.0)
+frailty_engine.set_chronological_age(4, 74)
 
 
 def _require_resident_id(twin: Dict[str, Any]) -> int:
