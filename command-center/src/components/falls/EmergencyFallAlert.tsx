@@ -40,7 +40,7 @@ export const EmergencyFallAlert: React.FC<EmergencyFallAlertProps> = ({
     : `Resident #${incident.residentId}`;
 
   const bandLabel = incident.band
-    ? `${incident.band.serialNumber} (${incident.band.deviceType})`
+    ? `${incident.band.serialNumber} (${incident.band.model || 'Bio-Band'})`
     : incident.bandId
     ? `Pod #${incident.bandId}`
     : 'Sentinel Pod Telemetry';

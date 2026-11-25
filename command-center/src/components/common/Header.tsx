@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Activity, LogOut, Sparkles } from 'lucide-react';
+import { Sun, Moon, Zap, LogOut, Sparkles } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -28,6 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   const { theme, toggleTheme } = useTheme();
   const { logout } = useAuth();
   const [formattedTime, setFormattedTime] = useState<string>('');
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
     setFormattedTime(
@@ -46,10 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="h-20 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/50 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-20 transition-colors">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-          <span>careMP Sentinel | </span>
-          <span className="text-[10px] font-mono tracking-wider font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-            Build 2036 | Healthspan
-          </span>
+          <span>careMP Sentinel</span>
         </h1>
         {subtitle && (
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
@@ -118,15 +116,15 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Simulate Vitals Trigger (Icon Only) */}
+        {/* Simulation & Testing Center Trigger (Icon Only) */}
         {onOpenSimulation && (
           <button
             onClick={onOpenSimulation}
-            aria-label="Simulate Vitals"
-            title="Simulate Vital Conditions"
+            aria-label="Simulation & Testing Center"
+            title="Open Simulation & Testing Center (Vitals, Facility Movement, Geofence, Falls)"
             className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center"
           >
-            <Activity className="w-4 h-4" />
+            <Zap className="w-4 h-4" />
           </button>
         )}
 
@@ -146,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Logout Button (Last Item) */}
         <button
-          onClick={() => logout()}
+          onClick={() => setShowSignOutConfirm(true)}
           aria-label="Sign Out"
           title="Sign Out"
           className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-500/40 hover:bg-rose-500/10 transition cursor-pointer shadow-xs flex items-center justify-center"
@@ -154,6 +152,44 @@ export const Header: React.FC<HeaderProps> = ({
           <LogOut className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Sign Out Confirmation Modal */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Sign Out</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Are you sure you want to sign out of the Sentinel Command Center?
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowSignOutConfirm(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSignOutConfirm(false);
+                  logout();
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-xs transition cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

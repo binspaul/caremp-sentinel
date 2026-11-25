@@ -273,6 +273,18 @@ export class Resident {
   })
   referenceRemSleepTolerance: number;
 
+  @Column({ type: 'integer', nullable: true, default: 25 })
+  fallRiskScore: number;
+
+  @Column({ type: 'integer', nullable: true, default: 85 })
+  healthScore: number;
+
+  @Column({ type: 'boolean', default: false })
+  hasFallHistory: boolean;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, default: null })
+  roomNumber: string | null;
+
   @Index()
   @Column({ type: 'boolean', default: true })
   isActive: boolean;

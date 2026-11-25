@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Resident } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
 import { ResidentProfileDrawer } from './ResidentProfileDrawer';
+import { RegisterResidentModal } from './RegisterResidentModal';
 import {
   Users,
   Search,
@@ -18,6 +19,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ShieldAlert,
+  Plus,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 
 interface ResidentsViewProps {
@@ -43,6 +47,10 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({
   // State for Sliding Profile Drawer
   const [selectedResidentForProfile, setSelectedResidentForProfile] = useState<Resident | null>(null);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+
+  // State for Register Resident Modal & Toast Feedback
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadResidents = async () => {
     setIsLoading(true);
@@ -114,7 +122,38 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({
             Care recipient registry, continuous telemetry enrollment, demographic baselines, and clinical risk profiles
           </p>
         </div>
+
+        <button
+          onClick={() => setIsRegisterModalOpen(true)}
+          className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-emerald-500/20 transition-all cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Register Resident</span>
+        </button>
       </div>
+
+      {/* Toast Feedback */}
+      {feedbackMsg && (
+        <div
+          className={`p-3 rounded-xl flex items-center justify-between text-xs font-semibold shadow-sm transition-all ${
+            feedbackMsg.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800'
+              : 'bg-rose-50 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {feedbackMsg.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-500" />
+            )}
+            <span>{feedbackMsg.text}</span>
+          </div>
+          <button onClick={() => setFeedbackMsg(null)} className="cursor-pointer opacity-70 hover:opacity-100">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Top Telemetry Summary Counters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -365,18 +404,34 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Status */}
+                      {/* Status & Health */}
                       <td className="px-4 py-3">
-                        {r.status === 1 ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Active Monitoring
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 text-[11px]">
-                            Discharged
-                          </span>
-                        )}
+                        <div className="flex flex-col gap-1 items-start">
+                          {r.status === 1 ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Active Monitoring
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 text-[11px]">
+                              Discharged
+                            </span>
+                          )}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-medium">Health:</span>
+                            <span
+                              className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                                (r.healthScore ?? 85) >= 80
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : (r.healthScore ?? 85) >= 60
+                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                  : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                              }`}
+                            >
+                              {r.healthScore ?? 85}/100
+                            </span>
+                          </div>
+                        </div>
                       </td>
 
                       {/* Actions */}
@@ -496,6 +551,19 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({
         isOpen={isProfileDrawerOpen}
         onClose={handleCloseProfile}
         onViewVitals={onSelectResidentVitals}
+      />
+
+      {/* Register Resident Modal Dialog */}
+      <RegisterResidentModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onResidentCreated={() => {
+          loadResidents();
+          setFeedbackMsg({
+            type: 'success',
+            text: 'New care recipient registered successfully and enrolled into continuous telemetry monitoring.',
+          });
+        }}
       />
     </div>
   );

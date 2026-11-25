@@ -21,6 +21,14 @@ import { Admin } from './admins/entities/admin.entity';
 import { Band } from './bands/entities/band.entity';
 import { BandsModule } from './bands/bands.module';
 
+// Radar Pods
+import { RadarPod } from './radar-pods/entities/radar-pod.entity';
+import { RadarPodsModule } from './radar-pods/radar-pods.module';
+
+// Chest Patches
+import { ChestPatch } from './chest-patches/entities/chest-patch.entity';
+import { ChestPatchesModule } from './chest-patches/chest-patches.module';
+
 // Facility & Indoor Beacons
 import { Floor } from './facility/entities/floor.entity';
 import { RoomZone } from './facility/entities/room-zone.entity';
@@ -85,6 +93,8 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
         entities: [
           Admin,
           Band,
+          RadarPod,
+          ChestPatch,
           Beacon,
           Floor,
           RoomZone,
@@ -116,6 +126,8 @@ import { VitalsSchedulerModule } from './_schedulers/vitals-scheduler.module';
     VitalsToDigitalTwinModule,
     AuthModule,
     BandsModule,
+    RadarPodsModule,
+    ChestPatchesModule,
     FacilityModule,
     FallsModule,
     GenomicsModule,

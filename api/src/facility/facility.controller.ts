@@ -244,6 +244,34 @@ export class FacilityController {
   // Presence & Simulation Telemetry
   // ==========================================
   @Version('1')
+  @Get('geojson')
+  async getGeoJson(@Query('floorNumber') floorNumber?: string) {
+    const data = await this.facilityService.getFloorGeoJson(
+      floorNumber ? Number(floorNumber) : undefined,
+    );
+    return {
+      code: 200,
+      status: 'success',
+      message: 'Facility GeoJSON indoor features retrieved',
+      data,
+    };
+  }
+
+  @Version('1')
+  @Get('floors/geojson')
+  async getFloorsGeoJson(@Query('floorNumber') floorNumber?: string) {
+    const data = await this.facilityService.getFloorGeoJson(
+      floorNumber ? Number(floorNumber) : undefined,
+    );
+    return {
+      code: 200,
+      status: 'success',
+      message: 'Facility GeoJSON indoor features retrieved',
+      data,
+    };
+  }
+
+  @Version('1')
   @Get('presence')
   async getPresence() {
     const data = await this.facilityService.getPresence();

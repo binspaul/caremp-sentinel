@@ -52,7 +52,6 @@ export const BandsManagementModal: React.FC<BandsManagementModalProps> = ({
   // New band form state
   const [newSerial, setNewSerial] = useState('');
   const [newMac, setNewMac] = useState('');
-  const [newType, setNewType] = useState<'wristband' | 'radar_pod'>('wristband');
 
   const fetchBands = useCallback(async () => {
     setIsLoading(true);
@@ -137,8 +136,7 @@ export const BandsManagementModal: React.FC<BandsManagementModalProps> = ({
       await commandCenterService.createBand({
         serialNumber: newSerial.trim().toUpperCase(),
         macAddress: newMac.trim().toUpperCase(),
-        deviceType: newType,
-        model: newType === 'radar_pod' ? 'Sentinel 60GHz FMCW Radar Pod' : 'Sentinel Low-Cost Bio-Pod v1',
+        model: 'Sentinel Bio-Band Pulse v2',
         batteryLevel: 100,
         isWorn: false,
         status: 'available',
@@ -321,17 +319,6 @@ export const BandsManagementModal: React.FC<BandsManagementModalProps> = ({
                     required
                   />
                 </div>
-                <div>
-                  <label className="text-[11px] font-medium text-slate-500 block mb-1">Sensor Form Factor</label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as any)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-hidden focus:border-emerald-500 font-medium cursor-pointer"
-                  >
-                    <option value="wristband">Wristband (Dual-λ PPG)</option>
-                    <option value="radar_pod">Radar Pod (60-GHz mmWave)</option>
-                  </select>
-                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-1">
@@ -417,14 +404,8 @@ export const BandsManagementModal: React.FC<BandsManagementModalProps> = ({
                   >
                     {/* Device Identifier & Specs */}
                     <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          band.deviceType === 'radar_pod'
-                            ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20'
-                            : 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20'
-                        }`}
-                      >
-                        {band.deviceType === 'radar_pod' ? <Radio className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        <Radio className="w-5 h-5" />
                       </div>
 
                       <div>

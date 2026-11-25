@@ -9,6 +9,57 @@ import { CreateFloorDto, UpdateFloorDto } from './dtos/floor.dto';
 import { CreateRoomZoneDto, UpdateRoomZoneDto } from './dtos/room-zone.dto';
 import { CreateBeaconDto, UpdateBeaconDto } from './dtos/beacon.dto';
 
+// Geographic anchor for careMP Sentinel Facility (Infopark Kochi, Kakkanad, Kerala, India)
+export const FACILITY_GEO_ANCHOR = {
+  lat: 10.0105,
+  lng: 76.3631,
+  widthMeters: 60,
+  heightMeters: 36,
+  degLatPerMeter: 1 / 111111,
+  degLngPerMeter: 1 / (111111 * Math.cos(10.0105 * (Math.PI / 180))),
+};
+
+export function pixelToGeo(x: number, y: number, layoutWidth = 1000, layoutHeight = 600) {
+  const numX = Number(x) || 0;
+  const numY = Number(y) || 0;
+  const numLW = Number(layoutWidth) || 1000;
+  const numLH = Number(layoutHeight) || 600;
+  const normX = Math.max(0, Math.min(1, numX / numLW));
+  const normY = Math.max(0, Math.min(1, numY / numLH));
+  // Y goes downwards in SVG pixels (South in latitude):
+  const lat = Number(
+    (FACILITY_GEO_ANCHOR.lat + (0.5 - normY) * (FACILITY_GEO_ANCHOR.heightMeters * FACILITY_GEO_ANCHOR.degLatPerMeter)).toFixed(7),
+  );
+  // X goes rightwards in SVG pixels (East in longitude):
+  const lng = Number(
+    (FACILITY_GEO_ANCHOR.lng + (normX - 0.5) * (FACILITY_GEO_ANCHOR.widthMeters * FACILITY_GEO_ANCHOR.degLngPerMeter)).toFixed(7),
+  );
+  return { lat, lng };
+}
+
+export function rectToGeoPolygon(x: number, y: number, w: number, h: number, layoutWidth = 1000, layoutHeight = 600) {
+  const numX = Number(x) || 0;
+  const numY = Number(y) || 0;
+  const numW = Number(w) || 160;
+  const numH = Number(h) || 140;
+  const numLW = Number(layoutWidth) || 1000;
+  const numLH = Number(layoutHeight) || 600;
+
+  const pTopLeft = pixelToGeo(numX, numY, numLW, numLH);
+  const pTopRight = pixelToGeo(numX + numW, numY, numLW, numLH);
+  const pBottomRight = pixelToGeo(numX + numW, numY + numH, numLW, numLH);
+  const pBottomLeft = pixelToGeo(numX, numY + numH, numLW, numLH);
+
+  // Standard GeoJSON coordinate order: [longitude, latitude]
+  return [
+    [pTopLeft.lng, pTopLeft.lat],
+    [pTopRight.lng, pTopRight.lat],
+    [pBottomRight.lng, pBottomRight.lat],
+    [pBottomLeft.lng, pBottomLeft.lat],
+    [pTopLeft.lng, pTopLeft.lat],
+  ];
+}
+
 @Injectable()
 export class FacilityService implements OnModuleInit {
   constructor(
@@ -474,7 +525,19 @@ export class FacilityService implements OnModuleInit {
         .addOrderBy('zone.id', 'ASC')
         .getMany();
 
-      if (floors && floors.length > 0) return floors;
+      if (floors && floors.length > 0) {
+        return floors.map((f) => ({
+          ...f,
+          zones: (f.zones || []).map((z) => ({
+            ...z,
+            x: Number(z.x),
+            y: Number(z.y),
+            width: Number(z.width),
+            height: Number(z.height),
+            beacons: z.beacons || [],
+          })),
+        }));
+      }
     } catch (err) {
       console.warn('Facility DB read failed, using verified in-memory fallback:', err?.message);
     }
@@ -497,31 +560,149 @@ export class FacilityService implements OnModuleInit {
       if (zonesWithResidents && zonesWithResidents.length > 0) {
         return zonesWithResidents
           .filter((z) => z.currentResident !== null)
-          .map((z) => ({
-            residentId: z.currentResident.id,
-            uhid: z.currentResident.uhid,
-            name: `${z.currentResident.firstName} ${z.currentResident.lastName}`,
-            age: z.currentResident.age,
-            floorNumber: z.floor?.floorNumber || 1,
-            floorName: z.floor?.name || 'Main Floor',
-            zoneId: z.id,
-            roomNumber: z.roomNumber,
-            zoneName: z.name,
-            zoneType: z.zoneType,
-            isSafePerimeter: z.isSafePerimeter,
-            x: z.x + z.width / 2,
-            y: z.y + z.height / 2,
-            beaconId: z.beacons?.[0]?.serialNumber || 'BCN-ACTIVE',
-            rssi: -62,
-            dwellMinutes: 38,
-            status: z.isSafePerimeter ? 'safe' : 'egress_alert',
-          }));
+          .map((z) => {
+            const posX = Number(z.x) + Number(z.width) / 2;
+            const posY = Number(z.y) + Number(z.height) / 2;
+            const geo = pixelToGeo(posX, posY, z.floor?.layoutWidth || 1000, z.floor?.layoutHeight || 600);
+            return {
+              residentId: z.currentResident.id,
+              uhid: z.currentResident.uhid,
+              name: `${z.currentResident.firstName} ${z.currentResident.lastName}`,
+              age: z.currentResident.age,
+              floorNumber: z.floor?.floorNumber || 1,
+              floorName: z.floor?.name || 'Main Floor',
+              zoneId: z.id,
+              roomNumber: z.roomNumber,
+              zoneName: z.name,
+              zoneType: z.zoneType,
+              isSafePerimeter: z.isSafePerimeter,
+              x: posX,
+              y: posY,
+              lat: geo.lat,
+              lng: geo.lng,
+              beaconId: z.beacons?.[0]?.serialNumber || 'BCN-ACTIVE',
+              rssi: -62,
+              dwellMinutes: 38,
+              status: z.isSafePerimeter ? 'safe' : 'egress_alert',
+            };
+          });
       }
     } catch (err) {
       console.warn('Facility presence DB read failed, using fallback:', err?.message);
     }
 
     return this.getFallbackPresence();
+  }
+
+  async getFloorGeoJson(floorNumber?: number) {
+    const floors = await this.getFloors();
+    const targetFloors = floorNumber
+      ? floors.filter((f) => f.floorNumber === Number(floorNumber))
+      : floors;
+
+    const features: any[] = [];
+
+    for (const floor of targetFloors) {
+      const layoutW = Number(floor.layoutWidth || 1000);
+      const layoutH = Number(floor.layoutHeight || 600);
+
+      for (const zone of (floor.zones || [])) {
+        const zX = Number(zone.x ?? 40);
+        const zY = Number(zone.y ?? 40);
+        const zW = Number(zone.width ?? 160);
+        const zH = Number(zone.height ?? 140);
+
+        const polyCoords = rectToGeoPolygon(
+          zX,
+          zY,
+          zW,
+          zH,
+          layoutW,
+          layoutH,
+        );
+        const center = pixelToGeo(
+          zX + zW / 2,
+          zY + zH / 2,
+          layoutW,
+          layoutH,
+        );
+
+        // SIT (Simple Indoor Tagging) zone feature
+        features.push({
+          type: 'Feature',
+          id: `zone-${zone.id}`,
+          geometry: {
+            type: 'Polygon',
+            coordinates: [polyCoords],
+          },
+          properties: {
+            indoor: zone.zoneType === 'corridor' ? 'corridor' : 'room',
+            level: floor.floorNumber,
+            floorId: floor.id,
+            floorName: floor.name,
+            zoneId: zone.id,
+            ref: zone.roomNumber,
+            name: zone.name,
+            zoneType: zone.zoneType,
+            isSafePerimeter: zone.isSafePerimeter,
+            maxCapacity: zone.maxCapacity,
+            centerLat: center.lat,
+            centerLng: center.lng,
+            currentResident: zone.currentResident
+              ? {
+                  id: zone.currentResident.id,
+                  name: `${zone.currentResident.firstName} ${zone.currentResident.lastName}`,
+                  uhid: zone.currentResident.uhid,
+                }
+              : null,
+            beaconsCount: (zone.beacons || []).length,
+          },
+        });
+
+        // Beacon point features
+        if (zone.beacons && zone.beacons.length > 0) {
+          zone.beacons.forEach((b: any, idx: number) => {
+            const bX = zX + (zW / (zone.beacons.length + 1)) * (idx + 1);
+            const bY = zY + zH / 2;
+            const bGeo = pixelToGeo(bX, bY, layoutW, layoutH);
+
+            features.push({
+              type: 'Feature',
+              id: `beacon-${b.id || b.serialNumber}`,
+              geometry: {
+                type: 'Point',
+                coordinates: [bGeo.lng, bGeo.lat],
+              },
+              properties: {
+                indoor: 'beacon',
+                level: floor.floorNumber,
+                beaconId: b.id,
+                serialNumber: b.serialNumber,
+                macAddress: b.macAddress,
+                batteryLevel: b.batteryLevel,
+                zoneId: zone.id,
+                roomNumber: zone.roomNumber,
+                zoneName: zone.name,
+                lat: bGeo.lat,
+                lng: bGeo.lng,
+              },
+            });
+          });
+        }
+      }
+    }
+
+    return {
+      type: 'FeatureCollection',
+      metadata: {
+        facility: 'careMP Sentinel Campus (Infopark Kochi, India)',
+        anchor: FACILITY_GEO_ANCHOR,
+        activeLevel: floorNumber ? Number(floorNumber) : null,
+        featureCount: features.length,
+        generatedAt: new Date().toISOString(),
+      },
+      features,
+    };
   }
 
   // ==========================================
@@ -556,7 +737,17 @@ export class FacilityService implements OnModuleInit {
         isActive: dto.isActive ?? true,
       });
       const saved = await this.floorRepo.save(floor);
-      if (saved) return saved;
+      if (saved) {
+        this.initFallbackDataIfNeeded();
+        if (!this.fallbackFloors.some((f) => f.id === saved.id || f.floorNumber === saved.floorNumber)) {
+          this.fallbackFloors.push({
+            ...saved,
+            zones: [],
+          });
+        }
+        (saved as any).zones = [];
+        return saved;
+      }
     } catch (err) {
       console.warn('Floor DB create failed, saving to fallback:', err?.message);
     }
@@ -633,7 +824,7 @@ export class FacilityService implements OnModuleInit {
         .orderBy('zone.id', 'ASC');
 
       if (floorId) {
-        qb = qb.where('zone.floorId = :floorId', { floorId });
+        qb = qb.where('zone.floorId = :floorId OR floor.floorNumber = :floorId', { floorId });
       }
       const zones = await qb.getMany();
       if (zones && zones.length > 0) return zones;
@@ -644,7 +835,7 @@ export class FacilityService implements OnModuleInit {
     const allZones: any[] = [];
     for (const f of this.fallbackFloors) {
       if (!floorId || f.id === floorId || f.floorNumber === floorId) {
-        for (const z of f.zones) {
+        for (const z of (f.zones || [])) {
           allZones.push({
             ...z,
             floor: { id: f.id, floorNumber: f.floorNumber, name: f.name, code: f.code },
@@ -678,21 +869,46 @@ export class FacilityService implements OnModuleInit {
 
   async createZone(dto: CreateRoomZoneDto) {
     try {
+      // Find floor record to resolve valid foreign key
+      let floorRecord = await this.floorRepo.findOne({
+        where: [{ id: Number(dto.floorId) }, { floorNumber: Number(dto.floorId) }],
+      });
+
       const zone = this.zoneRepo.create({
-        floorId: Number(dto.floorId),
+        floorId: floorRecord ? floorRecord.id : Number(dto.floorId),
         roomNumber: dto.roomNumber,
         name: dto.name,
         zoneType: dto.zoneType || 'suite',
         isSafePerimeter: dto.isSafePerimeter ?? true,
-        x: dto.x ? Number(dto.x) : 40,
-        y: dto.y ? Number(dto.y) : 40,
-        width: dto.width ? Number(dto.width) : 160,
-        height: dto.height ? Number(dto.height) : 140,
-        maxCapacity: dto.maxCapacity ? Number(dto.maxCapacity) : 1,
+        x: dto.x !== undefined ? Number(dto.x) : 40,
+        y: dto.y !== undefined ? Number(dto.y) : 40,
+        width: dto.width !== undefined ? Number(dto.width) : 160,
+        height: dto.height !== undefined ? Number(dto.height) : 140,
+        maxCapacity: dto.maxCapacity !== undefined ? Number(dto.maxCapacity) : 1,
         description: dto.description || '',
       });
       const saved = await this.zoneRepo.save(zone);
-      if (saved) return saved;
+      if (saved) {
+        this.initFallbackDataIfNeeded();
+        const f = this.fallbackFloors.find(
+          (fl) => fl.id === Number(dto.floorId) || fl.floorNumber === Number(dto.floorId) || (floorRecord && fl.id === floorRecord.id),
+        );
+        if (f) {
+          if (!f.zones) f.zones = [];
+          if (!f.zones.some((z: any) => z.id === saved.id)) {
+            f.zones.push({
+              ...saved,
+              x: Number(saved.x),
+              y: Number(saved.y),
+              width: Number(saved.width),
+              height: Number(saved.height),
+              currentResident: null,
+              beacons: [],
+            });
+          }
+        }
+        return saved;
+      }
     } catch (err) {
       console.warn('Zone DB create failed, saving to fallback:', err?.message);
     }
@@ -708,16 +924,17 @@ export class FacilityService implements OnModuleInit {
       name: dto.name,
       zoneType: dto.zoneType || 'suite',
       isSafePerimeter: dto.isSafePerimeter ?? true,
-      x: dto.x ? Number(dto.x) : 40,
-      y: dto.y ? Number(dto.y) : 40,
-      width: dto.width ? Number(dto.width) : 160,
-      height: dto.height ? Number(dto.height) : 140,
-      maxCapacity: dto.maxCapacity ? Number(dto.maxCapacity) : 1,
+      x: dto.x !== undefined ? Number(dto.x) : 40,
+      y: dto.y !== undefined ? Number(dto.y) : 40,
+      width: dto.width !== undefined ? Number(dto.width) : 160,
+      height: dto.height !== undefined ? Number(dto.height) : 140,
+      maxCapacity: dto.maxCapacity !== undefined ? Number(dto.maxCapacity) : 1,
       description: dto.description || '',
       currentResident: null,
       beacons: [],
     };
     if (floor) {
+      if (!floor.zones) floor.zones = [];
       floor.zones.push(newZone);
     }
     return newZone;
@@ -1109,6 +1326,9 @@ export class FacilityService implements OnModuleInit {
     for (const f of floors) {
       for (const z of f.zones) {
         if (z.currentResident) {
+          const posX = z.x + z.width / 2;
+          const posY = z.y + z.height / 2;
+          const geo = pixelToGeo(posX, posY, f.layoutWidth || 1000, f.layoutHeight || 600);
           presenceList.push({
             residentId: z.currentResident.id,
             uhid: z.currentResident.uhid,
@@ -1121,8 +1341,10 @@ export class FacilityService implements OnModuleInit {
             zoneName: z.name,
             zoneType: z.zoneType,
             isSafePerimeter: z.isSafePerimeter,
-            x: z.x + z.width / 2,
-            y: z.y + z.height / 2,
+            x: posX,
+            y: posY,
+            lat: geo.lat,
+            lng: geo.lng,
             beaconId: z.beacons?.[0]?.serialNumber || 'BCN-ACTIVE',
             rssi: -62,
             dwellMinutes: 44,
