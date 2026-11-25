@@ -28,6 +28,21 @@ import { DashboardCounters, Vital, Resident, FallIncident } from './types';
 
 const AUTO_REFRESH_INTERVAL_SECONDS = 60;
 
+const DEFAULT_ELEANOR_VANCE: Resident = {
+  id: 1,
+  uhid: 'RES-001',
+  firstName: 'Eleanor',
+  lastName: 'Vance',
+  emailAddress: 'eleanor.vance@caremp.ai',
+  phoneNumber: '+1-555-019-2831',
+  age: 78,
+  gender: 2,
+  status: 1,
+  description: "Resident with FAST Stage 5 Moderate Alzheimer's Disease, sundowning agitation, and circadian sleep inversion. Former elementary school librarian for 32 years.",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
 const CommandCenterApp: React.FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -318,33 +333,15 @@ const CommandCenterApp: React.FC = () => {
         </main>
       </div>
 
-      {/* Floating Action Buttons: Care Coach Copilot & AI Tele-Consult */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
-        {/* Secondary FAB: AI Telemedicine Consultation */}
-        <button
-          onClick={() => setIsTelemedicineModalOpen(true)}
-          aria-label="Open AI Telemedicine Copilot"
-          title="Launch AI Telemedicine Consultation & Clinical Brief"
-          className="w-11 h-11 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-950/40 hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
-        >
-          <Video className="w-4 h-4 group-hover:scale-110 transition-transform" />
-        </button>
-
-        {/* Primary FAB: Care Coach AI Copilot */}
-        <button
-          onClick={() => setIsCopilotModalOpen(true)}
-          aria-label="Open Dementia Care Coach Copilot"
-          title="Launch Frontline Dementia Care Coach Copilot"
-          className="relative px-4 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white flex items-center gap-2 shadow-xl shadow-purple-900/30 dark:shadow-purple-950/60 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-purple-400/40 group font-semibold text-xs"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-300 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-          </span>
-          <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-          <span>Care Coach AI</span>
-        </button>
-      </div>
+      {/* Floating Action Button (FAB): AI Tele-Consult available across all screens */}
+      <button
+        onClick={() => setIsTelemedicineModalOpen(true)}
+        aria-label="Open AI Telemedicine Copilot"
+        title="Launch AI Telemedicine Consultation & Clinical Brief"
+        className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-900/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
+      >
+        <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
+      </button>
 
       {/* Vital Simulation Modal Dialog */}
       <SimulationModal
@@ -358,15 +355,15 @@ const CommandCenterApp: React.FC = () => {
       <CareCoachCopilotModal
         isOpen={isCopilotModalOpen}
         onClose={() => setIsCopilotModalOpen(false)}
-        residents={residents}
-        initialResidentId={selectedResidentId}
+        residents={residents.length > 0 ? residents : [DEFAULT_ELEANOR_VANCE]}
+        initialResidentId={selectedResidentId || 1}
       />
 
       {/* AI Telemedicine Copilot Modal */}
       <TelemedicineModal
         isOpen={isTelemedicineModalOpen}
         onClose={() => setIsTelemedicineModalOpen(false)}
-        resident={residentsMap[selectedResidentId || 1] || residents[0]}
+        resident={residentsMap[selectedResidentId || 1] || residents.find((r) => r.id === 1) || DEFAULT_ELEANOR_VANCE}
         recentVital={recentVitals[0]}
       />
 

@@ -40,12 +40,12 @@ export const CareCoachCopilotModal: React.FC<CareCoachCopilotModalProps> = ({
   residents,
   initialResidentId,
 }) => {
-  const [selectedId, setSelectedId] = useState<number>(initialResidentId || residents[0]?.id || 1);
+  const [selectedId, setSelectedId] = useState<number>(initialResidentId || 1);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome-1',
       sender: 'agent',
-      text: `- **Ready**: Care Coach Copilot is active and monitoring dementia telemetry.\n- **Support**: Ask me for real-time de-escalation scripts, calming anchors, or shift handoff briefs.\n- **Action**: Select a resident above to contextualize validation therapy guidance.`,
+      text: `- **Ready**: Care Coach Copilot is active and monitoring Eleanor Vance (FAST Stage 5 Alzheimer's).\n- **Support**: Ask me for real-time de-escalation scripts, calming anchors, or shift handoff briefs.\n- **Action**: Use prompt chips below or type an urgent observation to get immediate steps.`,
       timestamp: 'Just now',
     },
   ]);

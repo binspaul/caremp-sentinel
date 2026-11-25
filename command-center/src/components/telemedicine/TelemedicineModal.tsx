@@ -22,6 +22,8 @@ import {
   FileText,
   MessageSquare,
   Zap,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
 import { MarkdownRenderer } from '../common/MarkdownRenderer';
@@ -51,12 +53,13 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
   const [inputQuery, setInputQuery] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 'msg-1',
       sender: 'copilot',
-      text: "Hello Dr. Jenkins. I have pre-loaded the resident's longitudinal cognitive telemetry, 60-GHz mmWave nocturnal restlessness feed, safe-zone geofence logs, and CPIC anticholinergic profile. What would you like me to analyze?",
+      text: `- **Ready**: Pre-loaded Eleanor Vance's longitudinal dementia telemetry, sundowning agitation metrics (76/100), and personalized life anchors.\n- **Support**: Ask me for real-time de-escalation actions, validation scripts, or 60-second shift handoffs.`,
       timestamp: 'Just now',
     },
   ]);
@@ -64,9 +67,9 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
 
   if (!isOpen) return null;
 
-  const residentName = resident ? `${resident.firstName} ${resident.lastName}` : 'Alex Rivera';
+  const residentName = resident ? `${resident.firstName} ${resident.lastName}` : 'Eleanor Vance';
   const uhid = resident?.uhid || 'RES-001';
-  const age = resident?.age || 72;
+  const age = resident?.age || 78;
 
   // Use current vital or fallback to simulated deterioration numbers
   const hr = recentVital?.heartRate ? Math.round(recentVital.heartRate) : 126;
@@ -329,48 +332,74 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
           </div>
 
           {/* Right Column: AI Clinical Diagnostic Brief & Interactive Copilot (5 Cols) */}
-          <div className="lg:col-span-5 flex flex-col justify-between overflow-hidden bg-slate-50/70 dark:bg-slate-900/90 p-5 space-y-4">
-            {/* Clinical Brief Card */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="lg:col-span-5 flex flex-col h-full min-h-0 overflow-hidden bg-slate-50/70 dark:bg-slate-900/90 p-4 gap-3">
+            {/* Compact Clinical Brief Card with Collapsible Details */}
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 shrink-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  30s AI Triage Diagnostic Synopsis
-                </span>
-                <Badge variant={isCritical ? 'critical' : 'normal'} size="sm">
-                  {isCritical ? 'SUNDOWNING SURGE: HIGH RISK (88)' : 'COGNITIVE STATE: STABLE'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    30s AI Triage Synopsis
+                  </span>
+                  <Badge variant={isCritical ? 'critical' : 'normal'} size="sm">
+                    {isCritical ? 'SUNDOWNING SURGE (76)' : 'COGNITIVE STABLE'}
+                  </Badge>
+                </div>
+
+                <button
+                  onClick={() => setIsSynopsisExpanded(!isSynopsisExpanded)}
+                  className="flex items-center gap-1 text-[11px] font-mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md transition"
+                  title={isSynopsisExpanded ? 'Collapse synopsis' : 'Expand full clinical synopsis'}
+                >
+                  <span>{isSynopsisExpanded ? 'Less' : 'Details'}</span>
+                  {isSynopsisExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
               </div>
 
-              <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 font-sans leading-relaxed">
-                <p>
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">Sundowning Prodrome: </span>
-                  Late-afternoon sympathetic autonomic surge and micro-motion hyperactivity detected 40 min prior to overt combativeness. Peak vulnerability window active.
-                </p>
-                <p>
-                  <span className="font-semibold text-purple-700 dark:text-purple-400">Anticholinergic / PGx Warning: </span>
-                  CYP2D6 Poor Metabolizer (Donepezil capped 5mg) &amp; High Anticholinergic Burden (ARS: 3). High risk of drug-induced cognitive worsening and delirium.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800/80">
-                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Action:</span>
-                <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                  Non-Pharm De-escalation &bull; Dim Circadian Light &bull; Reassuring Bedside Check
+              {/* Streamlined Summary Badges (Always Visible) */}
+              <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
+                <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold border border-rose-500/20">
+                  ⚠️ Sundowning Surge: Window (4:00-6:30 PM)
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold border border-purple-500/20">
+                  🧬 CYP2D6 Poor Metabolizer (Donepezil 5mg cap)
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+                  ⚡ Calm Anchor: Lavender Blanket &amp; Jazz
                 </span>
               </div>
+
+              {/* Expanded Clinical Narrative (Toggleable) */}
+              {isSynopsisExpanded && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 space-y-1.5 font-sans leading-relaxed">
+                  <p>
+                    <span className="font-semibold text-rose-600 dark:text-rose-400">Sundowning Prodrome: </span>
+                    Late-afternoon sympathetic autonomic surge and micro-motion hyperactivity detected 40 min prior to overt combativeness. Peak vulnerability window active.
+                  </p>
+                  <p>
+                    <span className="font-semibold text-purple-700 dark:text-purple-400">Anticholinergic / PGx Warning: </span>
+                    CYP2D6 Poor Metabolizer (Donepezil capped 5mg) &amp; High Anticholinergic Burden (ARS: 3). High risk of drug-induced cognitive worsening and delirium.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-[11px] font-mono text-slate-500">Action:</span>
+                    <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                      Non-Pharm De-escalation &bull; Dim Circadian Light &bull; Reassuring Bedside Check
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Interactive Gemini Chat Assistant */}
+            {/* Interactive Gemini Chat Assistant (Expansive Layout) */}
             <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-3 overflow-hidden">
-              <div className="flex-1 overflow-y-auto space-y-3 p-1">
+              <div className="flex-1 overflow-y-auto min-h-0 space-y-3 p-1">
                 {chatMessages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex flex-col ${msg.sender === 'physician' ? 'items-end' : 'items-start'}`}
                   >
                     <div
-                      className={`max-w-[90%] p-3 rounded-2xl text-xs leading-relaxed ${
+                      className={`max-w-[92%] p-3 rounded-2xl text-xs leading-relaxed ${
                         msg.sender === 'physician'
                           ? 'bg-emerald-600 text-white rounded-br-none shadow-xs'
                           : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 rounded-bl-none shadow-2xs'
@@ -397,8 +426,8 @@ export const TelemedicineModal: React.FC<TelemedicineModalProps> = ({
                 )}
               </div>
 
-              {/* Quick Prompt Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto py-2 shrink-0 border-t border-slate-200 dark:border-slate-800/60">
+              {/* Quick Prompt Chips (Smooth scroll without ugly scrollbar track) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-2 shrink-0 border-t border-slate-200 dark:border-slate-800/60 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 <button
                   onClick={() => handleSendQuery('Explain the Sundowning Agitation Score and de-escalation protocol')}
                   className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent text-[11px] whitespace-nowrap transition cursor-pointer"
