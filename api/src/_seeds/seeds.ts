@@ -8,6 +8,8 @@ import { seedSuperAdmin, seedDoctorAdmin } from './users.seed';
 import { seedRoles } from './roles.seed';
 import { seedResidents } from './residents.seed';
 import { seedBands } from './bands.seed';
+import { seedRadarPods } from './radar-pods.seed';
+import { seedChestPatches } from './chest-patches.seed';
 import { seedFalls } from './falls.seed';
 import { seedGenomics } from './genomics.seed';
 import { seedHealthspan } from './healthspan.seed';
@@ -22,6 +24,8 @@ async function bootstrap() {
   await seedDoctorAdmin(userRepo);
   await seedResidents(dataSource);
   await seedBands(dataSource);
+  await seedRadarPods(dataSource);
+  await seedChestPatches(dataSource);
   await seedFalls(dataSource);
   await seedGenomics(dataSource);
   await seedHealthspan(dataSource);

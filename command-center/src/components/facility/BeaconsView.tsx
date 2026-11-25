@@ -242,15 +242,13 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
             Indoor BLE location beacon anchors, battery telemetry, signal calibration, and spatial room pairing
           </p>
         </div>
-        {onNavigateToMap && (
-          <button
-            onClick={onNavigateToMap}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition cursor-pointer self-start sm:self-auto"
-          >
-            <MapPin className="w-4 h-4 text-cyan-500" />
-            <span>View Facility Map</span>
-          </button>
-        )}
+        <button
+          onClick={handleOpenRegister}
+          className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-emerald-500/20 transition-all cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Register Beacon</span>
+        </button>
       </div>
 
       {/* Toast Feedback */}
@@ -403,15 +401,6 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
               <option value="assigned">Assigned to Room</option>
               <option value="unassigned">Unassigned / Spare</option>
             </select>
-
-            {/* Register Beacon Button */}
-            <button
-              onClick={handleOpenRegister}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition active:scale-95 cursor-pointer ml-auto sm:ml-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Register Beacon</span>
-            </button>
           </div>
         </div>
 
@@ -670,17 +659,17 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
 
       {/* Modal: Register / Edit Beacon */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-1">
-              <Radio className="w-5 h-5 text-amber-500" />
+              <Radio className="w-5 h-5 text-emerald-500" />
               <span>{editingBeacon ? 'Configure BLE Anchor' : 'Register BLE Beacon'}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
@@ -699,7 +688,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                     value={serialNumber}
                     onChange={(e) => setSerialNumber(e.target.value)}
                     placeholder="BCN-FL2-205"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 font-mono"
                   />
                 </div>
                 <div>
@@ -712,7 +701,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                     value={macAddress}
                     onChange={(e) => setMacAddress(e.target.value)}
                     placeholder="E4:95:6E:02:05:01"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 font-mono"
                   />
                 </div>
               </div>
@@ -727,7 +716,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                   placeholder="Sentinel BLE Anchor v2"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500"
                 />
               </div>
 
@@ -738,7 +727,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                 <select
                   value={zoneId ?? ''}
                   onChange={(e) => setZoneId(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="">-- Unassigned (Spare Stock) --</option>
                   {allRooms.map((r) => (
@@ -758,7 +747,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                     type="number"
                     value={rssi}
                     onChange={(e) => setRssi(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 font-mono"
                   />
                 </div>
 
@@ -772,7 +761,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                     max={20}
                     value={txIntervalHz}
                     onChange={(e) => setTxIntervalHz(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 font-mono"
                   />
                 </div>
 
@@ -786,7 +775,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                     max={100}
                     value={batteryLevel}
                     onChange={(e) => setBatteryLevel(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500 font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 font-mono"
                   />
                 </div>
               </div>
@@ -798,7 +787,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as BeaconStatus)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="active">Active Online</option>
                   <option value="low_battery">Low Battery</option>
@@ -811,13 +800,13 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-md transition active:scale-95 cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-emerald-500/20 transition cursor-pointer"
                 >
                   {editingBeacon ? 'Save Changes' : 'Register Beacon'}
                 </button>
@@ -829,17 +818,17 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
 
       {/* Modal: Quick Pair / Unassign Room */}
       {isAssignModalOpen && targetBeacon && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 relative">
             <button
               onClick={() => setIsAssignModalOpen(false)}
-              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-1">
-              <Link2 className="w-5 h-5 text-indigo-500" />
+              <Link2 className="w-5 h-5 text-emerald-500" />
               <span>Pair Beacon to Room Zone</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-mono">
@@ -854,7 +843,7 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                 <select
                   value={selectedZoneId ?? ''}
                   onChange={(e) => setSelectedZoneId(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="">-- Unassign (Return to Spares) --</option>
                   {allRooms.map((r) => (
@@ -869,14 +858,14 @@ export const BeaconsView: React.FC<BeaconsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAssignModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveQuickAssign}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md transition active:scale-95 cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-emerald-500/20 transition cursor-pointer"
                 >
                   Update Pairing
                 </button>

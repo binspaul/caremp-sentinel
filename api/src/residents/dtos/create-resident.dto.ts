@@ -1,46 +1,36 @@
 import {
-  Length,
   IsString,
-  IsDateString,
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsEmail,
+  IsInt,
+  IsNumber,
+  IsBoolean,
   MaxLength,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class CreateResidentDto {
   @IsString()
-  @IsNotEmpty()
-  @Length(1, 255)
-  uhid: string;
+  @IsOptional()
+  @MaxLength(255)
+  uhid?: string;
 
   @IsString()
   @IsNotEmpty()
-  @Length(1, 255)
+  @MaxLength(255)
   firstName: string;
 
+  @IsString()
   @IsOptional()
+  @MaxLength(255)
+  middleName?: string;
+
+  @IsString()
   @IsNotEmpty()
-  middleName: string;
-
-  @IsString()
-  @Length(1, 255)
+  @MaxLength(255)
   lastName: string;
-
-  @IsString()
-  @Length(1, 255)
-  nickName: string;
-
-  @IsString()
-  @Length(1, 2000)
-  description?: string;
-
-  @IsDateString()
-  dateOfBirth: string;
-
-  @IsInt()
-  gender: number;
 
   @IsEmail()
   @IsNotEmpty()
@@ -49,48 +39,118 @@ export class CreateResidentDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(255)
+  @MaxLength(50)
   phoneNumber: string;
 
   @IsString()
-  @IsNotEmpty()
-  @Length(1, 50)
-  emergencyContactNumber: string;
+  @IsOptional()
+  @MaxLength(50)
+  emergencyContactNumber?: string;
 
   @IsString()
-  @Length(1, 2000)
-  address: string;
+  @IsOptional()
+  dateOfBirth?: string;
 
   @IsInt()
-  bloodGroupId: number;
+  @IsOptional()
+  @Min(0)
+  @Max(130)
+  age?: number;
+
+  @IsInt()
+  @IsOptional()
+  gender?: number; // 1: Male, 2: Female, 3: Other
+
+  @IsInt()
+  @IsOptional()
+  bloodGroupId?: number; // 1: O+, 2: A+, 3: B+, 4: AB+, etc.
 
   @IsString()
-  @Length(1, 2000)
-  notes: string;
+  @IsOptional()
+  @MaxLength(50)
+  roomNumber?: string;
+
+  @IsInt()
+  @IsOptional()
+  zoneId?: number; // Optional zone to assign the resident to
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(100)
+  fallRiskScore?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(100)
+  healthScore?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  hasFallHistory?: boolean;
 
   @IsString()
-  @Length(1, 2000)
-  specialNotes: string;
+  @IsOptional()
+  @MaxLength(2000)
+  description?: string;
 
-  @IsInt()
-  @IsNotEmpty()
-  createdBy: number;
+  @IsString()
+  @IsOptional()
+  @MaxLength(2000)
+  address?: string;
 
-  @IsInt()
-  @IsNotEmpty()
-  userId: number;
+  @IsString()
+  @IsOptional()
+  @MaxLength(2000)
+  notes?: string;
 
+  @IsString()
+  @IsOptional()
+  @MaxLength(2000)
+  specialNotes?: string;
+
+  @IsNumber()
+  @IsOptional()
+  referenceHeartRate?: number;
+
+  @IsNumber()
+  @IsOptional()
+  referenceHrv?: number;
+
+  @IsNumber()
+  @IsOptional()
+  referenceSystolicBP?: number;
+
+  @IsNumber()
+  @IsOptional()
+  referenceDiastolicBP?: number;
+
+  @IsNumber()
+  @IsOptional()
+  referenceOxygenSaturation?: number;
+
+  @IsNumber()
+  @IsOptional()
+  referenceBodyTemperature?: number;
+
+  @IsNumber()
   @IsOptional()
   heightCm?: number;
 
-  @IsInt()
-  @IsOptional()
-  heightUnit?: number;
-
+  @IsNumber()
   @IsOptional()
   weight?: number;
 
   @IsInt()
   @IsOptional()
-  weightUnit?: number;
+  status?: number; // 1: Active, 0: Inactive
+
+  @IsInt()
+  @IsOptional()
+  userId?: number;
+
+  @IsInt()
+  @IsOptional()
+  createdBy?: number;
 }

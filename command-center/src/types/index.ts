@@ -62,7 +62,9 @@ export interface Resident {
   referenceOxygenSaturation?: number;
   referenceBodyTemperature?: number;
   fallRiskScore?: number;
+  healthScore?: number;
   hasFallHistory?: boolean;
+  roomNumber?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -129,14 +131,13 @@ export interface DashboardCounters {
 // ==========================================
 
 export type BandStatus = 'available' | 'active' | 'charging' | 'maintenance';
-export type BandDeviceType = 'wristband' | 'radar_pod' | 'chest_patch';
 
 export interface Band {
   id: number;
   serialNumber: string;
   macAddress: string;
   model: string;
-  deviceType: BandDeviceType;
+  deviceType?: string;
   firmwareVersion: string;
   batteryLevel: number;
   isWorn: boolean;
@@ -158,6 +159,88 @@ export interface BandCounters {
   maintenance: number;
   lowBattery: number;
   notWorn: number;
+}
+
+// ==========================================
+// Radar Pods Hardware Fleet Types
+// ==========================================
+
+export type RadarInstallationType = 'bedhead' | 'wall_mount' | 'ceiling';
+export type RadarPodStatus = 'active' | 'standby' | 'offline' | 'maintenance';
+
+export interface RadarPod {
+  id: number;
+  serialNumber: string;
+  macAddress: string;
+  model: string;
+  frequencyBand: string;
+  installationType: RadarInstallationType;
+  detectionRangeMeters: number;
+  respirationRateBpm: number | null;
+  heartRateBpm: number | null;
+  bedOccupancy: boolean;
+  firmwareVersion: string;
+  powerSource: string;
+  status: RadarPodStatus;
+  isOnline: boolean;
+  roomNumber: string | null;
+  lastHeartbeatAt: string | null;
+  notes?: string;
+  assignedResidentId: number | null;
+  assignedResident?: Resident | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RadarPodCounters {
+  total: number;
+  active: number;
+  standby: number;
+  offline: number;
+  maintenance: number;
+  bedOccupied: number;
+}
+
+// ==========================================
+// Chest Patches Hardware Fleet Types
+// ==========================================
+
+export type ChestPatchType = 'single_lead_ecg' | 'cardiopulmonary' | 'temp_respiration';
+export type AdhesionStatus = 'adhered' | 'loose' | 'detached' | 'replacement_due';
+export type ChestPatchStatus = 'active' | 'available' | 'charging' | 'depleted' | 'maintenance';
+
+export interface ChestPatch {
+  id: number;
+  serialNumber: string;
+  macAddress: string;
+  model: string;
+  patchType: ChestPatchType;
+  batteryLevel: number;
+  adhesionStatus: AdhesionStatus;
+  wearDurationDays: number;
+  maxWearDays: number;
+  skinTempCelsius: number | null;
+  isWorn: boolean;
+  rssi: number;
+  status: ChestPatchStatus;
+  firmwareVersion: string;
+  lastSeenAt: string | null;
+  notes?: string;
+  assignedResidentId: number | null;
+  assignedResident?: Resident | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ChestPatchCounters {
+  total: number;
+  active: number;
+  available: number;
+  charging: number;
+  depleted: number;
+  maintenance: number;
+  lowBattery: number;
+  looseAdhesion: number;
 }
 
 // ==========================================
@@ -221,6 +304,8 @@ export interface BeaconInfo {
   macAddress?: string;
   batteryLevel: number;
   status: string;
+  txIntervalHz?: number;
+  rssiCalibrated1m?: number;
 }
 
 export type BeaconStatus = 'active' | 'low_battery' | 'offline' | 'maintenance';
@@ -298,10 +383,62 @@ export interface ResidentPresence {
   isSafePerimeter: boolean;
   x: number;
   y: number;
+  lat?: number;
+  lng?: number;
   beaconId: string;
   rssi: number;
   dwellMinutes: number;
   status: 'safe' | 'egress_alert';
+}
+
+export interface FacilityGeoFeature {
+  type: 'Feature';
+  id: string;
+  geometry: {
+    type: 'Polygon' | 'Point';
+    coordinates: any;
+  };
+  properties: {
+    indoor: 'room' | 'corridor' | 'beacon' | 'area';
+    level: number;
+    floorId?: number;
+    floorName?: string;
+    zoneId?: number;
+    ref?: string;
+    name?: string;
+    zoneType?: FacilityZoneType;
+    isSafePerimeter?: boolean;
+    maxCapacity?: number;
+    centerLat?: number;
+    centerLng?: number;
+    currentResident?: { id: number; name: string; uhid: string } | null;
+    beaconsCount?: number;
+    beaconId?: number;
+    serialNumber?: string;
+    macAddress?: string;
+    batteryLevel?: number;
+    roomNumber?: string;
+    zoneName?: string;
+    lat?: number;
+    lng?: number;
+  };
+}
+
+export interface FacilityGeoJson {
+  type: 'FeatureCollection';
+  metadata: {
+    facility: string;
+    anchor: {
+      lat: number;
+      lng: number;
+      widthMeters: number;
+      heightMeters: number;
+    };
+    activeLevel: number | null;
+    featureCount: number;
+    generatedAt: string;
+  };
+  features: FacilityGeoFeature[];
 }
 
 

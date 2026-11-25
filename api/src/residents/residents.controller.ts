@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Body,
   Query,
@@ -12,6 +13,7 @@ import {
   Version,
   ValidationPipe,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -22,6 +24,7 @@ import { RolesGuard } from 'src/auth/role.guard';
 import { PaginationQueryDto } from '../_common/dtos/pagination-query.dto';
 
 import { ResidentsService } from './residents.service';
+import { CreateResidentDto } from './dtos/create-resident.dto';
 import { UpdateResidentDto } from './dtos/update-resident.dto';
 
 @Controller('residents')
@@ -29,6 +32,38 @@ export class ResidentsController {
   constructor(
     private readonly residentsService: ResidentsService,
   ) { }
+
+  /**
+  * Create new resident
+  */
+  @Post()
+  @Version('1')
+  @Roles(Role.SUPERADMIN, Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async create(
+    @Body(new ValidationPipe({ transform: true })) dto: CreateResidentDto,
+    @UserContext('id') userId?: number,
+  ) {
+    try {
+      const resident = await this.residentsService.create(dto, userId);
+
+      return {
+        code: 201,
+        status: 'success',
+        message: 'Resident registered successfully.',
+        data: resident,
+      };
+    } catch (error: any) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      throw new BadRequestException({
+        status: 'error',
+        message: error.message || 'Failed to register resident.',
+        data: null,
+      });
+    }
+  }
 
   /**
   * Get resident counters

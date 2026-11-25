@@ -16,6 +16,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ArrowRight,
+  Plus,
 } from 'lucide-react';
 import { Floor } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
@@ -70,6 +71,16 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
   const showNotification = (text: string, type: 'success' | 'error' = 'success') => {
     setFeedbackMsg({ text, type });
     setTimeout(() => setFeedbackMsg(null), 4000);
+  };
+
+  const handleOpenAddFloor = () => {
+    setEditingFloor(null);
+    const nextNumber = floors.length > 0 ? Math.max(...floors.map((f) => f.floorNumber)) + 1 : 1;
+    setFloorNumber(nextNumber);
+    setFloorName('');
+    setFloorCode(`FL-${String(nextNumber).padStart(2, '0')}`);
+    setFloorDesc('');
+    setIsFloorModalOpen(true);
   };
 
   const handleOpenEditFloor = (floor: Floor) => {
@@ -164,17 +175,13 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
           </p>
         </div>
 
-        {onNavigateToMap && (
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <button
-              onClick={onNavigateToMap}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition cursor-pointer"
-            >
-              <MapPin className="w-4 h-4 text-cyan-500" />
-              <span>View Facility Map</span>
-            </button>
-          </div>
-        )}
+        <button
+          onClick={handleOpenAddFloor}
+          className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-emerald-500/20 transition-all cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Floor</span>
+        </button>
       </div>
 
       {/* Toast Feedback */}
@@ -499,11 +506,11 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
 
       {/* Create / Edit Floor Modal */}
       {isFloorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/70 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-indigo-500" />
+                <Building2 className="w-5 h-5 text-emerald-500" />
                 <span>{editingFloor ? 'Edit Floor Level' : 'Add Architectural Floor Level'}</span>
               </h3>
               <button
@@ -526,7 +533,7 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
                   max={20}
                   value={floorNumber}
                   onChange={(e) => setFloorNumber(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                 />
               </div>
 
@@ -540,7 +547,7 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
                   placeholder="e.g. Floor 2: Memory Care Suites & Therapy Wing"
                   value={floorName}
                   onChange={(e) => setFloorName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                 />
               </div>
 
@@ -554,7 +561,7 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
                   placeholder="e.g. FL-02"
                   value={floorCode}
                   onChange={(e) => setFloorCode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                 />
               </div>
 
@@ -567,7 +574,7 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
                   placeholder="Description of clinical functions, patient rooms, or amenities on this level..."
                   value={floorDesc}
                   onChange={(e) => setFloorDesc(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
                 />
               </div>
 
@@ -575,13 +582,13 @@ export const FloorsView: React.FC<FloorsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsFloorModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold cursor-pointer shadow-xs"
+                  className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-emerald-500/20 transition cursor-pointer"
                 >
                   {editingFloor ? 'Save Changes' : 'Create Floor'}
                 </button>

@@ -6,25 +6,28 @@ import {
   CheckCircle2,
   AlertTriangle,
   Users,
-  Compass,
   Layers,
   ChevronDown,
-  Video,
   Activity,
-  X,
+  Grid,
 } from 'lucide-react';
 import { Floor, RoomZone, ResidentPresence } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
+import { RoomDetailDrawer } from './RoomDetailDrawer';
 
 interface FacilityMapViewProps {
   lastUpdated?: Date;
   onLaunchTelemedicine?: (residentId: number) => void;
+  onViewResidentVitals?: (residentId: number) => void;
+  onNavigateToRooms?: (floorId?: number) => void;
   targetRoomNumber?: string | null;
 }
 
 export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
   lastUpdated,
   onLaunchTelemedicine,
+  onViewResidentVitals,
+  onNavigateToRooms,
   targetRoomNumber,
 }) => {
   const [floors, setFloors] = useState<Floor[]>([]);
@@ -33,7 +36,7 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedZone, setSelectedZone] = useState<RoomZone | null>(null);
   const [selectedPresence, setSelectedPresence] = useState<ResidentPresence | null>(null);
-  const [simulatingMove, setSimulatingMove] = useState(false);
+  const [isRoomDrawerOpen, setIsRoomDrawerOpen] = useState(false);
   const [alertBanner, setAlertBanner] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -49,14 +52,23 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
       // If a target room is requested (e.g. from a fall alert), auto-switch floor
       if (targetRoomNumber) {
         const floorWithRoom = floorsRes.find((f) =>
-          f.zones.some((z) => z.roomNumber.toLowerCase() === targetRoomNumber.toLowerCase()),
+          f.zones?.some((z) => z.roomNumber.toLowerCase() === targetRoomNumber.toLowerCase()),
         );
         if (floorWithRoom) {
           setSelectedFloorNumber(floorWithRoom.floorNumber);
-          const zone = floorWithRoom.zones.find(
+          const zone = floorWithRoom.zones?.find(
             (z) => z.roomNumber.toLowerCase() === targetRoomNumber.toLowerCase(),
           );
-          if (zone) setSelectedZone(zone);
+          if (zone) {
+            setSelectedZone(zone);
+            setIsRoomDrawerOpen(true);
+          }
+        }
+      } else if (floorsRes && floorsRes.length > 0) {
+        // Ensure selectedFloorNumber exists in loaded floors
+        const exists = floorsRes.some((f) => f.floorNumber === selectedFloorNumber);
+        if (!exists) {
+          setSelectedFloorNumber(floorsRes[0].floorNumber);
         }
       }
     } catch (err) {
@@ -68,7 +80,7 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
 
   useEffect(() => {
     loadData();
-  }, [lastUpdated]);
+  }, [lastUpdated, selectedFloorNumber]);
 
   const activeFloor =
     floors.find((f) => f.floorNumber === selectedFloorNumber) || floors[0];
@@ -78,23 +90,6 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
   );
 
   const hasBreachOnFloor = floorPresence.some((p) => !p.isSafePerimeter);
-
-  const handleSimulateMovement = async (residentId: number, targetZoneId: number) => {
-    setSimulatingMove(true);
-    try {
-      const res = await commandCenterService.simulateResidentMovement(residentId, targetZoneId);
-      if (res.alertTriggered) {
-        setAlertBanner(res.message);
-      } else {
-        setAlertBanner(null);
-      }
-      await loadData();
-    } catch (err) {
-      console.error('Failed to simulate movement:', err);
-    } finally {
-      setSimulatingMove(false);
-    }
-  };
 
   const getZoneFill = (zone: RoomZone) => {
     switch (zone.zoneType) {
@@ -125,14 +120,14 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-            <MapPin className="w-6 h-6 text-cyan-500 dark:text-cyan-400" />
+            <MapPin className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
             <span>Facility Map</span>
             <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-              BLE Micro-Location
+              Vector Blueprint
             </span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            2-Floor interactive BLE micro-location topology, memory care safe-zones, and resident tracking
+            Interactive multi-floor spatial topology, memory care safe-zones, BLE micro-anchors, and live resident presence
           </p>
         </div>
       </div>
@@ -181,7 +176,7 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">BLE Beacon Anchors</p>
             <p className="text-xl font-bold font-mono text-cyan-600 dark:text-cyan-400">
-              {activeFloor?.zones.reduce((acc, z) => acc + (z.beacons?.length || 1), 0) || 12}{' '}
+              {activeFloor?.zones?.reduce((acc, z) => acc + (z.beacons?.length || 1), 0) ?? 0}{' '}
               <span className="text-xs font-normal text-emerald-500 font-sans font-semibold">Active</span>
             </p>
           </div>
@@ -224,70 +219,49 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
         </div>
       </div>
 
-      {/* Main Interactive Map & Controls Container */}
+      {/* Main Vector Blueprint Canvas Container */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
         {/* Top Controls Bar */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-cyan-500" />
-              <span>Facility Map</span>
-              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                Floor {selectedFloorNumber}
-              </span>
+              <Grid className="w-5 h-5 text-emerald-500" />
+              <span>Spatial Blueprint</span>
             </h2>
+            <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              Level {selectedFloorNumber}
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Floor Switcher Dropdown */}
-            <div className="relative">
-              <select
-                value={selectedFloorNumber}
-                onChange={(e) => {
-                  setSelectedFloorNumber(Number(e.target.value));
-                  setSelectedZone(null);
-                  setSelectedPresence(null);
-                }}
-                className="appearance-none pl-8 pr-8 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white shadow-xs focus:outline-hidden focus:border-cyan-500 cursor-pointer transition"
-              >
-                <option value={2}>Floor 2: Memory Care Suites &amp; Telemetry Desk</option>
-                <option value={1}>Floor 1: Ground Floor &amp; Sensory Garden</option>
-              </select>
-              <Layers className="w-3.5 h-3.5 text-cyan-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            {/* Quick Simulation Dropdown */}
-            <div className="relative">
-              <select
-                defaultValue=""
-                disabled={simulatingMove}
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  const [rId, zId] = e.target.value.split(':').map(Number);
-                  handleSimulateMovement(rId, zId);
-                  e.target.value = '';
-                }}
-                className="appearance-none pl-8 pr-8 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-xs focus:outline-hidden focus:border-cyan-500 cursor-pointer transition"
-              >
-                <option value="" disabled>⚡ Test Movement &amp; Geofence</option>
-                <option value="2:214">🚨 Move Eleanor to Fire Stairwell B (Trigger Egress Alert!)</option>
-                <option value="2:204">✓ Return Eleanor to Suite 204 (Safe Baseline)</option>
-                <option value="3:206">🌿 Move Marcus to Snoezelen Calming Lounge</option>
-                <option value="1:106">🌳 Move Alex to Sensory Garden (Ground Floor)</option>
-              </select>
-              <Compass className="w-3.5 h-3.5 text-amber-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
+          {/* Floor Selection Dropdown (Compact Width - Floor Name Only) */}
+          <div className="relative w-auto min-w-[140px] sm:min-w-[170px]">
+            <select
+              value={selectedFloorNumber}
+              onChange={(e) => {
+                setSelectedFloorNumber(Number(e.target.value));
+                setSelectedZone(null);
+                setSelectedPresence(null);
+              }}
+              aria-label="Select Facility Floor"
+              className="w-full appearance-none pl-8 pr-8 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white shadow-xs hover:border-emerald-500 dark:hover:border-emerald-500 focus:outline-hidden focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition truncate"
+            >
+              {floors.map((f) => (
+                <option key={f.id} value={f.floorNumber}>
+                  {f.name || `Floor ${f.floorNumber}`}
+                </option>
+              ))}
+            </select>
+            <Layers className="w-3.5 h-3.5 text-emerald-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
-        {/* Architectural SVG Map Canvas */}
-        <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 relative">
-          <div className="w-full aspect-16/10 max-h-[560px] flex items-center justify-center p-2 sm:p-4">
+        {/* Vector Blueprint Canvas View */}
+        <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 relative shadow-inner">
+          <div className="w-full flex items-center justify-center p-2 sm:p-4">
             <svg
-              viewBox="0 0 1000 600"
-              className="w-full h-full select-none"
+              viewBox={`0 0 ${activeFloor?.layoutWidth || 1000} ${activeFloor?.layoutHeight || 600}`}
+              className="w-full h-auto select-none block"
               style={{ shapeRendering: 'geometricPrecision' }}
             >
               {/* Background architectural grid */}
@@ -302,14 +276,14 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
                   />
                 </pattern>
               </defs>
-              <rect width="1000" height="600" fill="url(#archGrid)" />
+              <rect width={activeFloor?.layoutWidth || 1000} height={activeFloor?.layoutHeight || 600} fill="url(#archGrid)" />
 
               {/* Perimeter Building Outer Wall */}
               <rect
                 x="20"
                 y="20"
-                width="960"
-                height="560"
+                width={(activeFloor?.layoutWidth || 1000) - 40}
+                height={(activeFloor?.layoutHeight || 600) - 40}
                 rx="12"
                 fill="none"
                 strokeWidth="3"
@@ -317,108 +291,135 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
               />
 
               {/* Render Reduced & Inset Room Tiles */}
-              {activeFloor?.zones.map((zone) => {
-                const isSelected = selectedZone?.id === zone.id;
+              {activeFloor?.zones && activeFloor.zones.length > 0 ? (
+                activeFloor.zones.map((zone) => {
+                  const isSelected = selectedZone?.id === zone.id;
 
-                // Slightly inset each room tile (reduced size) to create clean architectural spacing
-                const inset = 4;
-                const rx = zone.x + inset;
-                const ry = zone.y + inset;
-                const rw = Math.max(20, zone.width - inset * 2);
-                const rh = Math.max(20, zone.height - inset * 2);
+                  const inset = 4;
+                  const numX = Number(zone.x ?? 40);
+                  const numY = Number(zone.y ?? 40);
+                  const numW = Number(zone.width ?? 160);
+                  const numH = Number(zone.height ?? 140);
+                  const rx = numX + inset;
+                  const ry = numY + inset;
+                  const rw = Math.max(20, numW - inset * 2);
+                  const rh = Math.max(20, numH - inset * 2);
 
-                return (
-                  <g
-                    key={zone.id}
-                    onClick={() => {
-                      setSelectedZone(zone);
-                      const p = floorPresence.find((pr) => pr.zoneId === zone.id);
-                      setSelectedPresence(p || null);
-                    }}
-                    className="cursor-pointer group transition-all"
+                  return (
+                    <g
+                      key={zone.id}
+                      onClick={() => {
+                        setSelectedZone(zone);
+                        const p = floorPresence.find((pr) => pr.zoneId === zone.id);
+                        setSelectedPresence(p || null);
+                        setIsRoomDrawerOpen(true);
+                      }}
+                      className="cursor-pointer group transition-all"
+                    >
+                      {/* Zone Base Tile */}
+                      <rect
+                        x={rx}
+                        y={ry}
+                        width={rw}
+                        height={rh}
+                        rx="8"
+                        strokeWidth={isSelected ? 2.5 : 1}
+                        className={`transition-all ${getZoneFill(zone)} ${
+                          isSelected ? 'stroke-cyan-500 shadow-md' : ''
+                        }`}
+                      />
+
+                      {/* Beacon Indicator Dot at Ceiling Center */}
+                      <circle
+                        cx={rx + rw - 12}
+                        cy={ry + 12}
+                        r="2.5"
+                        className="fill-cyan-500/80 dark:fill-cyan-400/80 animate-pulse"
+                      />
+                      <circle
+                        cx={rx + rw - 12}
+                        cy={ry + 12}
+                        r="6"
+                        fill="none"
+                        strokeWidth="0.8"
+                        className="stroke-cyan-500/40 animate-ping"
+                      />
+
+                      {/* Room Number Pill */}
+                      <rect
+                        x={rx + 6}
+                        y={ry + 6}
+                        width={zone.roomNumber.length * 7 + 10}
+                        height="15"
+                        rx="4"
+                        className="fill-slate-200/90 dark:fill-slate-800/90"
+                      />
+                      <text
+                        x={rx + 11}
+                        y={ry + 17}
+                        className="text-[9px] font-mono font-bold fill-slate-700 dark:fill-slate-300 pointer-events-none"
+                      >
+                        {zone.roomNumber}
+                      </text>
+
+                      {/* Room Name Label */}
+                      <text
+                        x={rx + 8}
+                        y={ry + 32}
+                        className="text-[10px] font-sans font-bold fill-slate-800 dark:fill-slate-200 pointer-events-none"
+                      >
+                        {zone.name.split(' (')[0]}
+                      </text>
+
+                      {/* Zone Type Micro-Badge */}
+                      <text
+                        x={rx + 8}
+                        y={ry + 44}
+                        className="text-[8px] font-mono font-medium fill-slate-500 dark:fill-slate-400 uppercase pointer-events-none"
+                      >
+                        {zone.zoneType} &bull; {zone.isSafePerimeter ? 'Safe' : 'Restricted'}
+                      </text>
+
+                      {/* Hover Highlight Ring */}
+                      <rect
+                        x={rx}
+                        y={ry}
+                        width={rw}
+                        height={rh}
+                        rx="8"
+                        fill="none"
+                        strokeWidth="1.5"
+                        className="stroke-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                      />
+                    </g>
+                  );
+                })
+              ) : (
+                <g>
+                  <text
+                    x="500"
+                    y="280"
+                    textAnchor="middle"
+                    className="text-sm font-semibold fill-slate-400 dark:fill-slate-500 font-sans"
                   >
-                    {/* Zone Base Tile */}
-                    <rect
-                      x={rx}
-                      y={ry}
-                      width={rw}
-                      height={rh}
-                      rx="8"
-                      strokeWidth={isSelected ? 2.5 : 1}
-                      className={`transition-all ${getZoneFill(zone)} ${
-                        isSelected ? 'stroke-cyan-500 shadow-md' : ''
-                      }`}
-                    />
-
-                    {/* Beacon Indicator Dot at Ceiling Center */}
-                    <circle
-                      cx={rx + rw - 12}
-                      cy={ry + 12}
-                      r="2.5"
-                      className="fill-cyan-500/80 dark:fill-cyan-400/80 animate-pulse"
-                    />
-                    <circle
-                      cx={rx + rw - 12}
-                      cy={ry + 12}
-                      r="6"
-                      fill="none"
-                      strokeWidth="0.8"
-                      className="stroke-cyan-500/40 animate-ping"
-                    />
-
-                    {/* Room Number Pill (Compact size) */}
-                    <rect
-                      x={rx + 6}
-                      y={ry + 6}
-                      width={zone.roomNumber.length * 7 + 10}
-                      height="15"
-                      rx="4"
-                      className="fill-slate-200/90 dark:fill-slate-800/90"
-                    />
-                    <text
-                      x={rx + 11}
-                      y={ry + 17}
-                      className="text-[9px] font-mono font-bold fill-slate-700 dark:fill-slate-300 pointer-events-none"
-                    >
-                      {zone.roomNumber}
-                    </text>
-
-                    {/* Room Name Label */}
-                    <text
-                      x={rx + 8}
-                      y={ry + 32}
-                      className="text-[10px] font-sans font-bold fill-slate-800 dark:fill-slate-200 pointer-events-none"
-                    >
-                      {zone.name.split(' (')[0]}
-                    </text>
-
-                    {/* Zone Type Micro-Badge */}
-                    <text
-                      x={rx + 8}
-                      y={ry + 44}
-                      className="text-[8px] font-mono font-medium fill-slate-500 dark:fill-slate-400 uppercase pointer-events-none"
-                    >
-                      {zone.zoneType} &bull; {zone.isSafePerimeter ? 'Safe' : 'Restricted'}
-                    </text>
-
-                    {/* Hover Highlight Ring */}
-                    <rect
-                      x={rx}
-                      y={ry}
-                      width={rw}
-                      height={rh}
-                      rx="8"
-                      fill="none"
-                      strokeWidth="1.5"
-                      className="stroke-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                    />
-                  </g>
-                );
-              })}
+                    No rooms configured on Floor {selectedFloorNumber} yet
+                  </text>
+                  <text
+                    x="500"
+                    y="308"
+                    textAnchor="middle"
+                    className="text-xs fill-slate-400 dark:fill-slate-500 font-mono"
+                  >
+                    Add rooms for this floor in Facility &gt; Rooms
+                  </text>
+                </g>
+              )}
 
               {/* Render Live Resident Avatars on Top */}
               {floorPresence.map((presence) => {
                 const isEgress = !presence.isSafePerimeter;
+                const px = Number(presence.x || 100);
+                const py = Number(presence.y || 100);
 
                 return (
                   <g
@@ -426,15 +427,16 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedPresence(presence);
-                      const z = activeFloor?.zones.find((zn) => zn.id === presence.zoneId);
+                      const z = activeFloor?.zones?.find((zn) => zn.id === presence.zoneId);
                       if (z) setSelectedZone(z);
+                      setIsRoomDrawerOpen(true);
                     }}
                     className="cursor-pointer group animate-bounce-slow"
                   >
                     {/* Outer Pulsing Ping Ring */}
                     <circle
-                      cx={presence.x}
-                      cy={presence.y}
+                      cx={px}
+                      cy={py}
                       r={isEgress ? '26' : '20'}
                       fill="none"
                       strokeWidth="1.5"
@@ -447,18 +449,18 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
 
                     {/* Soft Aura Glow */}
                     <circle
-                      cx={presence.x}
-                      cy={presence.y}
+                      cx={px}
+                      cy={py}
                       r="16"
                       className={`${
                         isEgress ? 'fill-rose-500/30' : 'fill-emerald-500/25'
                       }`}
                     />
 
-                    {/* Resident Avatar Circle (Compact size) */}
+                    {/* Resident Avatar Circle */}
                     <circle
-                      cx={presence.x}
-                      cy={presence.y}
+                      cx={px}
+                      cy={py}
                       r="12"
                       className={`${
                         isEgress
@@ -469,8 +471,8 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
 
                     {/* Initials */}
                     <text
-                      x={presence.x}
-                      y={presence.y + 3.5}
+                      x={px}
+                      y={py + 3.5}
                       textAnchor="middle"
                       className="text-[9px] font-bold font-sans fill-white pointer-events-none"
                     >
@@ -481,7 +483,7 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
                     </text>
 
                     {/* Resident Label Pill Below Avatar */}
-                    <g transform={`translate(${presence.x - 38}, ${presence.y + 16})`}>
+                    <g transform={`translate(${px - 38}, ${py + 16})`}>
                       <rect
                         width="76"
                         height="15"
@@ -509,82 +511,6 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
             </svg>
           </div>
         </div>
-
-        {/* Selected Room / Resident HUD Popover */}
-        {(selectedZone || selectedPresence) && (
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-slideDown shadow-xs">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm text-white shadow-xs shrink-0 ${
-                  selectedPresence && !selectedPresence.isSafePerimeter
-                    ? 'bg-rose-600 animate-pulse'
-                    : 'bg-gradient-to-br from-teal-500 to-emerald-600'
-                }`}
-              >
-                {selectedPresence
-                  ? selectedPresence.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                  : selectedZone?.roomNumber}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {selectedPresence ? selectedPresence.name : selectedZone?.name}
-                  </h4>
-                  {selectedPresence && (
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
-                      {selectedPresence.uhid}
-                    </span>
-                  )}
-                  <span
-                    className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full font-bold ${
-                      selectedPresence?.isSafePerimeter ?? selectedZone?.isSafePerimeter
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 animate-pulse'
-                    }`}
-                  >
-                    {selectedPresence?.isSafePerimeter ?? selectedZone?.isSafePerimeter
-                      ? '✓ Safe Perimeter'
-                      : '🚨 Restricted Egress Alert'}
-                  </span>
-                </div>
-
-                <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-3 mt-1 font-mono">
-                  <span>📍 {selectedPresence?.zoneName || selectedZone?.name}</span>
-                  <span>&bull;</span>
-                  <span>⏱️ Dwell Time: {selectedPresence?.dwellMinutes || 42} mins</span>
-                  <span>&bull;</span>
-                  <span>📡 RSSI: -62 dBm (Beacon 100% Signal)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions for Selected Resident */}
-            <div className="flex items-center gap-2 shrink-0">
-              {selectedPresence && onLaunchTelemedicine && (
-                <button
-                  onClick={() => onLaunchTelemedicine(selectedPresence.residentId)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-semibold text-xs shadow-xs transition active:scale-95 cursor-pointer"
-                >
-                  <Video className="w-3.5 h-3.5" />
-                  <span>Launch Tele-Consult</span>
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setSelectedZone(null);
-                  setSelectedPresence(null);
-                }}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 text-xs font-semibold transition cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Legend & Functional Topology Strip */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -619,10 +545,27 @@ export const FacilityMapView: React.FC<FacilityMapViewProps> = ({
           </div>
 
           <div className="font-mono text-[11px] text-slate-400">
-            Auto-refreshed via continuous Kalman RSSI smoothing
+            Real-time multi-frequency RSSI micro-location
           </div>
         </div>
       </div>
+
+      {/* Room Detail Drawer (Right-Hand Slide-Over) */}
+      <RoomDetailDrawer
+        isOpen={isRoomDrawerOpen && !!selectedZone}
+        onClose={() => {
+          setIsRoomDrawerOpen(false);
+          setSelectedZone(null);
+          setSelectedPresence(null);
+        }}
+        zone={selectedZone}
+        floor={activeFloor}
+        presence={selectedPresence}
+        allPresences={presenceList}
+        onLaunchTelemedicine={onLaunchTelemedicine}
+        onViewResidentVitals={onViewResidentVitals}
+        onNavigateToRooms={onNavigateToRooms}
+      />
     </div>
   );
 };

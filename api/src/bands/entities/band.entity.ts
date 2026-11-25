@@ -17,12 +17,6 @@ export enum BandStatus {
   MAINTENANCE = 'maintenance',
 }
 
-export enum BandDeviceType {
-  WRISTBAND = 'wristband',
-  RADAR_POD = 'radar_pod',
-  CHEST_PATCH = 'chest_patch',
-}
-
 @Entity('band')
 export class Band {
   @PrimaryGeneratedColumn()
@@ -36,11 +30,8 @@ export class Band {
   @Column({ type: 'varchar', length: 100, nullable: false })
   macAddress: string;
 
-  @Column({ type: 'varchar', length: 255, default: 'Sentinel Low-Cost Bio-Pod v1' })
+  @Column({ type: 'varchar', length: 255, default: 'Sentinel Bio-Band Pulse v2' })
   model: string;
-
-  @Column({ type: 'varchar', length: 50, default: BandDeviceType.WRISTBAND })
-  deviceType: BandDeviceType;
 
   @Column({ type: 'varchar', length: 50, default: 'v1.2.0' })
   firmwareVersion: string;
