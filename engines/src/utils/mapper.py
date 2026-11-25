@@ -59,6 +59,14 @@ def build_reading_from_twin(twin: Dict[str, Any]) -> VitalReading:
             except (ValueError, TypeError):
                 continue
     if generated_at is None:
+        raw_ts = twin.get("timestamp") or twin.get("generatedAt") or (twin.get("metadata") or {}).get("updatedAt")
+        if raw_ts:
+            try:
+                generated_at = datetime.fromisoformat(str(raw_ts).replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                pass
+
+    if generated_at is None:
         generated_at = datetime.now(timezone.utc)
 
     sleep = physiology.get("sleep") or {}
@@ -320,10 +328,10 @@ def map_wandering(wandering_engine: Any, reading: VitalReading, location_data: O
 def map_circadian(circadian_engine: Any, reading: VitalReading, sleep_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Maps CircadianEngine assessment into twin payload."""
     sleep = sleep_data or {}
-    day_sleep = sleep.get("daytimeMinutes", 60)
-    night_sleep = sleep.get("totalDuration") or reading.total_sleep_time or 360
-    awakenings = sleep.get("awakenings", 2)
-    deep = sleep.get("deep") or reading.deep_sleep_time or 45
+    day_sleep = sleep.get("daytimeMinutes") or sleep.get("daytimeSleepMinutes", 60)
+    night_sleep = sleep.get("totalDuration") or sleep.get("nighttimeSleepMinutes") or sleep.get("totalSleepMinutes") or reading.total_sleep_time or 360
+    awakenings = sleep.get("awakenings") if sleep.get("awakenings") is not None else sleep.get("nightAwakenings", 2)
+    deep = sleep.get("deep") or sleep.get("deepSleepMinutes") or reading.deep_sleep_time or 45
 
     assessment = circadian_engine.assess_circadian_rhythm(
         resident_id=reading.resident_id,

@@ -160,7 +160,7 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = ({
   const floorName = floor?.name ?? `Floor ${floorNumber}`;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] overflow-hidden">
       {/* Backdrop */}
       <div
         onClick={onClose}
