@@ -70,17 +70,18 @@ class BaselineEngine(BaseEngine):
         # 0. Reject duplicate/replayed readings and compute elapsed seconds (dt)
         dt_seconds = 60.0
         last_processed_at = self._last_processed_at.get(resident_id)
-        if last_processed_at is not None:
-            if reading.generated_at <= last_processed_at:
+        if last_processed_at is not None and reading.generated_at is not None:
+            r_time = reading.generated_at.replace(tzinfo=None) if reading.generated_at.tzinfo else reading.generated_at
+            lp_time = last_processed_at.replace(tzinfo=None) if last_processed_at.tzinfo else last_processed_at
+            if r_time <= lp_time:
                 return {
                     "resident_id": resident_id,
                     "baselines": self.get_current_baselines(resident_id),
                     "status": "skipped_duplicate"
                 }
-            if isinstance(reading.generated_at, datetime) and isinstance(last_processed_at, datetime):
-                dt = (reading.generated_at - last_processed_at).total_seconds()
-                if dt > 0:
-                    dt_seconds = dt
+            dt = (r_time - lp_time).total_seconds()
+            if dt > 0:
+                dt_seconds = dt
 
         self._last_processed_at[resident_id] = reading.generated_at
 

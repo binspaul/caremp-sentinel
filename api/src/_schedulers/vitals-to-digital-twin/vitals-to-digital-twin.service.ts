@@ -121,11 +121,6 @@ export class VitalsToDigitalTwinService {
             trends: [],
             correlations: [],
             healthInsights: {
-              healthyAgeing: {
-                score: 100,
-                category: 'GOOD',
-                triggeredRules: [],
-              },
               predictions: [],
               recommendations: [],
             },
