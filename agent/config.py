@@ -39,7 +39,7 @@ DEFAULT_STM_TTL_DAYS = 7
 MAX_COMPACTION_TOKENS = 1500
 
 # Backend NestJS API Configuration
-raw_base_url = (os.getenv("BASE_URL") or os.getenv("API_BASE_URL") or "https://").rstrip('/')
+raw_base_url = (os.getenv("BASE_URL") or os.getenv("API_BASE_URL") or "http://localhost:4000").rstrip('/')
 BASE_URL = raw_base_url
 if not raw_base_url.endswith("/v1"):
     API_BASE_URL = f"{raw_base_url}/v1"
@@ -51,8 +51,8 @@ API_USER_EMAIL = os.getenv("API_USER_EMAIL", "sadmin@caremp.ai")
 API_USER_PASSWORD = os.getenv("API_USER_PASSWORD", "sadmin@123#")
 
 # Engines Microservice URL (FastAPI)
-raw_engines_url = (os.getenv("ENGINES_API_URL") or "https://").rstrip('/')
+raw_engines_url = (os.getenv("ENGINES_API_URL") or "http://localhost:5001/engines").rstrip('/')
 if not raw_engines_url.endswith("/api/engines") and not raw_engines_url.endswith("/engines"):
-    ENGINES_API_URL = f"{raw_engines_url}/api/engines"
+    ENGINES_API_URL = f"{raw_engines_url}/engines"
 else:
     ENGINES_API_URL = raw_engines_url
