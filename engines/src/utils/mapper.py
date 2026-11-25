@@ -122,23 +122,26 @@ def map_baselines(baseline_engine: Any, resident_id: int) -> Dict[str, Any]:
     return baselines
 
 
-def map_trends(trend_engine: Any, resident_id: int, window_name: str = "30m") -> List[Dict[str, Any]]:
-    """Maps TrendEngine state into the twin's flat trends array."""
+def map_trends(trend_engine: Any, resident_id: int, window_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Maps TrendEngine state across configured windows (15m, 30m, 2h) into the twin's flat trends array."""
+    from ..services.trend.engine import WINDOWS
     trends: List[Dict[str, Any]] = []
+    target_windows = [window_name] if window_name else list(WINDOWS.keys())
 
-    for internal_name, api_name in ALL_METRIC_NAME_MAP.items():
-        trend = trend_engine.get_current_trend(resident_id, internal_name, window_name)
-        if trend is None or trend.get("status") != "ready":
-            continue
+    for win in target_windows:
+        for internal_name, api_name in ALL_METRIC_NAME_MAP.items():
+            trend = trend_engine.get_current_trend(resident_id, internal_name, win)
+            if trend is None or trend.get("status") != "ready":
+                continue
 
-        percentage_change = trend.get("percentage_change")
-        trends.append({
-            "vital": api_name,
-            "window": window_name,
-            "direction": TREND_DIRECTION_MAP.get(trend["direction"], "STABLE"),
-            "percentageChange": percentage_change if percentage_change is not None else 0.0,
-            "rateOfChange": trend["slope"]
-        })
+            percentage_change = trend.get("percentage_change")
+            trends.append({
+                "vital": api_name,
+                "window": win,
+                "direction": TREND_DIRECTION_MAP.get(trend["direction"], "STABLE"),
+                "percentageChange": percentage_change if percentage_change is not None else 0.0,
+                "rateOfChange": trend["slope"]
+            })
 
     return trends
 

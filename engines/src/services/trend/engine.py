@@ -9,7 +9,9 @@ _SHARED_REPOSITORY = InMemoryTrendRepository()
 
 # Rolling windows to compute trends over, as window_name -> {size, min_readings}.
 WINDOWS = {
-    "30m": {"size": 30, "min_readings": 10}
+    "15m": {"size": 15, "min_readings": 2},
+    "30m": {"size": 30, "min_readings": 2},
+    "2h": {"size": 120, "min_readings": 2},
 }
 
 RECALCULATE_EVERY = 1

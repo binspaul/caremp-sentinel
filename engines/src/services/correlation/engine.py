@@ -8,7 +8,7 @@ from .repository import BaseCorrelationRepository, InMemoryCorrelationRepository
 _SHARED_REPOSITORY = InMemoryCorrelationRepository()
 
 WINDOW_SIZE = 30
-MIN_READINGS = 10
+MIN_READINGS = 2
 ASYNC_PAIRING_WINDOW_SECONDS = 30.0
 
 # Fixed vital pairs to correlate

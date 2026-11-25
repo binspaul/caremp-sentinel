@@ -41,7 +41,7 @@ def test_trend_suppresses_isolated_motion_spike():
     engine = TrendEngine(repository=InMemoryTrendRepository())
 
     # 9 flat baseline readings around 70 bpm
-    for i in range(MIN_READINGS - 1):
+    for i in range(9):
         reading = VitalReading(
             resident_id=2,
             heart_rate=70.0,
@@ -53,7 +53,7 @@ def test_trend_suppresses_isolated_motion_spike():
     spike_reading = VitalReading(
         resident_id=2,
         heart_rate=160.0,
-        generated_at=_BASE_TIME + timedelta(minutes=MIN_READINGS - 1)
+        generated_at=_BASE_TIME + timedelta(minutes=9)
     )
     result = engine.process_reading(spike_reading)
     hr_trend = result["trends"]["heart_rate"]["30m"]
