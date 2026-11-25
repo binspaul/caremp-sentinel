@@ -14,20 +14,28 @@ import {
   Radio,
   MapPin,
   Clock,
+  Zap,
 } from 'lucide-react';
 import { FallIncident, FallCounters } from '../../types';
 import commandCenterService from '../../services/commandCenterService';
 import { Badge } from '../common/Badge';
 import { FallDetailDrawer } from './FallDetailDrawer';
+import { SimulationModal } from '../simulation/SimulationModal';
 
 interface FallsViewProps {
   onLaunchTelemedicine?: (residentId: number) => void;
   lastUpdated?: Date;
+  latestFall?: FallIncident | null;
+  onResolved?: () => void;
+  onLocateOnMap?: (location?: string) => void;
 }
 
 export const FallsView: React.FC<FallsViewProps> = ({
   onLaunchTelemedicine,
   lastUpdated,
+  latestFall,
+  onResolved,
+  onLocateOnMap,
 }) => {
   const [incidents, setIncidents] = useState<FallIncident[]>([]);
   const [counters, setCounters] = useState<FallCounters | null>(null);
@@ -35,6 +43,7 @@ export const FallsView: React.FC<FallsViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSimulationOpen, setIsSimulationOpen] = useState(false);
 
   // Pagination state (default 15 per page)
   const [currentPage, setCurrentPage] = useState(1);
@@ -616,6 +625,27 @@ export const FallsView: React.FC<FallsViewProps> = ({
         onClose={handleCloseDrawer}
         onLaunchTelemedicine={onLaunchTelemedicine}
         onResolve={handleResolve}
+      />
+
+      {/* Floating Action Button (FAB): Emergency Fall Simulation */}
+      <button
+        onClick={() => setIsSimulationOpen(true)}
+        aria-label="Simulate Emergency Fall"
+        title="Simulate Emergency Fall"
+        className="fixed bottom-6 right-6 z-[500] w-12 h-12 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center shadow-xl shadow-emerald-950/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
+      >
+        <Zap className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+      </button>
+
+      {/* Emergency Fall Simulation Modal (Locked to Emergency Falls Alone) */}
+      <SimulationModal
+        isOpen={isSimulationOpen}
+        onClose={() => setIsSimulationOpen(false)}
+        lockedTab="falls"
+        onFallSimulated={async () => {
+          await loadData();
+          onResolved?.();
+        }}
       />
     </div>
   );

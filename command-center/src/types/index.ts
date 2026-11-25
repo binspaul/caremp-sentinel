@@ -527,8 +527,31 @@ export interface DigitalTwin {
   healthInsights?: DementiaHealthInsights;
   aiSummary?: string | AISummary;
   lastEngineRun?: string;
+// Notification Types
+// ==========================================
+
+export interface Notification {
+  id: number;
+  userId?: number | null;
+  residentId?: number | null;
+  type: 'alert' | 'fall' | 'vital_breach' | 'geofence' | 'device' | 'system' | string;
+  priority: 'critical' | 'high' | 'medium' | 'low' | string;
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  isRead: boolean;
+  readAt?: string | null;
+  isDismissed: boolean;
+  isDeleted?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NotificationCounters {
+  total: number;
+  unread: number;
+  criticalUnread: number;
+  byType: Record<string, number>;
 }
 
 

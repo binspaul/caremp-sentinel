@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Video,
   Radio,
   Signal,
   ShieldCheck,
@@ -15,16 +14,15 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { Sidebar, NavTab } from './components/common/Sidebar';
 import { Header } from './components/common/Header';
+import { PageTransitionLoader } from './components/common/PageTransitionLoader';
 import { OverviewTiles } from './components/dashboard/OverviewTiles';
 import { RecentVitalsTable } from './components/dashboard/RecentVitalsTable';
 import { ResidentsView } from './components/residents/ResidentsView';
 import { VitalsView } from './components/vitals/VitalsView';
 import { UsersView } from './components/users/UsersView';
-import { SimulationModal } from './components/simulation/SimulationModal';
 import { TelemedicineModal } from './components/telemedicine/TelemedicineModal';
 import { CareCoachCopilotModal } from './components/copilot/CareCoachCopilotModal';
 import { BandsManagementModal } from './components/bands/BandsManagementModal';
-import { EmergencyFallAlert } from './components/falls/EmergencyFallAlert';
 import { FallsHistoryModal } from './components/falls/FallsHistoryModal';
 import { FallsView } from './components/falls/FallsView';
 import { BandsView } from './components/bands/BandsView';
@@ -34,8 +32,10 @@ import { FacilityMapView } from './components/facility/FacilityMapView';
 import { FloorsView } from './components/facility/FloorsView';
 import { RoomsView } from './components/facility/RoomsView';
 import { BeaconsView } from './components/facility/BeaconsView';
+import { NotificationsView } from './components/notifications/NotificationsView';
 import { RecentFallsAndResidents } from './components/dashboard/RecentFallsAndResidents';
 import { FleetStatusCards } from './components/dashboard/FleetStatusCards';
+import { DashboardCharts } from './components/dashboard/DashboardCharts';
 import commandCenterService from './services/commandCenterService';
 import {
   DashboardCounters,
@@ -47,6 +47,7 @@ import {
   ChestPatchCounters,
   BeaconCounters,
   Floor,
+  NotificationCounters,
 } from './types';
 
 const AUTO_REFRESH_INTERVAL_SECONDS = 60;
@@ -88,8 +89,7 @@ const CommandCenterApp: React.FC = () => {
   const [mapTargetRoom, setMapTargetRoom] = useState<string | null>(null);
   const [selectedFloorForRooms, setSelectedFloorForRooms] = useState<number | 'all'>('all');
 
-  // Simulation, Telemedicine, Care Coach Copilot, Bands Fleet & Falls Modal States
-  const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
+  // Telemedicine, Care Coach Copilot, Bands Fleet & Falls Modal States
   const [isTelemedicineModalOpen, setIsTelemedicineModalOpen] = useState(false);
   const [isCopilotModalOpen, setIsCopilotModalOpen] = useState(false);
   const [isBandsModalOpen, setIsBandsModalOpen] = useState(false);
@@ -103,6 +103,7 @@ const CommandCenterApp: React.FC = () => {
   const [radarCounters, setRadarCounters] = useState<RadarPodCounters | null>(null);
   const [patchCounters, setPatchCounters] = useState<ChestPatchCounters | null>(null);
   const [beaconCounters, setBeaconCounters] = useState<BeaconCounters | null>(null);
+  const [notificationCounters, setNotificationCounters] = useState<NotificationCounters | null>(null);
   const [floors, setFloors] = useState<Floor[]>([]);
 
   // Dashboard Data State
@@ -135,6 +136,7 @@ const CommandCenterApp: React.FC = () => {
         radarCountersRes,
         patchCountersRes,
         beaconCountersRes,
+        notificationCountersRes,
         floorsRes,
       ] = await Promise.all([
         commandCenterService.getDashboardSummary(),
@@ -145,6 +147,7 @@ const CommandCenterApp: React.FC = () => {
         commandCenterService.getRadarPodCounters().catch(() => null),
         commandCenterService.getChestPatchCounters().catch(() => null),
         commandCenterService.getBeaconCounters().catch(() => null),
+        commandCenterService.getNotificationCounters().catch(() => null),
         commandCenterService.getFacilityFloors().catch(() => []),
       ]);
       setCounters(summary.counters);
@@ -158,6 +161,7 @@ const CommandCenterApp: React.FC = () => {
       setRadarCounters(radarCountersRes);
       setPatchCounters(patchCountersRes);
       setBeaconCounters(beaconCountersRes);
+      setNotificationCounters(notificationCountersRes);
       setFloors(floorsRes);
       setLastUpdated(new Date());
       setSecondsRemaining(AUTO_REFRESH_INTERVAL_SECONDS);
@@ -199,10 +203,6 @@ const CommandCenterApp: React.FC = () => {
     setActiveTab('vitals');
   };
 
-  const handleVitalSimulated = () => {
-    loadDashboardData();
-  };
-
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center transition-colors">
@@ -222,6 +222,8 @@ const CommandCenterApp: React.FC = () => {
     switch (tab) {
       case 'dashboard':
         return 'Cognitive surveillance, sundowning pre-agitation triage, and safe-zone geofencing';
+      case 'notifications':
+        return 'Real-time multi-modal incident triage, biometric anomaly alerts, and emergency dispatch';
       case 'map':
         return '2-Floor interactive BLE beacon indoor topology, memory care safe-zones, and resident tracking';
       case 'floors':
@@ -249,11 +251,15 @@ const CommandCenterApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors duration-200">
+      {/* Heartbeat Page Transition Loading Indicator */}
+      <PageTransitionLoader activeTab={activeTab} />
+
       {/* Navigation Sidebar */}
       <Sidebar
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
         unresolvedFallCount={unresolvedFallCount}
+        unreadNotificationCount={notificationCounters?.unread ?? 0}
       />
 
       {/* Main Command View Area */}
@@ -265,31 +271,13 @@ const CommandCenterApp: React.FC = () => {
           secondsRemaining={secondsRemaining}
           isRefreshing={isDataLoading}
           onRefresh={loadDashboardData}
-          onOpenSimulation={() => setIsSimulationModalOpen(true)}
+          onOpenTelemedicine={() => setIsTelemedicineModalOpen(true)}
+          onOpenNotifications={() => setActiveTab('notifications')}
+          unreadNotificationCount={notificationCounters?.unread ?? 0}
           onOpenCopilot={() => setIsCopilotModalOpen(true)}
         />
 
-        <main
-          className={`flex-1 w-full ${
-            activeTab === 'map'
-              ? 'px-6 py-3 overflow-hidden flex flex-col min-h-0 space-y-2'
-              : 'px-8 py-8 overflow-y-auto space-y-8'
-          }`}
-        >
-          {/* Emergency Fall Alert Banner (Always Visible on Top when an Incident is Unresolved) */}
-          <EmergencyFallAlert
-            incident={latestFall}
-            onResolved={loadDashboardData}
-            onLaunchTelemedicine={(resId) => {
-              setSelectedResidentId(resId);
-              setIsTelemedicineModalOpen(true);
-            }}
-            onLocateOnMap={(location) => {
-              setMapTargetRoom(location || null);
-              setActiveTab('map');
-            }}
-          />
-
+        <main className="flex-1 px-8 py-8 overflow-y-auto w-full space-y-8">
           {/* Devices Sub-navigation Tabs */}
           {DEVICE_SUB_TABS.some((t) => t.id === activeTab) && (
             <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
@@ -365,13 +353,17 @@ const CommandCenterApp: React.FC = () => {
                 />
               </section>
 
-              {/* Multi-Modal Hardware Fleet Telemetry */}
-              <section aria-label="Multi-Modal Device Fleets">
-                <FleetStatusCards
+              {/* Visual Telemetry Trends & Health Distribution Charts */}
+              <section aria-label="Physiological Telemetry & Fleet Graphs">
+                <DashboardCharts
+                  vitals={recentVitals}
+                  residents={residents}
+                  residentsMap={residentsMap}
                   bandCounters={bandCounters}
                   radarCounters={radarCounters}
                   patchCounters={patchCounters}
                   beaconCounters={beaconCounters}
+                  lastUpdated={lastUpdated}
                   onNavigate={(tab) => setActiveTab(tab)}
                 />
               </section>
@@ -407,25 +399,43 @@ const CommandCenterApp: React.FC = () => {
             </>
           )}
 
+          {activeTab === 'notifications' && (
+            <NotificationsView
+              residentsMap={residentsMap}
+              onNavigateToMap={(roomNumber) => {
+                setMapTargetRoom(roomNumber || null);
+                setActiveTab('map');
+              }}
+              onNavigateToVitals={(residentId) => {
+                setSelectedResidentId(residentId || null);
+                setActiveTab('vitals');
+              }}
+              onLaunchTelemedicine={(residentId) => {
+                setSelectedResidentId(residentId);
+                setIsTelemedicineModalOpen(true);
+              }}
+              onNotificationsUpdated={loadDashboardData}
+            />
+          )}
+
           {activeTab === 'map' && (
-            <div className="flex-1 min-h-0 w-full flex flex-col">
-              <FacilityMapView
-                lastUpdated={lastUpdated}
-                targetRoomNumber={mapTargetRoom}
-                onLaunchTelemedicine={(id) => {
-                  setSelectedResidentId(id);
-                  setIsTelemedicineModalOpen(true);
-                }}
-                onViewResidentVitals={(id) => {
-                  setSelectedResidentId(id);
-                  setActiveTab('vitals');
-                }}
-                onNavigateToRooms={(floorId) => {
-                  setSelectedFloorForRooms(floorId || 'all');
-                  setActiveTab('rooms');
-                }}
-              />
-            </div>
+            <FacilityMapView
+              lastUpdated={lastUpdated}
+              targetRoomNumber={mapTargetRoom}
+              onLaunchTelemedicine={(id) => {
+                setSelectedResidentId(id);
+                setIsTelemedicineModalOpen(true);
+              }}
+              onViewResidentVitals={(id) => {
+                setSelectedResidentId(id);
+                setActiveTab('vitals');
+              }}
+              onNavigateToRooms={(floorId) => {
+                setSelectedFloorForRooms(floorId || 'all');
+                setActiveTab('rooms');
+              }}
+              onMovementSimulated={loadDashboardData}
+            />
           )}
 
           {activeTab === 'floors' && (
@@ -466,9 +476,15 @@ const CommandCenterApp: React.FC = () => {
           {activeTab === 'falls' && (
             <FallsView
               lastUpdated={lastUpdated}
+              latestFall={latestFall}
+              onResolved={loadDashboardData}
               onLaunchTelemedicine={(id) => {
                 setSelectedResidentId(id);
                 setIsTelemedicineModalOpen(true);
+              }}
+              onLocateOnMap={(location) => {
+                setMapTargetRoom(location || null);
+                setActiveTab('map');
               }}
             />
           )}
@@ -508,27 +524,6 @@ const CommandCenterApp: React.FC = () => {
         </main>
       </div>
 
-      {/* Floating Action Button (FAB): AI Tele-Consult available across all screens */}
-      <button
-        onClick={() => setIsTelemedicineModalOpen(true)}
-        aria-label="Open AI Telemedicine Copilot"
-        title="Launch AI Telemedicine Consultation & Clinical Brief"
-        className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-900/25 dark:shadow-emerald-950/50 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 group"
-      >
-        <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-      </button>
-
-      {/* Test & Simulation Center Modal Dialog */}
-      <SimulationModal
-        isOpen={isSimulationModalOpen}
-        onClose={() => setIsSimulationModalOpen(false)}
-        onSimulated={handleVitalSimulated}
-        onMovementSimulated={loadDashboardData}
-        onFallSimulated={loadDashboardData}
-        residents={residents}
-        floors={floors}
-      />
-
       {/* Dementia Care Coach Copilot Slide-over Modal */}
       <CareCoachCopilotModal
         isOpen={isCopilotModalOpen}
@@ -542,7 +537,11 @@ const CommandCenterApp: React.FC = () => {
         isOpen={isTelemedicineModalOpen}
         onClose={() => setIsTelemedicineModalOpen(false)}
         resident={residentsMap[selectedResidentId || 1] || residents.find((r) => r.id === 1) || DEFAULT_ELEANOR_VANCE}
+        residents={residents.length > 0 ? residents : [DEFAULT_ELEANOR_VANCE]}
+        initialResidentId={selectedResidentId || 1}
         recentVital={recentVitals[0]}
+        recentVitals={recentVitals}
+        onSelectResident={(id) => setSelectedResidentId(id)}
       />
 
       {/* Hardware Bands & Sensor Pod Fleet Modal */}

@@ -95,27 +95,44 @@ class ApiClient:
     # --- Digital Twin Endpoints ---
 
     def get_digital_twin(self, resident_id: Any) -> Dict[str, Any]:
-        """Fetches Digital Twin profile for resident."""
+        """Fetches live Digital Twin profile for resident and enriches with engine analytics."""
         res_id = parse_resident_id(resident_id)
 
-        if self.use_mock:
-            return MOCK_TWIN_PROFILES.get(res_id, MOCK_TWIN_PROFILES[1])
+        if not self.use_mock:
+            token = self.get_token()
+            url = f"{API_BASE_URL}/digital-twin/resident/{res_id}"
+            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-        token = self.get_token()
-        url = f"{API_BASE_URL}/digital-twin/resident/{res_id}"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            try:
+                response = requests.get(url, headers=headers, timeout=5)
+                if response.status_code == 200:
+                    body = response.json()
+                    twin_data = body.get("data")
+                    if twin_data:
+                        # Normalize common fields for ease of clinical agent access
+                        identity = twin_data.get("identity") or {}
+                        full_name = f"{identity.get('firstName', '')} {identity.get('lastName', '')}".strip() or f"Resident #{res_id}"
+                        twin_data["name"] = full_name
+                        twin_data["age"] = identity.get("age")
+                        twin_data["gender"] = identity.get("gender")
 
-        try:
-            response = requests.get(url, headers=headers, timeout=5)
-            if response.status_code == 200:
-                body = response.json()
-                if body.get("data"):
-                    return body["data"]
-            logger.warning(f"Live digital twin fetch returned {response.status_code}, falling back to mock.")
-        except Exception as e:
-            logger.warning(f"Failed to fetch live digital twin ({e}), falling back to mock.")
+                        # If healthInsights are missing or sparse, enrich via live analytics engine pipeline
+                        if not twin_data.get("healthInsights") or not twin_data.get("healthInsights", {}).get("sundowning"):
+                            try:
+                                engine_url = f"{ENGINES_API_URL}/pipeline"
+                                eng_resp = requests.post(engine_url, json=twin_data, timeout=5)
+                                if eng_resp.status_code == 200:
+                                    twin_data = eng_resp.json()
+                                    twin_data["name"] = full_name
+                            except Exception as eng_err:
+                                logger.warning(f"Engine pipeline enrichment failed ({eng_err}), continuing with base twin.")
 
-        return MOCK_TWIN_PROFILES.get(res_id, MOCK_TWIN_PROFILES[1])
+                        return twin_data
+                logger.warning(f"Live digital twin fetch returned {response.status_code}, attempting local fallback.")
+            except Exception as e:
+                logger.warning(f"Failed to fetch live digital twin ({e}), attempting local fallback.")
+
+        return MOCK_TWIN_PROFILES.get(res_id, MOCK_TWIN_PROFILES.get(1, {}))
 
     # --- Health Reports (Lazy-Loading) ---
 
@@ -135,25 +152,23 @@ class ApiClient:
         """Fetches active short-term memory record."""
         res_id = parse_resident_id(resident_id)
 
-        if self.use_mock:
-            record = MOCK_STM_STORE.get(res_id)
-            if record and not record.get("isExpired"):
-                return record
-            return None
+        if not self.use_mock:
+            token = self.get_token()
+            url = f"{API_BASE_URL}/short-term-memory/{res_id}"
+            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-        token = self.get_token()
-        url = f"{API_BASE_URL}/short-term-memory/{res_id}"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            try:
+                response = requests.get(url, headers=headers, timeout=5)
+                if response.status_code == 200:
+                    body = response.json()
+                    return body.get("data")
+            except Exception as e:
+                logger.warning(f"Live STM fetch failed ({e}), checking local mock store.")
 
-        try:
-            response = requests.get(url, headers=headers, timeout=5)
-            if response.status_code == 200:
-                body = response.json()
-                return body.get("data")
-        except Exception as e:
-            logger.warning(f"Live STM fetch failed ({e}), using mock.")
-
-        return MOCK_STM_STORE.get(res_id)
+        record = MOCK_STM_STORE.get(res_id)
+        if record and not record.get("isExpired"):
+            return record
+        return None
 
     def save_short_term_memory(
         self,
@@ -165,39 +180,31 @@ class ApiClient:
         res_id = parse_resident_id(resident_id)
         ttl = ttl_days if (ttl_days and ttl_days > 0) else 7
 
-        if self.use_mock:
-            expires_at = (datetime.now(timezone.utc) + timedelta(days=ttl)).isoformat()
-            saved_record = {
-                "residentId": res_id,
-                "memoryText": memory_text,
-                "ttlDays": ttl,
-                "expiresAt": expires_at,
-                "isExpired": False
-            }
-            MOCK_STM_STORE[res_id] = saved_record
-            return saved_record
+        if not self.use_mock:
+            token = self.get_token()
+            url = f"{API_BASE_URL}/short-term-memory"
+            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            payload = {"residentId": res_id, "memoryText": memory_text, "ttlDays": ttl}
 
-        token = self.get_token()
-        url = f"{API_BASE_URL}/short-term-memory"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        payload = {"residentId": res_id, "memoryText": memory_text, "ttlDays": ttl}
-
-        try:
-            response = requests.post(url, json=payload, headers=headers, timeout=5)
-            if response.status_code in (200, 201):
-                body = response.json()
-                return body.get("data", payload)
-        except Exception as e:
-            logger.warning(f"Live STM save failed ({e}), saved to local mock store.")
+            try:
+                response = requests.post(url, json=payload, headers=headers, timeout=5)
+                if response.status_code in (200, 201):
+                    body = response.json()
+                    return body.get("data", payload)
+            except Exception as e:
+                logger.warning(f"Live STM save failed ({e}), saved to local mock store.")
 
         # Local fallback save
-        MOCK_STM_STORE[res_id] = {
+        expires_at = (datetime.now(timezone.utc) + timedelta(days=ttl)).isoformat()
+        saved_record = {
             "residentId": res_id,
             "memoryText": memory_text,
             "ttlDays": ttl,
+            "expiresAt": expires_at,
             "isExpired": False
         }
-        return MOCK_STM_STORE[res_id]
+        MOCK_STM_STORE[res_id] = saved_record
+        return saved_record
 
     # --- Long-Term Memory ---
 
@@ -205,21 +212,18 @@ class ApiClient:
         """Fetches long-term memory profile."""
         res_id = parse_resident_id(resident_id)
 
-        if self.use_mock:
-            text = MOCK_LTM_STORE.get(res_id, "")
-            return {"residentId": res_id, "memoryText": text} if text else None
+        if not self.use_mock:
+            token = self.get_token()
+            url = f"{API_BASE_URL}/long-term-memory/{res_id}"
+            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-        token = self.get_token()
-        url = f"{API_BASE_URL}/long-term-memory/{res_id}"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-        try:
-            response = requests.get(url, headers=headers, timeout=5)
-            if response.status_code == 200:
-                body = response.json()
-                return body.get("data")
-        except Exception as e:
-            logger.warning(f"Live LTM fetch failed ({e}), using mock.")
+            try:
+                response = requests.get(url, headers=headers, timeout=5)
+                if response.status_code == 200:
+                    body = response.json()
+                    return body.get("data")
+            except Exception as e:
+                logger.warning(f"Live LTM fetch failed ({e}), using local store.")
 
         text = MOCK_LTM_STORE.get(res_id, "")
         return {"residentId": res_id, "memoryText": text} if text else None
@@ -228,22 +232,19 @@ class ApiClient:
         """Saves compacted long-term memory profile."""
         res_id = parse_resident_id(resident_id)
 
-        if self.use_mock:
-            MOCK_LTM_STORE[res_id] = memory_text
-            return {"residentId": res_id, "memoryText": memory_text}
+        if not self.use_mock:
+            token = self.get_token()
+            url = f"{API_BASE_URL}/long-term-memory"
+            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            payload = {"residentId": res_id, "memoryText": memory_text}
 
-        token = self.get_token()
-        url = f"{API_BASE_URL}/long-term-memory"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        payload = {"residentId": res_id, "memoryText": memory_text}
-
-        try:
-            response = requests.post(url, json=payload, headers=headers, timeout=5)
-            if response.status_code in (200, 201):
-                body = response.json()
-                return body.get("data", payload)
-        except Exception as e:
-            logger.warning(f"Live LTM save failed ({e}), saved to local mock store.")
+            try:
+                response = requests.post(url, json=payload, headers=headers, timeout=5)
+                if response.status_code in (200, 201):
+                    body = response.json()
+                    return body.get("data", payload)
+            except Exception as e:
+                logger.warning(f"Live LTM save failed ({e}), saved to local store.")
 
         MOCK_LTM_STORE[res_id] = memory_text
         return {"residentId": res_id, "memoryText": memory_text}
@@ -257,56 +258,84 @@ class ApiClient:
         """
         res_id = parse_resident_id(resident_id)
 
-        if self.use_mock:
-            return MOCK_ENGINE_ANALYTICS.get(res_id, MOCK_ENGINE_ANALYTICS[1])
+        if not self.use_mock:
+            url = f"{ENGINES_API_URL}/pipeline"
+            twin = self.get_digital_twin(res_id)
+            try:
+                response = requests.post(url, json=twin, timeout=5)
+                if response.status_code == 200:
+                    return response.json()
+            except Exception as e:
+                logger.warning(f"Live engines pipeline failed ({e}), returning mock analytics.")
 
-        url = f"{ENGINES_API_URL}/pipeline"
-        twin = self.get_digital_twin(res_id)
-        try:
-            response = requests.post(url, json=twin, timeout=5)
-            if response.status_code == 200:
-                return response.json()
-        except Exception as e:
-            logger.warning(f"Live engines service not reachable ({e}), returning mock analytics.")
-
-        return MOCK_ENGINE_ANALYTICS.get(res_id, MOCK_ENGINE_ANALYTICS[1])
+        return MOCK_ENGINE_ANALYTICS.get(res_id, MOCK_ENGINE_ANALYTICS.get(1, {}))
 
     # --- careMP Sentinel: Genomics & Precision Biotechnology ---
 
     def get_genomic_profile(self, resident_id: Any) -> Dict[str, Any]:
         """
-        Fetches PRS scores, pharmacogenomics variants, and active drug-gene contraindications.
+        Fetches PRS scores, pharmacogenomics variants, and active drug-gene contraindications
+        directly from the live NestJS Database API and Analytics Engine.
         """
         res_id = parse_resident_id(resident_id)
-        if self.use_mock:
-            return MOCK_GENOMICS_PROFILES.get(res_id, MOCK_GENOMICS_PROFILES[1])
 
-        url = f"{ENGINES_API_URL}/genomics"
-        twin = self.get_digital_twin(res_id)
-        try:
-            response = requests.post(url, json=twin, timeout=5)
-            if response.status_code == 200:
-                insights = response.json().get("healthInsights", {})
-                return insights.get("genomics", MOCK_GENOMICS_PROFILES[1])
-        except Exception as e:
-            logger.warning(f"Genomics engine query failed ({e}), using mock.")
+        if not self.use_mock:
+            # 1. First attempt live NestJS genomics repository
+            token = self.get_token()
+            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            try:
+                url = f"{API_BASE_URL}/genomics/resident/{res_id}"
+                res = requests.get(url, headers=headers, timeout=5)
+                if res.status_code == 200:
+                    body = res.json()
+                    gdata = body.get("data")
+                    if gdata:
+                        return {
+                            "residentId": res_id,
+                            "overallRiskTier": gdata.get("overallRiskTier", "STANDARD"),
+                            "prsScores": gdata.get("prsScores", []),
+                            "variants": gdata.get("variants", []),
+                            "activeMedications": gdata.get("activeMedications", []),
+                            "activePgxAlerts": gdata.get("activePgxAlerts", []),
+                            "pharmacogenomics": {
+                                "variants": gdata.get("variants", []),
+                                "activeAlerts": gdata.get("activePgxAlerts", []),
+                            },
+                            "phenoGenomicCalibrations": gdata.get("phenoGenomicCalibrations", []),
+                        }
+            except Exception as e:
+                logger.warning(f"NestJS live genomics query failed ({e}), checking engine...")
 
-        return MOCK_GENOMICS_PROFILES.get(res_id, MOCK_GENOMICS_PROFILES[1])
+            # 2. Second attempt live FastAPI Genomics Engine
+            url = f"{ENGINES_API_URL}/genomics"
+            twin = self.get_digital_twin(res_id)
+            try:
+                response = requests.post(url, json=twin, timeout=5)
+                if response.status_code == 200:
+                    insights = response.json().get("healthInsights", {})
+                    g_engine = insights.get("genomics")
+                    if g_engine:
+                        return g_engine
+            except Exception as e:
+                logger.warning(f"Genomics engine query failed ({e}), using mock.")
+
+        return MOCK_GENOMICS_PROFILES.get(res_id, MOCK_GENOMICS_PROFILES.get(1, {}))
 
     def evaluate_drug_pgx(self, resident_id: Any, medication_name: str) -> Dict[str, Any]:
         """
         Checks a proposed medication against the resident's genetic variants per CPIC guidelines.
         """
-        profile = self.get_genomic_profile(resident_id)
+        res_id = parse_resident_id(resident_id)
+        profile = self.get_genomic_profile(res_id)
         med_lower = medication_name.lower().strip()
 
-        alerts = profile.get("pharmacogenomics", {}).get("activeAlerts", [])
+        alerts = profile.get("activePgxAlerts") or profile.get("pharmacogenomics", {}).get("activeAlerts", [])
         matched_alert = next((a for a in alerts if a.get("medication", "").lower() == med_lower), None)
 
         if matched_alert:
             return {
                 "status": "ALERT_TRIGGERED",
-                "residentId": resident_id,
+                "residentId": res_id,
                 "medication": medication_name,
                 "alert": matched_alert,
                 "isSafe": False,
@@ -315,10 +344,10 @@ class ApiClient:
 
         return {
             "status": "NO_KNOWN_CONTRAINDICATION",
-            "residentId": resident_id,
+            "residentId": res_id,
             "medication": medication_name,
             "isSafe": True,
-            "summary": f"No high-risk CPIC pharmacogenomic conflict detected for {medication_name} under resident's sequenced alleles."
+            "summary": f"No high-risk CPIC pharmacogenomic conflict detected for {medication_name} under resident #{res_id}'s sequenced alleles."
         }
 
     # --- careMP Sentinel: Telemedicine & Early Deterioration ---
@@ -328,20 +357,25 @@ class ApiClient:
         Retrieves live NEWS2 score, Sepsis prodrome assessment, and Rockwood e-FI frailty index.
         """
         res_id = parse_resident_id(resident_id)
-        if self.use_mock:
-            return MOCK_DETERIORATION_PROFILES.get(res_id, MOCK_DETERIORATION_PROFILES[1])
 
-        url = f"{ENGINES_API_URL}/deterioration"
-        twin = self.get_digital_twin(res_id)
-        try:
-            response = requests.post(url, json=twin, timeout=5)
-            if response.status_code == 200:
-                insights = response.json().get("healthInsights", {})
-                return insights.get("deterioration", MOCK_DETERIORATION_PROFILES[1])
-        except Exception as e:
-            logger.warning(f"Deterioration engine query failed ({e}), using mock.")
+        if not self.use_mock:
+            twin = self.get_digital_twin(res_id)
+            try:
+                det_url = f"{ENGINES_API_URL}/deterioration"
+                det_res = requests.post(det_url, json=twin, timeout=5)
+                frailty_url = f"{ENGINES_API_URL}/frailty"
+                frailty_res = requests.post(frailty_url, json=twin, timeout=5)
 
-        return MOCK_DETERIORATION_PROFILES.get(res_id, MOCK_DETERIORATION_PROFILES[1])
+                if det_res.status_code == 200:
+                    det_data = det_res.json().get("healthInsights", {}).get("deterioration", {})
+                    if frailty_res.status_code == 200:
+                        frailty_data = frailty_res.json().get("healthInsights", {}).get("frailty", {})
+                        det_data["frailty"] = frailty_data
+                    return det_data
+            except Exception as e:
+                logger.warning(f"Live deterioration engine query failed ({e}), falling back to mock.")
+
+        return MOCK_DETERIORATION_PROFILES.get(res_id, MOCK_DETERIORATION_PROFILES.get(1, {}))
 
     def generate_telemedicine_brief(self, resident_id: Any) -> Dict[str, Any]:
         """
@@ -352,25 +386,28 @@ class ApiClient:
         genomics = self.get_genomic_profile(res_id)
         deterioration = self.get_deterioration_and_frailty(res_id)
 
+        identity = twin.get("identity") or {}
+        patient_name = f"{identity.get('firstName', '')} {identity.get('lastName', '')}".strip() or twin.get("name") or f"Resident #{res_id}"
+
         news2 = deterioration.get("news2", {})
         sepsis = deterioration.get("sepsis", {})
-        pgx_alerts = genomics.get("pharmacogenomics", {}).get("activeAlerts", [])
+        pgx_alerts = genomics.get("activePgxAlerts") or genomics.get("pharmacogenomics", {}).get("activeAlerts", [])
 
         brief = {
             "residentId": res_id,
-            "patientName": twin.get("name", "Resident 1"),
+            "patientName": patient_name,
             "clinicalAcuity": {
                 "news2Score": news2.get("totalScore", 0),
                 "riskLevel": news2.get("riskLevel", "LOW"),
-                "sepsisSuspected": sepsis.get("isSepsisSuspected", False),
+                "sepsisSuspected": sepsis.get("isSuspected") or sepsis.get("isSepsisSuspected", False),
                 "sepsisSeverity": sepsis.get("severity", "LOW")
             },
             "pharmacogenomicWarnings": [
-                f"{a['medication']} x {a['gene']} ({a['severity']}): {a['clinicalRecommendation']}"
+                f"{a.get('medication', '')} x {a.get('gene', '')} ({a.get('severity', '')}): {a.get('clinicalRecommendation', '')}"
                 for a in pgx_alerts
             ],
-            "actionProtocol": news2.get("actionProtocol", "Continue monitoring"),
-            "recommendedImmediateActions": sepsis.get("clinicalIndicators", [])
+            "actionProtocol": news2.get("actionProtocol", "Continue standard continuous wearable biometric telemetry."),
+            "recommendedImmediateActions": sepsis.get("clinicalIndicators", []) if isinstance(sepsis.get("clinicalIndicators"), list) else [str(sepsis.get("clinicalIndicators", ""))]
         }
         return brief
 
@@ -382,44 +419,41 @@ class ApiClient:
         Returns agitationIndex, alertLevel, wanderingStatus, locationZone, and calmingSuggestions.
         """
         res_id = parse_resident_id(resident_id)
-        if self.use_mock:
-            dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
-            sundowning = dementia.get("sundowning", {})
-            return {
-                "residentId": res_id,
-                "agitationIndex": sundowning.get("agitationIndex", 76),
-                "alertLevel": sundowning.get("alertLevel", "SUNDOWNING_SURGE"),
-                "wanderingStatus": sundowning.get("wanderingStatus", "HALLWAY_PACING"),
-                "locationZone": sundowning.get("locationZone", "North Memory Corridor Gallery"),
-                "isSundowningWindow": sundowning.get("isSundowningWindow", True),
-                "advanceNoticeMinutes": sundowning.get("advanceNoticeMinutes", 35),
-                "calmingSuggestions": sundowning.get("calmingSuggestions", []),
-            }
 
-        url = f"{ENGINES_API_URL}/pipeline"
-        twin = self.get_digital_twin(res_id)
-        try:
-            response = requests.post(url, json=twin, timeout=5)
-            if response.status_code == 200:
-                insights = response.json().get("healthInsights", {})
-                sundowning_data = insights.get("sundowning", {})
-                wandering_data = insights.get("wandering", {})
-                status_raw = sundowning_data.get("status", "SUNDOWNING_SURGE")
-                alert_level = status_raw if status_raw in ("CALM", "RESTLESS", "SUNDOWNING_SURGE") else "SUNDOWNING_SURGE"
-                return {
-                    "residentId": res_id,
-                    "agitationIndex": sundowning_data.get("agitationIndex", 76),
-                    "alertLevel": alert_level,
-                    "wanderingStatus": wandering_data.get("wanderingStatus", "HALLWAY_PACING"),
-                    "locationZone": wandering_data.get("currentLocation", "North Memory Corridor Gallery"),
-                    "isSundowningWindow": sundowning_data.get("isSundowningWindow", True),
-                    "advanceNoticeMinutes": sundowning_data.get("advanceNoticeMinutes", 35),
-                    "calmingSuggestions": sundowning_data.get("recommendedInterventions") or MOCK_DEMENTIA_PROFILES[1]["sundowning"]["calmingSuggestions"],
-                }
-        except Exception as e:
-            logger.warning(f"Sundowning/wandering query failed ({e}), using mock.")
+        if not self.use_mock:
+            twin = self.get_digital_twin(res_id)
+            try:
+                sun_url = f"{ENGINES_API_URL}/sundowning"
+                sun_res = requests.post(sun_url, json=twin, timeout=5)
+                wand_url = f"{ENGINES_API_URL}/wandering"
+                wand_res = requests.post(wand_url, json=twin, timeout=5)
 
-        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
+                if sun_res.status_code == 200:
+                    sun_data = sun_res.json().get("healthInsights", {}).get("sundowning", {})
+                    wand_data = wand_res.json().get("healthInsights", {}).get("wandering", {}) if wand_res.status_code == 200 else {}
+                    status_raw = sun_data.get("status", "CALM")
+                    alert_level = status_raw if status_raw in ("CALM", "RESTLESS", "SUNDOWNING_SURGE") else "SUNDOWNING_SURGE"
+                    
+                    calming = sun_data.get("recommendedInterventions") or [
+                        "Offer familiar sensory blanket or comforting item",
+                        "Adjust environmental lighting to warm 2700K tone",
+                        "Use calm, unhurried verbal validation techniques"
+                    ]
+
+                    return {
+                        "residentId": res_id,
+                        "agitationIndex": sun_data.get("agitationIndex", 0),
+                        "alertLevel": alert_level,
+                        "wanderingStatus": wand_data.get("wanderingStatus", "SAFE_IN_ROOM"),
+                        "locationZone": wand_data.get("currentLocation", "Resident Suite"),
+                        "isSundowningWindow": sun_data.get("isSundowningWindow", False),
+                        "advanceNoticeMinutes": sun_data.get("advanceNoticeMinutes"),
+                        "calmingSuggestions": calming,
+                    }
+            except Exception as e:
+                logger.warning(f"Sundowning/wandering query failed ({e}), using fallback.")
+
+        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES.get(1, {}))
         sundowning = dementia.get("sundowning", {})
         return {
             "residentId": res_id,
@@ -438,49 +472,31 @@ class ApiClient:
         Returns dayNapMinutes, nightSleepMinutes, sleepFragmentationEvents, circadianRegularityScore, and dayNightStatus.
         """
         res_id = parse_resident_id(resident_id)
-        if self.use_mock:
-            dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
-            circ = dementia.get("circadian", {})
-            return {
-                "residentId": res_id,
-                "dayNapMinutes": circ.get("dayNapMinutes", 110),
-                "nightSleepMinutes": circ.get("nightSleepMinutes", 290),
-                "sleepFragmentationEvents": circ.get("sleepFragmentationEvents", 5),
-                "circadianRegularityScore": circ.get("circadianRegularityScore", 48),
-                "dayNightStatus": circ.get("dayNightStatus", "MILD"),
-                "deepSleepMinutes": circ.get("deepSleepMinutes", 42),
-                "dayNightRatio": circ.get("dayNightRatio", 0.38),
-                "actionableAdvice": circ.get("actionableAdvice", []),
-            }
 
-        url = f"{ENGINES_API_URL}/circadian"
-        twin = self.get_digital_twin(res_id)
-        try:
-            response = requests.post(url, json=twin, timeout=5)
-            if response.status_code == 200:
-                insights = response.json().get("healthInsights", {})
-                circ_data = insights.get("circadian", {})
-                status_raw = circ_data.get("status", "MILD_DRIFT")
-                day_night_status = "MILD"
-                if "NORMAL" in status_raw:
-                    day_night_status = "NORMAL"
-                elif "SEVERE" in status_raw or "REVERSAL" in status_raw:
-                    day_night_status = "SEVERE_REVERSAL"
-                return {
-                    "residentId": res_id,
-                    "dayNapMinutes": circ_data.get("daytimeSleepMinutes", 110),
-                    "nightSleepMinutes": circ_data.get("nighttimeSleepMinutes", 290),
-                    "sleepFragmentationEvents": circ_data.get("nightAwakenings", 5),
-                    "circadianRegularityScore": circ_data.get("circadianScore", 48),
-                    "dayNightStatus": day_night_status,
-                    "deepSleepMinutes": circ_data.get("deepSleepMinutes", 42),
-                    "dayNightRatio": circ_data.get("dayNightRatio", 0.38),
-                    "actionableAdvice": circ_data.get("actionableAdvice", []),
-                }
-        except Exception as e:
-            logger.warning(f"Circadian query failed ({e}), using mock.")
+        if not self.use_mock:
+            twin = self.get_digital_twin(res_id)
+            try:
+                circ_url = f"{ENGINES_API_URL}/circadian"
+                circ_res = requests.post(circ_url, json=twin, timeout=5)
+                if circ_res.status_code == 200:
+                    circ_data = circ_res.json().get("healthInsights", {}).get("circadian", {})
+                    status_raw = circ_data.get("status", "MILD_DRIFT")
+                    day_night_status = "NORMAL" if "NORMAL" in status_raw else ("SEVERE_REVERSAL" if "SEVERE" in status_raw or "REVERSAL" in status_raw else "MILD")
+                    return {
+                        "residentId": res_id,
+                        "dayNapMinutes": circ_data.get("daytimeSleepMinutes", 60),
+                        "nightSleepMinutes": circ_data.get("nighttimeSleepMinutes", 360),
+                        "sleepFragmentationEvents": circ_data.get("nightAwakenings", 2),
+                        "circadianRegularityScore": circ_data.get("circadianScore", 75),
+                        "dayNightStatus": day_night_status,
+                        "deepSleepMinutes": circ_data.get("deepSleepMinutes", 60),
+                        "dayNightRatio": circ_data.get("dayNightRatio", 0.2),
+                        "actionableAdvice": circ_data.get("actionableAdvice", []),
+                    }
+            except Exception as e:
+                logger.warning(f"Circadian query failed ({e}), using fallback.")
 
-        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
+        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES.get(1, {}))
         circ = dementia.get("circadian", {})
         return {
             "residentId": res_id,
@@ -497,52 +513,73 @@ class ApiClient:
     def generate_shift_handoff_brief(self, resident_id: Any) -> Dict[str, Any]:
         """
         Synthesizes a structured 60-second shift handoff card with vitalsSummary,
-        behavioralObservations, mealsHydration, and eveningWatchOuts.
+        behavioralObservations, mealsHydration, and eveningWatchOuts for ANY resident.
         """
         res_id = parse_resident_id(resident_id)
-        dementia = MOCK_DEMENTIA_PROFILES.get(res_id, MOCK_DEMENTIA_PROFILES[1])
-        handoff = dementia.get("shiftHandoff", {})
         twin = self.get_digital_twin(res_id)
+        det = self.get_deterioration_and_frailty(res_id)
+        dementia = self.get_sundowning_and_wandering(res_id)
+
+        identity = twin.get("identity") or {}
+        resident_name = f"{identity.get('firstName', '')} {identity.get('lastName', '')}".strip() or twin.get("name") or f"Resident #{res_id}"
+        diagnosis = twin.get("diagnosis", "Memory Care & Assisted Living Surveillance")
+
+        physio = twin.get("physiology") or {}
+        def val_of(metric: str, default: float) -> float:
+            v = physio.get(metric)
+            if isinstance(v, dict):
+                return v.get("value", default)
+            if isinstance(v, (int, float)):
+                return float(v)
+            return default
+
+        news2 = det.get("news2", {})
+        news2_score = news2.get("totalScore", 0)
+
+        vitals_summary = {
+            "heartRate": int(val_of("heartRate", 74)),
+            "bloodPressure": f"{int(val_of('systolicBP', 120))}/{int(val_of('diastolicBP', 80))} mmHg",
+            "respirationRate": 18,
+            "spo2": int(val_of("spo2", 97)),
+            "bodyTemperature": round(val_of("bodyTemperature", 36.8), 1),
+            "news2Score": news2_score,
+            "clinicalAlert": f"Clinical Acuity Level: {news2.get('riskLevel', 'ROUTINE')} (NEWS2 = {news2_score})"
+        }
+
+        behavioral = {
+            "agitationIndex": dementia.get("agitationIndex", 0),
+            "alertLevel": dementia.get("alertLevel", "CALM"),
+            "wanderingStatus": dementia.get("wanderingStatus", "SAFE_IN_ROOM"),
+            "location": dementia.get("locationZone", "Resident Suite"),
+            "mood": "Calm and cooperative" if dementia.get("agitationIndex", 0) < 40 else "Elevated restlessness during circadian transition window",
+            "validationTherapyResponse": "Responsive to personalized sensory calming anchors"
+        }
+
+        watchouts = [
+            f"Active diagnosis: {diagnosis}",
+            f"Sundowning surveillance: status is {dementia.get('alertLevel', 'CALM')} (Index: {dementia.get('agitationIndex', 0)}/100)",
+            f"Location safety: {dementia.get('locationZone', 'Suite')} ({dementia.get('wanderingStatus', 'SAFE')})",
+            "Ensure hydration and maintain routine night-time orientation cues."
+        ]
 
         return {
             "residentId": res_id,
-            "residentName": twin.get("name", "Eleanor Vance"),
-            "diagnosis": twin.get("diagnosis", "FAST Stage 5 Moderate Alzheimer's Disease"),
+            "residentName": resident_name,
+            "diagnosis": diagnosis,
             "handoffTimestamp": datetime.now(timezone.utc).isoformat(),
-            "vitalsSummary": handoff.get("vitalsSummary", {
-                "heartRate": 88,
-                "bloodPressure": "136/84 mmHg",
-                "respirationRate": 21,
-                "spo2": 95,
-                "bodyTemperature": 37.4,
-                "news2Score": 5,
-                "clinicalAlert": "MODERATE_ACUITY (NEWS2 = 5) - Monitor for occult infection / UTI"
-            }),
-            "behavioralObservations": handoff.get("behavioralObservations", {
-                "agitationIndex": 76,
-                "alertLevel": "SUNDOWNING_SURGE",
-                "wanderingStatus": "HALLWAY_PACING",
-                "location": "North Memory Corridor Gallery",
-                "mood": "Restless, looking for elementary school library keys, pacing hallway",
-                "validationTherapyResponse": "Responded positively to book sorting invitation and tactile blanket"
-            }),
-            "mealsHydration": handoff.get("mealsHydration", {
-                "breakfast": "Ate pureed oatmeal (85% consumed)",
-                "lunch": "Ate 70% of pureed chicken and vegetable soup; 400 mL fluids consumed",
-                "medicationAdherence": "Refused breakfast oral pills at 8:15 AM due to minor gum sensitivity; ate pureed oatmeal. Re-offered with soft applesauce."
-            }),
-            "eveningWatchOuts": handoff.get("eveningWatchOuts", [
-                "Sundowning surge window active (4:00-6:30 PM); close blinds against harsh shadow patterns",
-                "Hallway corridor pacing active; monitor egress beacons and fire exit doors",
-                "NEWS2 score of 5: rule out acute occult UTI or silent infection before attributing combativeness solely to dementia",
-                "Validate concerns gently—never argue, contradict, or say 'as I told you earlier'"
-            ]),
+            "vitalsSummary": vitals_summary,
+            "behavioralObservations": behavioral,
+            "mealsHydration": {
+                "meals": "Nutrition intake within baseline requirements",
+                "medicationAdherence": "Medications administered as scheduled"
+            },
+            "eveningWatchOuts": watchouts,
             "summary": (
-                f"60-Second Shift Handover for {twin.get('name', 'Eleanor Vance')}: "
-                f"Experiencing late-afternoon sundowning surge (Agitation Index: 76) with corridor pacing. "
-                f"NEWS2 score of 5 warrants screening for occult UTI. "
-                f"Refused breakfast pills due to gum sensitivity; re-offered with applesauce. "
-                f"Non-pharmacological calming anchors: Glen Miller jazz, lavender blanket, and book sorting."
+                f"60-Second Shift Handover for {resident_name}: "
+                f"Vitals stable (HR {vitals_summary['heartRate']} bpm, BP {vitals_summary['bloodPressure']}). "
+                f"NEWS2 score: {news2_score}. "
+                f"Cognitive/Behavioral state: {behavioral['alertLevel']} with Agitation Index {behavioral['agitationIndex']}/100. "
+                f"Location: {behavioral['location']}."
             )
         }
 

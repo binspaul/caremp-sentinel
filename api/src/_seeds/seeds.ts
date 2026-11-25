@@ -13,6 +13,7 @@ import { seedChestPatches } from './chest-patches.seed';
 import { seedFalls } from './falls.seed';
 import { seedGenomics } from './genomics.seed';
 import { seedHealthspan } from './healthspan.seed';
+import { seedNotifications } from './notifications.seed';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -29,6 +30,7 @@ async function bootstrap() {
   await seedFalls(dataSource);
   await seedGenomics(dataSource);
   await seedHealthspan(dataSource);
+  await seedNotifications(dataSource);
 
   console.info('# Seeding completed successfully.');
 

@@ -21,6 +21,7 @@ import {
   Flame,
   Radio,
   MapPin,
+  Clock,
 } from 'lucide-react';
 import commandCenterService from '../../services/commandCenterService';
 import { Resident, Vital, Floor, RoomZone, FallSeverity } from '../../types';
@@ -33,6 +34,8 @@ interface SimulationModalProps {
   onFallSimulated?: () => void;
   residents?: Resident[];
   floors?: Floor[];
+  initialTab?: SimulationTab;
+  lockedTab?: SimulationTab;
 }
 
 interface ConditionOption {
@@ -143,21 +146,6 @@ const CONDITIONS: ConditionOption[] = [
     },
   },
   {
-    type: 7,
-    name: 'Nocturnal Sleep Restlessness & Wandering Egress',
-    badge: 'Safe-Zone Breach',
-    badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
-    severity: 'warning',
-    description: '60-GHz contact-free radar detects continuous sleep fragmentation, unassisted bed-exit, and doorway BLE safe-perimeter breach.',
-    metrics: {
-      hr: '~94 bpm',
-      hrv: '~22 ms',
-      bp: '~136/86 mmHg',
-      spo2: '~96%',
-      temp: '36.8°C',
-    },
-  },
-  {
     type: 8,
     name: 'Pharmacogenomics (PGx) Adverse Interaction',
     badge: 'CPIC High Risk Conflict',
@@ -172,131 +160,143 @@ const CONDITIONS: ConditionOption[] = [
       temp: '37.4°C',
     },
   },
-  {
-    type: 9,
-    name: 'Freeze-of-Gait Fall & Post-Impact Immobility',
-    badge: '🚨 Cognitive Fall Detected',
-    badgeColor: 'bg-red-600/10 text-red-600 dark:text-red-400 border-red-600/30',
-    severity: 'critical',
-    description: 'High-g impact deceleration (>3.4g) with >80° orientation drop following motor freezing in advanced dementia. 45s immobility triggers immediate emergency dispatch.',
-    metrics: {
-      hr: '~118 bpm',
-      hrv: '~15 ms',
-      bp: '~92/58 mmHg',
-      spo2: '~96%',
-      temp: '36.8°C',
-    },
-  },
 ];
 
-interface MovementPreset {
+interface MovementScenarioOption {
   id: string;
-  title: string;
-  residentId: number;
-  residentName: string;
-  targetZoneId: number;
-  targetZoneName: string;
-  isBreach: boolean;
+  name: string;
   badge: string;
   badgeColor: string;
+  targetZoneKeyword: string;
+  fallbackZoneId: number;
+  fallbackZoneName: string;
+  isBreach: boolean;
+  rssiEstimate: string;
+  perimeterType: string;
+  anchorType: string;
+  description: string;
 }
 
-const MOVEMENT_PRESETS: MovementPreset[] = [
+const MOVEMENT_SCENARIOS: MovementScenarioOption[] = [
   {
-    id: 'eleanor-stairwell',
-    title: '🚨 Trigger Egress Breach Alert',
-    residentId: 2,
-    residentName: 'Eleanor Vance',
-    targetZoneId: 214,
-    targetZoneName: 'Fire Stairwell B (Restricted)',
+    id: 'egress-stairwell-breach',
+    name: 'Restricted Egress Stairwell Breach',
+    badge: '🚨 Perimeter Breach Alert',
+    badgeColor: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
+    targetZoneKeyword: 'stairwell',
+    fallbackZoneId: 214,
+    fallbackZoneName: 'Fire Stairwell B (Restricted)',
     isBreach: true,
-    badge: 'Egress Breach',
-    badgeColor: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40',
+    rssiEstimate: '-84 dBm (Threshold Exceeded)',
+    perimeterType: 'Restricted Perimeter',
+    anchorType: 'Stairwell BLE Gateway B',
+    description: 'Rapid movement toward perimeter exit stairwell with sustained RSSI breach, triggering immediate wandering security lockdown.',
   },
   {
-    id: 'eleanor-suite',
-    title: '✓ Return to Safe Baseline Suite',
-    residentId: 2,
-    residentName: 'Eleanor Vance',
-    targetZoneId: 204,
-    targetZoneName: 'Suite 204 (Private Memory Suite)',
+    id: 'safe-suite-return',
+    name: 'Designated Memory Suite Return',
+    badge: '✓ Safe Interior Zone',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+    targetZoneKeyword: 'suite',
+    fallbackZoneId: 204,
+    fallbackZoneName: 'Suite 204 (Private Memory Suite)',
     isBreach: false,
-    badge: 'Safe Zone',
-    badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40',
+    rssiEstimate: '-54 dBm (Stable Optimal)',
+    perimeterType: 'Protected Suite',
+    anchorType: 'In-Room Ceiling Pod Anchor',
+    description: 'Care recipient safely returned to their primary assigned living suite. Normal baseline telemetry and safe perimeter restored.',
   },
   {
-    id: 'marcus-calming',
-    title: '🌿 Transition to Calming Lounge',
-    residentId: 3,
-    residentName: 'Marcus Chen',
-    targetZoneId: 206,
-    targetZoneName: 'Snoezelen Calming Lounge',
+    id: 'outdoor-sensory-garden',
+    name: 'Supervised Sensory Garden Walk',
+    badge: '🌿 Monitored Perimeter',
+    badgeColor: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30',
+    targetZoneKeyword: 'garden',
+    fallbackZoneId: 106,
+    fallbackZoneName: 'Sensory Garden (Ground Floor)',
     isBreach: false,
-    badge: 'Safe Zone',
-    badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/40',
+    rssiEstimate: '-70 dBm (Monitored Outdoor)',
+    perimeterType: 'Monitored Outdoor Zone',
+    anchorType: 'Garden Mesh Beacon Array',
+    description: 'Outdoor courtyard ambulation within geofenced green space perimeter. Continuous multi-point beacon tracking active.',
   },
   {
-    id: 'alex-garden',
-    title: '🌳 Outdoor Sensory Garden Visit',
-    residentId: 1,
-    residentName: 'Alex Rivera',
-    targetZoneId: 106,
-    targetZoneName: 'Sensory Garden (Ground Floor)',
+    id: 'calming-lounge-session',
+    name: 'Snoezelen Calming Lounge Transition',
+    badge: '🛋️ Safe Common Area',
+    badgeColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
+    targetZoneKeyword: 'lounge',
+    fallbackZoneId: 206,
+    fallbackZoneName: 'Snoezelen Calming Lounge',
     isBreach: false,
-    badge: 'Safe Zone',
-    badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40',
+    rssiEstimate: '-58 dBm (Strong Line of Sight)',
+    perimeterType: 'Safe Common Area',
+    anchorType: 'Central Hub Anchor #4',
+    description: 'Movement to sensory therapeutic relaxation lounge. BLE anchor network verifies low agitation dwell time and safe occupancy.',
   },
 ];
 
-interface FallPreset {
+interface FallScenarioOption {
   id: string;
-  title: string;
-  residentId: number;
-  residentName: string;
-  location: string;
+  name: string;
+  badge: string;
+  badgeColor: string;
   severity: FallSeverity;
+  location: string;
   impactForceG: number;
   orientationChangeDeg: number;
   motionlessDurationSeconds: number;
-  clinicalDescription: string;
+  description: string;
 }
 
-const FALL_PRESETS: FallPreset[] = [
+const FALL_SCENARIOS: FallScenarioOption[] = [
   {
     id: 'fall-critical-bathroom',
-    title: '🚨 High-Impact Fall & Immobility',
-    residentId: 2,
-    residentName: 'Eleanor Vance',
-    location: 'Suite 204 Ensuite Bathroom',
+    name: 'High-Impact Acute Fall & Immobility',
+    badge: '🚨 Critical Fall Alert',
+    badgeColor: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
     severity: 'critical',
+    location: 'Suite Ensuite Bathroom',
     impactForceG: 3.8,
     orientationChangeDeg: 84,
     motionlessDurationSeconds: 45,
-    clinicalDescription: 'Sudden loss of postural balance while transferring in bathroom; acute 3.8g deceleration with prolonged immobility.',
+    description: 'Acute 3.8g deceleration with prolonged immobility while transferring in bathroom, triggering immediate emergency dispatch.',
   },
   {
     id: 'fall-moderate-bedside',
-    title: '⚠️ Bedside Tumble with Disorientation',
-    residentId: 3,
-    residentName: 'Marcus Chen',
-    location: 'Suite 206 Bedside',
+    name: 'Bedside Nocturnal Tumble & Disorientation',
+    badge: '⚠️ Bedside Incident',
+    badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
     severity: 'moderate',
+    location: 'Bedside Carpet Area',
     impactForceG: 2.3,
     orientationChangeDeg: 62,
     motionlessDurationSeconds: 22,
-    clinicalDescription: 'Unassisted night-time bed exit resulting in slide to carpet floor. Mild disorientation detected.',
+    description: 'Unassisted nocturnal bed-exit slide to carpet floor with mild disorientation detected by FMCW radar tracking.',
   },
   {
     id: 'fall-severe-ramp',
-    title: '⚠️ Slip on Sensory Garden Ramp',
-    residentId: 1,
-    residentName: 'Alex Rivera',
-    location: 'Sensory Garden West Ramp',
+    name: 'Outdoor Sensory Garden Ramp Slip',
+    badge: '⚠️ Severe Slip',
+    badgeColor: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30',
     severity: 'severe',
+    location: 'Sensory Garden West Ramp',
     impactForceG: 2.9,
     orientationChangeDeg: 75,
     motionlessDurationSeconds: 30,
-    clinicalDescription: 'Wet surface traction loss on garden transition ramp. Radar confirmed horizontal post-fall posture.',
+    description: 'Wet surface traction loss on garden transition incline. Kinematic sensor registered severe deceleration and sustained horizontal alignment.',
+  },
+  {
+    id: 'fall-cognitive-freezing',
+    name: 'Cognitive Freeze-of-Gait Fall',
+    badge: '🚨 Freeze-of-Gait',
+    badgeColor: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30',
+    severity: 'critical',
+    location: 'Memory Care Safe Corridor',
+    impactForceG: 3.4,
+    orientationChangeDeg: 80,
+    motionlessDurationSeconds: 40,
+    description: 'Motor blocking episode in advanced dementia resulting in backward balance loss and prolonged post-impact motionless state.',
   },
 ];
 
@@ -310,11 +310,21 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
   onFallSimulated,
   residents: initialResidents,
   floors: initialFloors,
+  initialTab,
+  lockedTab,
 }) => {
-  const [activeTab, setActiveTab] = useState<SimulationTab>('vitals');
+  const [activeTab, setActiveTab] = useState<SimulationTab>(lockedTab || initialTab || 'vitals');
   const [residents, setResidents] = useState<Resident[]>(initialResidents || []);
   const [floors, setFloors] = useState<Floor[]>(initialFloors || []);
   const [isLoadingData, setIsLoadingData] = useState(false);
+
+  useEffect(() => {
+    if (lockedTab) {
+      setActiveTab(lockedTab);
+    } else if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [lockedTab, initialTab, isOpen]);
 
   // Vitals State
   const [selectedResidentId, setSelectedResidentId] = useState<number | null>(null);
@@ -325,6 +335,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
 
   // Movement State
   const [movementResidentId, setMovementResidentId] = useState<number | null>(null);
+  const [selectedMovementScenarioId, setSelectedMovementScenarioId] = useState<string>(MOVEMENT_SCENARIOS[0].id);
   const [movementZoneId, setMovementZoneId] = useState<number | null>(null);
   const [isSubmittingMovement, setIsSubmittingMovement] = useState(false);
   const [movementResult, setMovementResult] = useState<{
@@ -339,12 +350,19 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
 
   // Fall State
   const [fallResidentId, setFallResidentId] = useState<number | null>(null);
-  const [fallLocation, setFallLocation] = useState<string>('Suite 204 Bathroom');
-  const [fallSeverity, setFallSeverity] = useState<FallSeverity>('critical');
-  const [fallImpactForce, setFallImpactForce] = useState<number>(3.8);
-  const [fallImmobilitySec, setFallImmobilitySec] = useState<number>(45);
+  const [selectedFallScenarioId, setSelectedFallScenarioId] = useState<string>(FALL_SCENARIOS[0].id);
+  const [fallLocation, setFallLocation] = useState<string>(FALL_SCENARIOS[0].location);
   const [isSubmittingFall, setIsSubmittingFall] = useState(false);
   const [fallResult, setFallResult] = useState<string | null>(null);
+  const [fallSuccessData, setFallSuccessData] = useState<{
+    id?: number;
+    residentName: string;
+    scenarioName: string;
+    location: string;
+    severity: string;
+    impact: number;
+    motionless: number;
+  } | null>(null);
   const [fallError, setFallError] = useState<string | null>(null);
 
   // Load / refresh residents & floors
@@ -371,9 +389,16 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
 
       if (floorsRes && floorsRes.length > 0) {
         setFloors(floorsRes);
-        const firstZone = floorsRes[0]?.zones?.[0];
-        if (firstZone) {
-          setMovementZoneId(firstZone.id);
+        const allZ = floorsRes.flatMap((f: Floor) => f.zones || []);
+        const matched = allZ.find(
+          (z: RoomZone) =>
+            z.name.toLowerCase().includes(MOVEMENT_SCENARIOS[0].targetZoneKeyword) ||
+            z.roomNumber.toLowerCase().includes(MOVEMENT_SCENARIOS[0].targetZoneKeyword),
+        );
+        if (matched) {
+          setMovementZoneId(matched.id);
+        } else if (allZ[0]) {
+          setMovementZoneId(allZ[0].id);
         }
       }
     } catch (err) {
@@ -391,6 +416,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       setMovementResult(null);
       setFallError(null);
       setFallResult(null);
+      setFallSuccessData(null);
 
       if (initialResidents && initialResidents.length > 0) {
         setResidents(initialResidents);
@@ -401,9 +427,16 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       }
       if (initialFloors && initialFloors.length > 0) {
         setFloors(initialFloors);
-        const firstZone = initialFloors[0]?.zones?.[0];
-        if (firstZone) {
-          setMovementZoneId((prev) => prev ?? firstZone.id);
+        const allZ = initialFloors.flatMap((f) => f.zones || []);
+        const matched = allZ.find(
+          (z) =>
+            z.name.toLowerCase().includes(MOVEMENT_SCENARIOS[0].targetZoneKeyword) ||
+            z.roomNumber.toLowerCase().includes(MOVEMENT_SCENARIOS[0].targetZoneKeyword),
+        );
+        if (matched) {
+          setMovementZoneId((prev) => prev ?? matched.id);
+        } else if (allZ[0]) {
+          setMovementZoneId((prev) => prev ?? allZ[0].id);
         }
       }
 
@@ -426,6 +459,38 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
 
   const activeCondition = CONDITIONS.find((c) => c.type === selectedConditionType) || CONDITIONS[0];
   const selectedResident = residents.find((r) => r.id === selectedResidentId);
+  const activeMovementScenario =
+    MOVEMENT_SCENARIOS.find((s) => s.id === selectedMovementScenarioId) || MOVEMENT_SCENARIOS[0];
+  const selectedMovementResident = residents.find((r) => r.id === movementResidentId);
+  const activeFallScenario = FALL_SCENARIOS.find((s) => s.id === selectedFallScenarioId) || FALL_SCENARIOS[0];
+  const selectedFallResident = residents.find((r) => r.id === fallResidentId);
+
+  const getHeaderInfo = () => {
+    if (lockedTab === 'vitals') {
+      return {
+        title: 'Vital Telemetry Simulation',
+        subtitle: 'Simulate synthetic physiological telemetry and multi-signal vital anomalies',
+      };
+    }
+    if (lockedTab === 'falls') {
+      return {
+        title: 'Emergency Fall Simulation',
+        subtitle: 'Simulate kinematic impact, orientation change, and post-fall immobility telemetry',
+      };
+    }
+    if (lockedTab === 'movement') {
+      return {
+        title: 'Facility Movement & Geofence Simulation',
+        subtitle: 'Simulate resident movement across suites and safe perimeters',
+      };
+    }
+    return {
+      title: 'Test & Simulation Center',
+      subtitle: 'Trigger synthetic hemodynamics, geofence movements, and emergency fall alerts',
+    };
+  };
+
+  const headerInfo = getHeaderInfo();
 
   const getResidentDisplayName = (r: Resident) => {
     const name = `${r.firstName || ''} ${r.middleName ? `${r.middleName} ` : ''}${r.lastName || ''}`.trim();
@@ -440,6 +505,12 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       floorNum: f.floorNumber,
     })),
   );
+
+  const targetZone = allZones.find((z) => z.id === movementZoneId);
+  const targetZoneDisplayName = targetZone
+    ? `${targetZone.floorName} • Room ${targetZone.roomNumber} (${targetZone.name})`
+    : activeMovementScenario.fallbackZoneName;
+  const isTargetSafe = targetZone ? targetZone.isSafePerimeter : !activeMovementScenario.isBreach;
 
   // 1. Trigger Vitals Simulation
   const handleRunVitalsSimulation = async () => {
@@ -460,6 +531,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       if (onSimulated) {
         onSimulated(result);
       }
+      onClose();
     } catch (err: any) {
       console.error('Simulation error:', err);
       setVitalsError(
@@ -475,10 +547,19 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
   // 2. Trigger Movement Simulation
   const handleRunMovementSimulation = async (resId?: number, zId?: number) => {
     const rId = resId ?? movementResidentId;
-    const targetZ = zId ?? movementZoneId;
+    let targetZ = zId ?? movementZoneId;
+
+    if (!targetZ) {
+      const matchedZone = allZones.find(
+        (z) =>
+          z.name.toLowerCase().includes(activeMovementScenario.targetZoneKeyword) ||
+          z.roomNumber.toLowerCase().includes(activeMovementScenario.targetZoneKeyword),
+      );
+      targetZ = matchedZone ? matchedZone.id : (allZones[0]?.id || activeMovementScenario.fallbackZoneId);
+    }
 
     if (!rId || !targetZ) {
-      setMovementError('Please select both a resident and a target destination zone.');
+      setMovementError('Please select both a care recipient and a target destination zone.');
       return;
     }
 
@@ -491,6 +572,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       if (onMovementSimulated) {
         onMovementSimulated();
       }
+      onClose();
     } catch (err: any) {
       console.error('Movement simulation error:', err);
       setMovementError(
@@ -504,10 +586,9 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
   };
 
   // 3. Trigger Fall Simulation
-  const handleRunFallSimulation = async (preset?: FallPreset) => {
-    const rId = preset ? preset.residentId : fallResidentId;
-    if (!rId) {
-      setFallError('Please select a resident to simulate a fall incident for.');
+  const handleRunFallSimulation = async () => {
+    if (!fallResidentId) {
+      setFallError('Please select a care recipient to simulate a fall incident for.');
       return;
     }
 
@@ -515,26 +596,33 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
     setFallError(null);
 
     try {
-      const loc = preset ? preset.location : fallLocation;
-      const sev = preset ? preset.severity : fallSeverity;
-      const impact = preset ? preset.impactForceG : fallImpactForce;
-      const motionless = preset ? preset.motionlessDurationSeconds : fallImmobilitySec;
-      const desc = preset
-        ? preset.clinicalDescription
-        : `Simulated fall incident recorded at ${loc}. High deceleration impact (${impact}g) with motionless post-impact period (${motionless}s).`;
+      const loc = fallLocation || activeFallScenario.location;
+      const sev = activeFallScenario.severity;
+      const impact = activeFallScenario.impactForceG;
+      const motionless = activeFallScenario.motionlessDurationSeconds;
+      const desc = activeFallScenario.description;
 
-      await commandCenterService.recordFall({
-        residentId: rId,
+      const recordRes = await commandCenterService.recordFall({
+        residentId: fallResidentId,
         location: loc,
         severity: sev,
         impactForceG: impact,
         motionlessDurationSeconds: motionless,
-        orientationChangeDeg: preset ? preset.orientationChangeDeg : 75,
+        orientationChangeDeg: activeFallScenario.orientationChangeDeg,
         clinicalDescription: desc,
       });
 
-      const resObj = residents.find((r) => r.id === rId);
-      const name = resObj ? getResidentDisplayName(resObj) : `Resident #${rId}`;
+      const resObj = residents.find((r) => r.id === fallResidentId);
+      const name = resObj ? getResidentDisplayName(resObj) : `Resident #${fallResidentId}`;
+      setFallSuccessData({
+        id: recordRes?.id,
+        residentName: name,
+        scenarioName: activeFallScenario.name,
+        location: loc,
+        severity: sev,
+        impact,
+        motionless,
+      });
       setFallResult(
         `🚨 Fall Incident Dispatched! ${sev.toUpperCase()} fall logged for ${name} at ${loc}. Emergency alert broadcast to all floor dashboards.`,
       );
@@ -542,6 +630,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       if (onFallSimulated) {
         onFallSimulated();
       }
+      onClose();
     } catch (err: any) {
       console.error('Fall simulation error:', err);
       setFallError(
@@ -555,7 +644,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
         onClick={onClose}
@@ -563,7 +652,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-10 transition-all my-8">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-20 transition-all my-8">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-950/40">
           <div className="flex items-center gap-3">
@@ -572,10 +661,10 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                Test &amp; Simulation Center
+                {headerInfo.title}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Trigger synthetic hemodynamics, geofence movements, and emergency fall alerts
+                {headerInfo.subtitle}
               </p>
             </div>
           </div>
@@ -589,47 +678,49 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
           </button>
         </div>
 
-        {/* Mode Navigation Tabs */}
-        <div className="flex items-center border-b border-slate-200 dark:border-slate-800 px-6 pt-3 bg-slate-50/40 dark:bg-slate-950/20 gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('vitals')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'vitals'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            <span>Vital Telemetry</span>
-          </button>
+        {/* Mode Navigation Tabs (Hidden when a specific simulation mode is locked) */}
+        {!lockedTab && (
+          <div className="flex items-center border-b border-slate-200 dark:border-slate-800 px-6 pt-3 bg-slate-50/40 dark:bg-slate-950/20 gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('vitals')}
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'vitals'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              <span>Vital Telemetry</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('movement')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'movement'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Footprints className="w-4 h-4" />
-            <span>Facility Movement &amp; Geofence</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('movement')}
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'movement'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Footprints className="w-4 h-4" />
+              <span>Facility Movement &amp; Geofence</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('falls')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'falls'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <AlertTriangle className="w-4 h-4" />
-            <span>Emergency Falls</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('falls')}
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'falls'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Emergency Falls</span>
+            </button>
+          </div>
+        )}
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 space-y-4 max-h-[65vh] overflow-y-auto">
@@ -810,7 +901,7 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                 <div
                   className={`p-3.5 rounded-2xl border flex items-start gap-3 ${
                     movementResult.alertTriggered
-                      ? 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300'
+                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300'
                       : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
                   }`}
                 >
@@ -820,9 +911,24 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                   )}
                   <div className="flex-1 text-xs">
-                    <p className="font-semibold">{movementResult.message}</p>
+                    <p
+                      className={`font-semibold ${
+                        movementResult.alertTriggered
+                          ? 'text-rose-900 dark:text-rose-200'
+                          : 'text-emerald-900 dark:text-emerald-200'
+                      }`}
+                    >
+                      {movementResult.alertTriggered
+                        ? 'Spatial Egress Alert Triggered!'
+                        : 'Movement Successfully Dispatched!'}
+                    </p>
                     <p className="mt-0.5 opacity-90">
-                      {movementResult.resident} &rarr; {movementResult.newLocation} ({movementResult.isSafePerimeter ? 'Safe Perimeter' : 'Restricted Egress Zone'})
+                      <span className="font-semibold">{movementResult.resident}</span> &rarr;{' '}
+                      <span className="font-semibold">{movementResult.newLocation}</span> (
+                      {movementResult.isSafePerimeter
+                        ? 'Safe Perimeter Restored'
+                        : 'Restricted Egress Breach Alert Logged'}
+                      ). Beacon coordinates and floor map updated.
                     </p>
                   </div>
                 </div>
@@ -839,78 +945,175 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                 </div>
               )}
 
-              {/* Quick Preset Movement Scenarios */}
-              <div className="space-y-2">
+              {/* Target Resident Selector */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-emerald-500" />
+                    Target Care Recipient
+                  </label>
+                  {isLoadingData && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                      <RotateCcw className="w-2.5 h-2.5 animate-spin" />
+                      Loading...
+                    </span>
+                  )}
+                </div>
+
+                <select
+                  value={movementResidentId ?? ''}
+                  onChange={(e) => setMovementResidentId(e.target.value ? Number(e.target.value) : null)}
+                  disabled={isLoadingData && residents.length === 0}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-hidden focus:border-emerald-500 transition cursor-pointer disabled:opacity-50"
+                >
+                  {residents.length === 0 ? (
+                    <option value="" disabled>
+                      {isLoadingData ? 'Loading care recipients...' : 'No residents enrolled'}
+                    </option>
+                  ) : (
+                    residents.map((r) => {
+                      const fullName = getResidentDisplayName(r);
+                      return (
+                        <option key={r.id} value={r.id}>
+                          {fullName} &bull; UHID: {r.uhid || `ID: ${r.id}`}
+                        </option>
+                      );
+                    })
+                  )}
+                </select>
+              </div>
+
+              {/* Movement Scenario Pattern Selector */}
+              <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <Compass className="w-3.5 h-3.5 text-amber-500" />
-                  Quick Movement Scenarios
+                  <Footprints className="w-3.5 h-3.5 text-emerald-500" />
+                  Spatial Movement Pattern
                 </label>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {MOVEMENT_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      disabled={isSubmittingMovement}
-                      onClick={() => handleRunMovementSimulation(preset.residentId, preset.targetZoneId)}
-                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 hover:bg-slate-100/80 dark:hover:bg-slate-900 transition text-left cursor-pointer group disabled:opacity-50"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                          {preset.title}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                  {MOVEMENT_SCENARIOS.map((scenario) => {
+                    const isSelected = selectedMovementScenarioId === scenario.id;
+                    return (
+                      <button
+                        key={scenario.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMovementScenarioId(scenario.id);
+                          const matchedZone = allZones.find(
+                            (z) =>
+                              z.name.toLowerCase().includes(scenario.targetZoneKeyword) ||
+                              z.roomNumber.toLowerCase().includes(scenario.targetZoneKeyword),
+                          );
+                          if (matchedZone) {
+                            setMovementZoneId(matchedZone.id);
+                          }
+                        }}
+                        className={`text-left p-3 rounded-2xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 dark:border-emerald-500/70 shadow-xs ring-1 ring-emerald-500/50'
+                            : 'bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span
+                            className={`text-xs font-bold leading-tight ${
+                              isSelected
+                                ? 'text-emerald-900 dark:text-emerald-300'
+                                : 'text-slate-800 dark:text-slate-200'
+                            }`}
+                          >
+                            {scenario.name}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block ${scenario.badgeColor}`}
+                        >
+                          {scenario.badge}
                         </span>
-                      </div>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block ${preset.badgeColor}`}>
-                        {preset.badge}
-                      </span>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                        {preset.residentName} &rarr; {preset.targetZoneName}
-                      </p>
-                    </button>
-                  ))}
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">
+                          {scenario.description}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Custom Movement Simulator */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                  <Footprints className="w-3.5 h-3.5 text-emerald-500" />
-                  Custom Resident &amp; Zone Transition
+              {/* Destination Zone Selector */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Compass className="w-3.5 h-3.5 text-emerald-500" />
+                    Target Destination Zone
+                  </label>
+                  {targetZone && (
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                        targetZone.isSafePerimeter
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                      }`}
+                    >
+                      {targetZone.isSafePerimeter ? '✓ Safe Perimeter' : '🚨 Restricted Egress'}
+                    </span>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                      Resident
-                    </label>
-                    <select
-                      value={movementResidentId ?? ''}
-                      onChange={(e) => setMovementResidentId(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 transition cursor-pointer"
-                    >
-                      {residents.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {getResidentDisplayName(r)} (ID: {r.id})
-                        </option>
-                      ))}
-                    </select>
+                <select
+                  value={movementZoneId ?? ''}
+                  onChange={(e) => setMovementZoneId(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-hidden focus:border-emerald-500 transition cursor-pointer"
+                >
+                  {allZones.length === 0 ? (
+                    <option value={activeMovementScenario.fallbackZoneId}>
+                      {activeMovementScenario.fallbackZoneName}
+                    </option>
+                  ) : (
+                    allZones.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.floorName} &bull; Room {z.roomNumber} ({z.name}) {z.isSafePerimeter ? '✓ Safe' : '🚨 Restricted'}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {/* Simulated Spatial Projections */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                <div className="text-[11px] font-mono uppercase text-slate-400 font-semibold mb-2">
+                  Simulated Spatial &amp; Geofence Projections
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Target Location</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100 truncate" title={targetZoneDisplayName}>
+                      {targetZone ? `Room ${targetZone.roomNumber}` : 'Zone 214'}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                      Target Destination Zone
-                    </label>
-                    <select
-                      value={movementZoneId ?? ''}
-                      onChange={(e) => setMovementZoneId(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-500 transition cursor-pointer"
-                    >
-                      {allZones.map((z) => (
-                        <option key={z.id} value={z.id}>
-                          {z.floorName} &bull; Room {z.roomNumber} ({z.name}) {z.isSafePerimeter ? '✓ Safe' : '🚨 Restricted'}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Perimeter Status</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {isTargetSafe ? 'Safe Interior' : 'Restricted Egress'}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Radio className="w-3.5 h-3.5 text-purple-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Anchor Signal</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeMovementScenario.rssiEstimate.split(' ')[0]} dBm
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <ShieldAlert className={`w-3.5 h-3.5 mx-auto mb-1 ${!isTargetSafe ? 'text-rose-500' : 'text-emerald-500'}`} />
+                    <div className="text-[10px] text-slate-400">Alert Escalation</div>
+                    <div className={`text-xs font-mono font-bold uppercase ${!isTargetSafe ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      {!isTargetSafe ? 'Security Alert' : 'Normal Flow'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -920,20 +1123,24 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
           {/* TAB 3: EMERGENCY FALL INCIDENTS */}
           {activeTab === 'falls' && (
             <div className="space-y-4">
-              {/* Fall Result Banner */}
-              {fallResult && (
-                <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-700 dark:text-rose-300 flex items-start gap-3">
-                  <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+              {/* Success Banner */}
+              {fallSuccessData && (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                   <div className="flex-1 text-xs">
-                    <p className="font-semibold text-rose-900 dark:text-rose-200">
-                      Emergency Incident Dispatched!
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-200">
+                      Emergency Fall Incident Successfully Dispatched!
                     </p>
-                    <p className="mt-0.5">{fallResult}</p>
+                    <p className="text-emerald-700 dark:text-emerald-400 mt-0.5">
+                      Incident #{fallSuccessData.id ?? 'ALERT'} logged for{' '}
+                      <span className="font-semibold">{fallSuccessData.residentName}</span> (
+                      {fallSuccessData.scenarioName}) at <span className="font-semibold">{fallSuccessData.location}</span>. Impact: {fallSuccessData.impact}g deceleration, motionless period: {fallSuccessData.motionless}s. High-priority dispatch broadcast to floor dashboards.
+                    </p>
                   </div>
                 </div>
               )}
 
-              {/* Fall Error Banner */}
+              {/* Error Banner */}
               {fallError && (
                 <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 flex items-start gap-3">
                   <AlertOctagon className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
@@ -944,95 +1151,129 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                 </div>
               )}
 
-              {/* Quick Fall Presets */}
-              <div className="space-y-2">
+              {/* Target Resident Selector */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-emerald-500" />
+                    Target Care Recipient
+                  </label>
+                  {isLoadingData && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                      <RotateCcw className="w-2.5 h-2.5 animate-spin" />
+                      Loading...
+                    </span>
+                  )}
+                </div>
+
+                <select
+                  value={fallResidentId ?? ''}
+                  onChange={(e) => setFallResidentId(e.target.value ? Number(e.target.value) : null)}
+                  disabled={isLoadingData && residents.length === 0}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:outline-hidden focus:border-emerald-500 transition cursor-pointer disabled:opacity-50"
+                >
+                  {residents.length === 0 ? (
+                    <option value="" disabled>
+                      {isLoadingData ? 'Loading care recipients...' : 'No residents enrolled'}
+                    </option>
+                  ) : (
+                    residents.map((r) => {
+                      const fullName = getResidentDisplayName(r);
+                      return (
+                        <option key={r.id} value={r.id}>
+                          {fullName} &bull; UHID: {r.uhid || `ID: ${r.id}`}
+                        </option>
+                      );
+                    })
+                  )}
+                </select>
+              </div>
+
+              {/* Fall Scenario Selector */}
+              <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                  Emergency Fall Scenario Presets
+                  <AlertTriangle className="w-3.5 h-3.5 text-emerald-500" />
+                  Fall Scenario Pattern
                 </label>
 
-                <div className="space-y-2">
-                  {FALL_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      disabled={isSubmittingFall}
-                      onClick={() => handleRunFallSimulation(preset)}
-                      className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-rose-500/50 hover:bg-rose-500/5 dark:hover:bg-rose-950/20 transition text-left cursor-pointer group flex items-center justify-between gap-3 disabled:opacity-50"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400">
-                            {preset.title}
-                          </span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 uppercase font-bold">
-                            {preset.severity}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                  {FALL_SCENARIOS.map((scenario) => {
+                    const isSelected = selectedFallScenarioId === scenario.id;
+                    return (
+                      <button
+                        key={scenario.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedFallScenarioId(scenario.id);
+                          setFallLocation(scenario.location);
+                        }}
+                        className={`text-left p-3 rounded-2xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 dark:border-emerald-500/70 shadow-xs ring-1 ring-emerald-500/50'
+                            : 'bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span
+                            className={`text-xs font-bold leading-tight ${
+                              isSelected
+                                ? 'text-emerald-900 dark:text-emerald-300'
+                                : 'text-slate-800 dark:text-slate-200'
+                            }`}
+                          >
+                            {scenario.name}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {preset.residentName} &bull; {preset.location} ({preset.impactForceG}g deceleration, {preset.motionlessDurationSeconds}s immobility)
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block ${scenario.badgeColor}`}
+                        >
+                          {scenario.badge}
+                        </span>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">
+                          {scenario.description}
                         </p>
-                      </div>
-
-                      <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 shrink-0 flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                        Dispatch &rarr;
-                      </span>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Custom Fall Builder */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                  <Flame className="w-3.5 h-3.5 text-rose-500" />
-                  Custom Fall Incident Dispatcher
+              {/* Simulated Kinematic & Sensor Projections */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                <div className="text-[11px] font-mono uppercase text-slate-400 font-semibold mb-2">
+                  Simulated Kinematic &amp; Sensor Projections
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                      Resident
-                    </label>
-                    <select
-                      value={fallResidentId ?? ''}
-                      onChange={(e) => setFallResidentId(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-rose-500 transition cursor-pointer"
-                    >
-                      {residents.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {getResidentDisplayName(r)}
-                        </option>
-                      ))}
-                    </select>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Zap className="w-3.5 h-3.5 text-amber-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Impact Force</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeFallScenario.impactForceG} g
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                      Severity Rating
-                    </label>
-                    <select
-                      value={fallSeverity}
-                      onChange={(e) => setFallSeverity(e.target.value as FallSeverity)}
-                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-rose-500 transition cursor-pointer"
-                    >
-                      <option value="critical">🚨 Critical (Deceleration &gt;3.5g, Immobility &gt;30s)</option>
-                      <option value="severe">⚠️ Severe (Deceleration 2.5-3.5g)</option>
-                      <option value="moderate">ℹ️ Moderate (Controlled bed tumble or slide)</option>
-                    </select>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Compass className="w-3.5 h-3.5 text-rose-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Orientation Drop</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeFallScenario.orientationChangeDeg}&deg;
+                    </div>
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                      Fall Location (Room / Area)
-                    </label>
-                    <input
-                      type="text"
-                      value={fallLocation}
-                      onChange={(e) => setFallLocation(e.target.value)}
-                      placeholder="e.g. Suite 204 Bathroom, Corridor 4B, Sensory Garden Ramp"
-                      className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-rose-500 transition"
-                    />
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <Clock className="w-3.5 h-3.5 text-purple-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Immobility Period</div>
+                    <div className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {activeFallScenario.motionlessDurationSeconds} s
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <ShieldAlert className="w-3.5 h-3.5 text-emerald-500 mx-auto mb-1" />
+                    <div className="text-[10px] text-slate-400">Incident Severity</div>
+                    <div className="text-xs font-mono font-bold uppercase text-slate-800 dark:text-slate-100">
+                      {activeFallScenario.severity}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1093,8 +1334,8 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Footprints className="w-3.5 h-3.5" />
-                    <span>Simulate Movement</span>
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Trigger Movement Simulation</span>
                   </>
                 )}
               </button>
@@ -1103,9 +1344,9 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
             {activeTab === 'falls' && (
               <button
                 type="button"
-                onClick={() => handleRunFallSimulation()}
-                disabled={isSubmittingFall || !fallResidentId}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/25 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+                onClick={handleRunFallSimulation}
+                disabled={isSubmittingFall || !fallResidentId || residents.length === 0}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
               >
                 {isSubmittingFall ? (
                   <>
@@ -1114,8 +1355,8 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Dispatch Fall Incident</span>
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Trigger Fall Simulation</span>
                   </>
                 )}
               </button>

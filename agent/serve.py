@@ -219,7 +219,10 @@ def chat_endpoint(payload: ChatRequest):
         dynamic_context = build_additional_context(res_id)
         system_prompt = (
             f"{CARE_COACH_INSTRUCTION}\n\n"
-            f"[CURRENT USER HEALTH CONTEXT]\n"
+            f"[ACTIVE TARGET RESIDENT PROFILE]\n"
+            f"You are currently assessing and consulting on Resident #{res_id}.\n"
+            f"When invoking any tools (e.g., get_current_twin_state, get_genomic_profile, check_pharmacogenomics, get_deterioration_and_frailty, get_sundowning_and_wandering, get_circadian_sleep_profile, generate_shift_handoff_brief), always pass resident_id={res_id}.\n\n"
+            f"[CURRENT USER HEALTH CONTEXT FOR RESIDENT #{res_id}]\n"
             f"{dynamic_context}\n"
             f"[END CONTEXT]"
         )

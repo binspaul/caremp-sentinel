@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export type NavTab =
   | 'dashboard'
+  | 'notifications'
   | 'vitals'
   | 'falls'
   | 'residents'
@@ -34,6 +35,7 @@ interface SidebarProps {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
   unresolvedFallCount?: number;
+  unreadNotificationCount?: number;
 }
 
 type NavItem =
@@ -64,6 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onTabChange,
   unresolvedFallCount = 0,
+  unreadNotificationCount = 0,
 }) => {
   const { user } = useAuth();
 

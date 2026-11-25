@@ -270,8 +270,16 @@ export const RecentFallsAndResidents: React.FC<RecentFallsAndResidentsProps> = (
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        Active
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                          (resident.healthScore ?? 85) >= 80
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            : (resident.healthScore ?? 85) >= 60
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                        }`}
+                      >
+                        Score {resident.healthScore ?? 85}
                       </span>
                       <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
                     </div>
