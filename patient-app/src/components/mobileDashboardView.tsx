@@ -1,35 +1,35 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
+  Sparkles,
+  User,
+  ShieldCheck,
+  ChevronRight,
+  Moon,
   Heart,
+  Check,
+  X,
+  BookOpen,
+  Music,
+  Video,
+  VideoOff,
+  Mic,
+  MicOff,
+  PhoneOff,
+  MessageSquare,
+  ChevronDown,
+  Send,
   Activity,
   Droplets,
   Thermometer,
-  Moon,
-  Check,
-  ChevronDown,
-  ArrowUpRight,
-  Send,
-  Sparkles,
-  X,
-  Video,
-  Dna,
+  LogOut,
+  Footprints,
 } from "lucide-react";
-import { WellnessScorePieChart } from "./wellnessScorePieChart";
-import { HumanBodyIllustration, type OrganType } from "./humanBodyIllustration";
-import {
-  VitalsTrendGraph,
-  type VitalMetricKey,
-  METRIC_CONFIGS,
-} from "./vitalsTrendGraph";
-import { Input } from "@/components/ui/input";
-import Logo from "@/assets/logo.png";
-import { VitalRecord } from "@/types/vital";
+import type { VitalRecord } from "@/types/vital";
 import type { ResidentDigitalTwinData } from "../types/digitalTwin";
+import { Input } from "@/components/ui/input";
 import { sendAgentChatMessage } from "../api";
-import {
-  VitalRelationshipsCard,
-  BodyDataCard,
-} from "./vitalRelationshipsAndBody";
+import wavyBg from "@/assets/purpleWavyBg.png";
+import eleanor from "@/assets/eleanor.png";
 
 export interface MobileDashboardViewProps {
   latestVital?: VitalRecord | null;
@@ -44,7 +44,7 @@ export interface MobileDashboardViewProps {
   onOpenTelemedicine?: () => void;
 }
 
-// 4-point Diamond Sparkle logo mark
+// 4-pointed diamond sparkle icon matching careMP sentinel mark
 function SparkleIcon({
   className = "w-5 h-5",
   fill = "currentColor",
@@ -59,83 +59,85 @@ function SparkleIcon({
   );
 }
 
-// Spline path generator for smooth wellness rhythm wave
-const getSplinePath = (
-  points: { value?: number; hr?: number; x?: number; y?: number }[],
-  width: number,
-  height = 90,
-  minVal = 50,
-  maxVal = 95,
-) => {
-  if (!points || points.length === 0) return "";
-  const n = points.length;
-  const coords = points.map((p, idx) => {
-    const x = p.x !== undefined ? p.x : (idx / (n - 1)) * width;
-    const val = p.value !== undefined ? p.value : p.hr || 70;
-    const y =
-      p.y !== undefined
-        ? p.y
-        : height - ((val - minVal) / (maxVal - minVal)) * height;
-    return { x, y };
-  });
+// Lightweight Markdown Renderer
+function ReactMarkdown({
+  children,
+  components,
+}: {
+  children?: string;
+  components?: {
+    p?: (props: { children: any }) => any;
+    strong?: (props: { children: any }) => any;
+    ul?: (props: { children: any }) => any;
+    ol?: (props: { children: any }) => any;
+    li?: (props: { children: any }) => any;
+  };
+}) {
+  if (!children) return null;
+  const P =
+    components?.p ||
+    (({ children }: any) => <p className="mb-1.5 last:mb-0">{children}</p>);
+  const Strong =
+    components?.strong ||
+    (({ children }: any) => (
+      <strong className="font-bold text-slate-900">{children}</strong>
+    ));
 
-  let d = `M ${coords[0].x} ${coords[0].y}`;
-  for (let i = 0; i < coords.length - 1; i++) {
-    const p0 = coords[Math.max(0, i - 1)];
-    const p1 = coords[i];
-    const p2 = coords[i + 1];
-    const p3 = coords[Math.min(coords.length - 1, i + 2)];
-
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-  }
-  return d;
-};
-
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
+  const paragraphs = children.split("\n\n");
+  return (
+    <>
+      {paragraphs.map((para, i) => {
+        const parts = para.split(/(\*\*.*?\*\*)/g);
+        return (
+          <P key={i}>
+            {parts.map((part, j) => {
+              if (part.startsWith("**") && part.endsWith("**")) {
+                return <Strong key={j}>{part.slice(2, -2)}</Strong>;
+              }
+              return part;
+            })}
+          </P>
+        );
+      })}
+    </>
+  );
 }
 
 export function MobileDashboardView({
   latestVital,
-  trendVitals = [],
-  digitalTwin,
+  trendVitals: _trendVitals = [],
+  digitalTwin: _digitalTwin,
   currentUser,
   onSignOut,
-  onOpenTelemedicine,
+  onOpenTelemedicine: _onOpenTelemedicine,
 }: MobileDashboardViewProps) {
-  const [rhythmRange, setRhythmRange] = useState<
-    "7 days" | "30 days" | "90 days"
-  >("7 days");
   const [completedSteps, setCompletedSteps] = useState<{
     [key: string]: boolean;
   }>({});
-  const [selectedTrendMetric, setSelectedTrendMetric] =
-    useState<VitalMetricKey>(null);
-  const [selectedTimeFilter, setSelectedTimeFilter] =
-    useState("Last 30 minutes");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedOrgan, setSelectedOrgan] = useState<OrganType>("heart");
-
-  // Dialog State for Mobile AI Companion
+  const [isLifeStoryOpen, setIsLifeStoryOpen] = useState(false);
+  const [isCareGuidanceOpen, setIsCareGuidanceOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<
+    { id: string; role: "user" | "assistant"; text: string }[]
+  >([
     {
       id: "m-1",
       role: "user",
-      text: "Why might I feel more tired today?",
+      text: "Give me an update on Eleanor Vance. Has anything changed in her behavior or routine today?",
     },
     {
       id: "m-2",
       role: "assistant",
-      text: "Your daily wellness score is 86/100 with steady vitals. However, 3 consecutive nights with reduced sleep (6h 45m last night) are creating a mild recovery deficit. Consider an early wind-down tonight.",
+      text: `Eleanor Vance — Today’s Update
+              Eleanor’s overall status is stable, but Sentinel has detected a few changes from her usual pattern today.
+              • Activity: Lower than her usual daytime activity
+              • Sleep: More interrupted overnight
+              • Movement: Increased hallway movement during the afternoon
+              • Behavior: Mild increase in restlessness around 5:00 PM 
+              These changes are not necessarily concerning on their own, but the combination is different from Eleanor’s recent baseline.
+              Suggested attention: Keep an eye on her this evening and maintain her usual calming routine.`,
     },
   ]);
 
@@ -143,9 +145,9 @@ export function MobileDashboardView({
     const text = (customText || chatInput).trim();
     if (!text) return;
 
-    const userMsg: ChatMessage = {
+    const userMsg = {
       id: `u-${Date.now()}`,
-      role: "user",
+      role: "user" as const,
       text,
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -169,7 +171,13 @@ export function MobileDashboardView({
         "Your cardiovascular indicators are nominal. Staying well-hydrated today will support resting heart rate balance.";
       if (text.toLowerCase().includes("baseline")) {
         reply =
-          "Compared to your 30-day baseline: resting heart rate is -9 bpm (70 bpm) and HRV is +9 ms (45 ms), showing strong cardiac resilience.";
+          "Compared to your 30-day baseline: resting heart rate is **-9 bpm** (70 bpm) and HRV is **+9 ms** (45 ms), showing strong cardiac resilience.";
+      } else if (
+        text.toLowerCase().includes("heart") ||
+        text.toLowerCase().includes("rhythm")
+      ) {
+        reply =
+          "Your resting heart rate is steady at **72 bpm** with normal sinus rhythm observed over the past 24 hours.";
       } else if (text.toLowerCase().includes("sleep")) {
         reply =
           "Deep sleep was down 14% last night. A short 15-minute screen-free wind-down before bed is recommended.";
@@ -181,1415 +189,1165 @@ export function MobileDashboardView({
     }, 400);
   };
 
+  // Tele-Consultation state
+  const [isTelemedicineCallOpen, setIsTelemedicineCallOpen] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(true);
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+  const [callSeconds, setCallSeconds] = useState(55);
+  const [chatMessages, setChatMessages] = useState<
+    { id: string; sender: "doctor" | "user"; time: string; text: string }[]
+  >([
+    {
+      id: "m-1",
+      sender: "doctor",
+      time: "10:32 AM",
+      text: "Hello Mary! I have your continuous telemetry HUD and digital twin open on my screen. How are you feeling right now?",
+    },
+    {
+      id: "m-2",
+      sender: "user",
+      time: "10:33 AM",
+      text: "Your nocturnal dipping and vitals are looking stable today.",
+    },
+    {
+      id: "m-3",
+      sender: "doctor",
+      time: "10:33 AM",
+      text: "Your nocturnal dipping and vitals are looking stable today.",
+    },
+  ]);
+  const [inputMessage, setInputMessage] = useState("");
+
+  useEffect(() => {
+    if (!isTelemedicineCallOpen) return;
+    const interval = setInterval(() => {
+      setCallSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isTelemedicineCallOpen]);
+
+  const formatCallTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remSecs = secs % 60;
+    return `${mins}:${remSecs < 10 ? "0" : ""}${remSecs}`;
+  };
+
+  const handleSendConsultMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim()) return;
+    const newMsg = {
+      id: `msg-${Date.now()}`,
+      sender: "user" as const,
+      time: "10:34 AM",
+      text: inputMessage.trim(),
+    };
+    setChatMessages((prev) => [...prev, newMsg]);
+    setInputMessage("");
+  };
+
   const toggleStep = (stepId: string) => {
-    setCompletedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }));
+    setCompletedSteps((prev) => ({
+      ...prev,
+      [stepId]: !prev[stepId],
+    }));
   };
 
-  // Vitals displays
-  const hrDisplay = latestVital?.heartRate
-    ? Math.round(parseFloat(latestVital.heartRate))
-    : 72;
-  const sysDisplay = latestVital?.systolicBP
-    ? Math.round(parseFloat(latestVital.systolicBP))
-    : 120;
-  const diaDisplay = latestVital?.diastolicBP
-    ? Math.round(parseFloat(latestVital.diastolicBP))
-    : 80;
-  const o2Display = latestVital?.oxygenSaturation
-    ? Math.round(parseFloat(latestVital.oxygenSaturation))
-    : 98;
-  const tempVal = latestVital?.bodyTemperature
-    ? Math.round(parseFloat(latestVital.bodyTemperature))
-    : 37;
-  const sleepTotal = latestVital?.totalSleepTime
-    ? parseFloat(latestVital.totalSleepTime)
-    : null;
-  const sleepDisplay =
-    sleepTotal !== null && sleepTotal > 0
-      ? `${Math.floor(sleepTotal / 60)}h ${Math.round(sleepTotal % 60)}m`
-      : "6h 45m";
+  // Dynamic derivation with graceful fallback to mockup defaults
+  const sleepValue = latestVital?.totalSleepTime
+    ? `${Math.floor(parseFloat(latestVital.totalSleepTime) / 60)}h ${Math.round(
+        parseFloat(latestVital.totalSleepTime) % 60,
+      )}m last night`
+    : "6h 45m last night";
 
-  // Rhythm data
-  const rhythmData = {
-    "7 days": [
-      { label: "Fri", value: 68 },
-      { label: "Sat", value: 71 },
-      { label: "Sun", value: 69 },
-      { label: "Mon", value: 76 },
-      { label: "Tue", value: 74 },
-      { label: "Wed", value: 75 },
-      { label: "Today", value: 72 },
-    ],
-    "30 days": [
-      { label: "W1", value: 70 },
-      { label: "W2", value: 73 },
-      { label: "W3", value: 75 },
-      { label: "W4", value: 72 },
-    ],
-    "90 days": [
-      { label: "Month 1", value: 69 },
-      { label: "Month 2", value: 74 },
-      { label: "Month 3", value: 72 },
-    ],
-  };
-
-  const currentRhythm = rhythmData[rhythmRange];
-  const rhythmWidth = 320;
-  const rhythmHeight = 80;
-  const rhythmLinePath = getSplinePath(
-    currentRhythm,
-    rhythmWidth,
-    rhythmHeight,
-  );
-  const rhythmAreaPath = `${rhythmLinePath} L ${rhythmWidth} ${rhythmHeight} L 0 ${rhythmHeight} Z`;
-
-  // Trend latest metric stat
-  const trendLatest = trendVitals.length > 0 ? trendVitals[0] : latestVital;
-  const currentHr = trendLatest?.heartRate
-    ? Math.round(parseFloat(trendLatest.heartRate))
-    : digitalTwin?.physiology?.heartRate?.value
-      ? Math.round(digitalTwin.physiology.heartRate.value)
-      : 70;
-  const hrBaseline = digitalTwin?.baselines?.heartRate?.value
-    ? Math.round(digitalTwin.baselines.heartRate.value)
-    : 79;
-  const hrDiff = Math.round(currentHr - hrBaseline);
-
-  const currentSys = trendLatest?.systolicBP
-    ? Math.round(parseFloat(trendLatest.systolicBP))
-    : digitalTwin?.physiology?.systolicBP?.value
-      ? Math.round(digitalTwin.physiology.systolicBP.value)
-      : 120;
-  const sysBaseline = digitalTwin?.baselines?.systolicBP?.value
-    ? Math.round(digitalTwin.baselines.systolicBP.value)
-    : 120;
-  const sysDiff = Math.round(currentSys - sysBaseline);
-
-  const currentDia = trendLatest?.diastolicBP
-    ? Math.round(parseFloat(trendLatest.diastolicBP))
-    : digitalTwin?.physiology?.diastolicBP?.value
-      ? Math.round(digitalTwin.physiology.diastolicBP.value)
-      : 80;
-  const diaBaseline = digitalTwin?.baselines?.diastolicBP?.value
-    ? Math.round(digitalTwin.baselines.diastolicBP.value)
-    : 80;
-  const diaDiff = Math.round(currentDia - diaBaseline);
-
-  const currentTemp = trendLatest?.bodyTemperature
-    ? parseFloat(trendLatest.bodyTemperature).toFixed(1)
-    : digitalTwin?.physiology?.bodyTemperature?.value
-      ? digitalTwin.physiology.bodyTemperature.value.toFixed(1)
-      : "37.0";
-  const tempBaseline = digitalTwin?.baselines?.bodyTemperature?.value
-    ? Math.round(digitalTwin.baselines.bodyTemperature.value)
-    : 37;
-  const tempDiff = Math.round(parseFloat(currentTemp) - tempBaseline);
-
-  const hrTrend = digitalTwin?.trends?.find((t) => t.vital === "heartRate");
-  const hrTrendStatus = hrTrend
-    ? {
-        text:
-          hrTrend.direction?.toUpperCase() === "INCREASING"
-            ? "Increasing"
-            : hrTrend.direction?.toUpperCase() === "DECREASING"
-              ? "Decreasing"
-              : "Stable",
-        dot:
-          hrTrend.direction?.toUpperCase() === "INCREASING"
-            ? "bg-amber-500"
-            : hrTrend.direction?.toUpperCase() === "DECREASING"
-              ? "bg-blue-500"
-              : "bg-slate-300",
-        color:
-          hrTrend.direction?.toUpperCase() === "INCREASING"
-            ? "text-amber-600 font-medium"
-            : hrTrend.direction?.toUpperCase() === "DECREASING"
-              ? "text-blue-600 font-medium"
-              : "text-slate-500",
-      }
-    : { text: "Stable", dot: "bg-slate-300", color: "text-slate-500" };
-
-  const bpStatus =
-    sysDisplay >= 140 || diaDisplay >= 90
-      ? { text: "High", dot: "bg-rose-500", color: "text-rose-600 font-medium" }
-      : sysDisplay > 120 || diaDisplay > 80
-        ? {
-            text: "Above ideal",
-            dot: "bg-amber-500",
-            color: "text-amber-600 font-medium",
-          }
-        : {
-            text: "Optimal",
-            dot: "bg-emerald-500",
-            color: "text-emerald-600 font-medium",
-          };
-
-  const o2Status =
-    o2Display < 90
-      ? { text: "Low", dot: "bg-rose-500", color: "text-rose-600 font-medium" }
-      : o2Display < 95
-        ? {
-            text: "Below ideal",
-            dot: "bg-amber-500",
-            color: "text-amber-600 font-medium",
-          }
-        : {
-            text: "In your usual range",
-            dot: "bg-slate-300",
-            color: "text-slate-500",
-          };
-
-  const sleepStatus =
-    sleepTotal !== null && sleepTotal > 0 && sleepTotal < 360
-      ? {
-          text: "Less than usual",
-          dot: "bg-amber-500",
-          color: "text-amber-600 font-medium",
-        }
-      : { text: "Normal", dot: "bg-emerald-400", color: "text-slate-500" };
-
-  // Comparison table items using digitalTwin physiology and baselines
-  const comparisonData = useMemo(() => {
-    // 1. Heart rate
-    const hrBase = Math.round(digitalTwin?.baselines?.heartRate?.value ?? 79);
-    const hrVal =
-      Math.round(digitalTwin?.physiology?.heartRate?.value ?? 70) ??
-      (latestVital?.heartRate
-        ? Math.round(parseFloat(latestVital.heartRate))
-        : 70);
-    const hrDiffVal = Math.round(hrVal - hrBase);
-
-    // 2. Blood oxygen
-    const o2Base = Math.round(digitalTwin?.baselines?.spo2?.value ?? 98);
-    const o2Val =
-      (digitalTwin?.physiology as any)?.spo2?.value ??
-      (digitalTwin?.physiology as any)?.oxygenSaturation?.value ??
-      (latestVital?.oxygenSaturation
-        ? Math.round(parseFloat(latestVital.oxygenSaturation))
-        : 97);
-    const o2DiffVal = Math.round(o2Val - o2Base);
-
-    // 3. Body temperature
-    const tempBase = Math.round(
-      digitalTwin?.baselines?.bodyTemperature?.value ?? 37,
-    );
-    const tempVal =
-      Math.round(digitalTwin?.physiology?.bodyTemperature?.value ?? 35) ??
-      (latestVital?.bodyTemperature
-        ? parseFloat(parseFloat(latestVital.bodyTemperature).toFixed(1))
-        : 37);
-    const tempDiffVal = Number((tempVal - tempBase).toFixed(1));
-
-    // 4. Heart rate variability
-    const hrvBase = Math.round(digitalTwin?.baselines?.hrv?.value ?? 36);
-    const hrvVal =
-      Math.round(digitalTwin?.physiology?.hrv?.value ?? 29) ??
-      (latestVital?.hrv ? Math.round(parseFloat(latestVital.hrv)) : 45);
-    const hrvDiffVal = Math.round(hrvVal - hrvBase);
-
-    // 5. Systolic pressure
-    const sysBase = Math.round(
-      digitalTwin?.baselines?.systolicBP?.value ?? 123,
-    );
-    const sysVal =
-      Math.round(digitalTwin?.physiology?.systolicBP?.value ?? 125) ??
-      (latestVital?.systolicBP
-        ? Math.round(parseFloat(latestVital.systolicBP))
-        : 120);
-    const sysDiffVal = Math.round(sysVal - sysBase);
-
-    // 6. Diastolic pressure
-    const diaBase = Math.round(
-      digitalTwin?.baselines?.diastolicBP?.value ?? 82,
-    );
-    const diaVal =
-      Math.round(digitalTwin?.physiology?.diastolicBP?.value ?? 85) ??
-      (latestVital?.diastolicBP
-        ? Math.round(parseFloat(latestVital.diastolicBP))
-        : 77);
-    const diaDiffVal = Math.round(diaVal - diaBase);
-
-    return [
-      {
-        signal: "Heart rate",
-        baseline: `${hrBase} bpm`,
-        today: `${hrVal} bpm`,
-        diff:
-          hrDiffVal === 0
-            ? "No change"
-            : `${hrDiffVal > 0 ? `+${hrDiffVal}` : hrDiffVal} bpm`,
-        type: hrDiffVal === 0 ? "neutral" : "purple",
-      },
-      {
-        signal: "Blood oxygen",
-        baseline: `${o2Base}%`,
-        today: `${o2Val}%`,
-        diff:
-          o2DiffVal === 0
-            ? "No change"
-            : `${o2DiffVal > 0 ? `+${o2DiffVal}` : o2DiffVal}%`,
-        type: o2DiffVal === 0 ? "neutral" : "purple",
-      },
-      {
-        signal: "Body temperature",
-        baseline: `${tempBase}°C`,
-        today: `${tempVal}°C`,
-        diff:
-          tempDiffVal === 0
-            ? "No change"
-            : `${tempDiffVal > 0 ? `+${tempDiffVal}` : tempDiffVal}°C`,
-        type: tempDiffVal === 0 ? "neutral" : "purple",
-      },
-      {
-        signal: "Heart rate variability",
-        baseline: `${hrvBase} ms`,
-        today: `${hrvVal} ms`,
-        diff:
-          hrvDiffVal === 0
-            ? "No change"
-            : `${hrvDiffVal > 0 ? `+${hrvDiffVal}` : hrvDiffVal} ms`,
-        type: hrvDiffVal === 0 ? "neutral" : "purple",
-      },
-      {
-        signal: "Systolic pressure",
-        baseline: `${sysBase} mmHg`,
-        today: `${sysVal} mmHg`,
-        diff:
-          sysDiffVal === 0
-            ? "No change"
-            : `${sysDiffVal > 0 ? `+${sysDiffVal}` : sysDiffVal} mmHg`,
-        type: sysDiffVal === 0 ? "neutral" : "purple",
-      },
-      {
-        signal: "Diastolic pressure",
-        baseline: `${diaBase} mmHg`,
-        today: `${diaVal} mmHg`,
-        diff:
-          diaDiffVal === 0
-            ? "No change"
-            : `${diaDiffVal > 0 ? `+${diaDiffVal}` : diaDiffVal} mmHg`,
-        type: diaDiffVal === 0 ? "neutral" : "purple",
-      },
-    ];
-  }, [digitalTwin, latestVital]);
-
-  const rawWellnessScore =
-    digitalTwin?.healthInsights?.healthyAgeing?.score || 80;
-  const wellnessScore = Number(rawWellnessScore);
+  const caregiverName = currentUser?.firstName || "Margaret";
+  const residentName = "Eleanor";
+  const residentAge = "82";
+  const roomNumber = "214";
 
   return (
-    <div className="w-full h-full relative overflow-hidden flex flex-col font-sans">
-      {/* Scrollable Screen Content Container */}
+    <div className="w-full h-full relative overflow-hidden flex flex-col font-sans select-none">
+      {/* Scrollable Container */}
       <div
-        className="w-full h-full overflow-y-auto overflow-x-hidden bg-[#F6F6FA] text-[#1c192d] selection:bg-purple-200 pb-20"
-        style={{ scrollbarWidth: "none" }}
+        className="w-full h-full overflow-y-auto overflow-x-hidden bg-[#F8F9FC] text-slate-900 pb-12"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {/* Mobile Header Bar */}
-        <header className="w-full bg-white border-b border-slate-200/50 sticky top-0 z-20 backdrop-blur-md">
-          <div className="px-4 h-14 flex items-center justify-between">
-            {/* <div className="flex items-center gap-2">
-              <SparkleIcon className="w-5 h-5 text-[#7C6EAD]" fill="#7C6EAD" />
-              <span className="text-base font-bold tracking-tight text-[#16122b]">
-                careMP Sentinel
-              </span>
-            </div> */}
-            <img src={Logo} className="w-36 sm:w-24 shrink-0" alt="logo" />
-
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-1.5 bg-white border border-slate-200/80 rounded-full px-2.5 py-0.5 shadow-2xs">
-                <div className="w-4 h-4 rounded-full bg-slate-100 border border-slate-200/60 flex items-center justify-center text-[9px] font-semibold text-slate-700">
-                  {currentUser?.firstName?.[0] || "J"}
-                </div>
-                <span className="text-[11px] font-medium text-slate-800">
-                  {currentUser?.firstName || "John"}
-                </span>
-              </div>
-
-              <button
-                onClick={onSignOut}
-                className="text-[11px] font-medium text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-              >
-                Sign out
-              </button>
+        {/* Top Header */}
+        <header className="w-full px-5 pt-10 pb-2 flex items-center justify-between sticky top-0 z-20 bg-[#F8F9FC]/90 backdrop-blur-md">
+          {/* careMP SENTINEL Logo */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-[#654BB9] flex items-center justify-center text-white shadow-xs">
+              <SparkleIcon className="w-4 h-4 fill-white" />
             </div>
+            <div className="flex flex-col">
+              <span className="text-[17px] font-bold text-slate-900 tracking-tight leading-none">
+                careMP
+              </span>
+              <span className="text-[8px] font-bold tracking-widest text-slate-400 uppercase leading-none mt-1">
+                SENTINEL
+              </span>
+            </div>
+          </div>
+
+          {/* Right Action Icons: Notification Bell & User Profile */}
+          <div className="flex items-center gap-2 relative">
+            {/* Telemedicine Call Button */}
+            <button
+              type="button"
+              onClick={() => setIsTelemedicineCallOpen(true)}
+              className="w-9 h-9 rounded-full bg-purple-100/70 hover:bg-purple-200/70 flex items-center justify-center text-slate-700 transition-colors relative cursor-pointer"
+              title="Tele-Consultation"
+            >
+              <Video className="w-4 h-4 text-purple-900" />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#F8F9FC] animate-pulse" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="w-9 h-9 rounded-full border border-slate-200/80 bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors cursor-pointer shadow-2xs"
+              title="Account"
+            >
+              <User className="w-4 h-4" />
+            </button>
+
+            {/* User Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 top-11 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-30 animate-in fade-in zoom-in-95">
+                <div className="px-3 py-1.5 border-b border-slate-100">
+                  <p className="text-xs font-semibold text-slate-800">
+                    {caregiverName}
+                  </p>
+                  <p className="text-[10px] text-slate-400">Caregiver</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setIsTelemedicineCallOpen(true);
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-purple-700 hover:bg-purple-50 flex items-center gap-2 cursor-pointer font-medium"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>Telemedicine Call</span>
+                </button>
+                {onSignOut && (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onSignOut();
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign out</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
-        {/* Main Content Stream (Single Column Layout) */}
-        <main className="px-4 py-4 space-y-4">
-          {/* Section 1: Greeting & Live Indicator */}
-          <div className="space-y-2">
-            <h1 className="text-xl font-bold tracking-tight text-[#16122b]">
-              Good evening, {currentUser?.firstName || "John"}.
-            </h1>
-            <p className="text-[11px] text-slate-500 leading-snug">
-              A clear picture of your health. A little guidance for what&apos;s
-              next.
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200/70 bg-white/90 text-[10px] font-medium text-slate-600 shadow-2xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                </span>
-                <span>Live · Synced 1 min ago</span>
-              </div>
-
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Sentinel Bio-Pod #BND-001 · 94% ⚡ Paired</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Telemedicine Quick Action */}
-          {onOpenTelemedicine && (
-            <div
-              onClick={onOpenTelemedicine}
-              className="rounded-2xl p-3 bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm flex items-center justify-between cursor-pointer hover:opacity-95 transition-all"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Video className="w-4 h-4 text-white animate-pulse" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold leading-tight">Live Tele-Consult Ready</p>
-                  <p className="text-[10px] text-emerald-100">Dr. Sarah Jenkins &bull; Telemetry Synced</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white/20 text-white border border-white/30">
-                Join Video &rarr;
-              </span>
-            </div>
-          )}
-
-          {/* Mobile Pheno-Genomics & Longevity Summary */}
-          <div className="rounded-2xl p-3.5 bg-white border border-slate-200/80 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-[#16122b]">
-                <Dna className="w-3.5 h-3.5 text-purple-600" />
-                <span>Longevity &amp; Biological Age</span>
-              </div>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                -3.8 Yrs Younger
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-400 text-[9.5px]">Bio-Age: </span>
-                <span className="font-bold text-slate-800">68.2 yrs</span>
-                <p className="text-[9px] text-slate-500 mt-0.5">e-FI Frailty: 0.12 (Robust)</p>
-              </div>
-              <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-400 text-[9.5px]">PGx Safety: </span>
-                <span className="font-bold text-emerald-600">Ticagrelor</span>
-                <p className="text-[9px] text-slate-500 mt-0.5">CYP2C19 alternative</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Daily Wellness Gradient Card */}
-          <div className="rounded-3xl p-5 bg-gradient-to-br from-[#26233E] via-[#494071] to-[#7C6EAD] text-white shadow-sm relative overflow-hidden space-y-3">
-            <div className="absolute top-0 right-0 w-44 h-44 bg-purple-400/10 rounded-full blur-2xl pointer-events-none" />
-
-            <span className="text-[9px] font-bold tracking-widest text-purple-200/80 uppercase">
-              YOUR DAILY WELLNESS
+        {/* Content Stream */}
+        <main className="px-4 pt-4 space-y-4">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-medium border border-emerald-200/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Updated 3:40 PM</span>
             </span>
+            <span className="text-xs text-slate-400 font-normal">
+              Thursday, 14 May
+            </span>
+          </div>
+          {/* Greeting Section */}
+          <div className="">
+            <h1 className="text-[26px] font-bold tracking-tight text-slate-900 leading-tight">
+              Good afternoon, {caregiverName}.
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Here&apos;s how {residentName} is doing today
+            </p>
+          </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl font-medium tracking-tight">
-                    {wellnessScore}
+          {/* AI CARE SUMMARY CARD (Rich Purple Gradient) */}
+          <div className="relative overflow-hidden rounded-[26px]">
+            <img
+              src={wavyBg}
+              className="absolute inset-0 w-full h-full object-cover blur-sm scale-105"
+            />
+            <div className="relative z-10 p-5">
+              {/* Overline */}
+              <div className="flex items-center gap-1.5 text-purple-200 text-[10px] font-bold tracking-widest uppercase mb-2.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                <span>AI CARE SUMMARY</span>
+              </div>
+
+              {/* Main Headline */}
+              <h2 className="text-[21px] font-bold text-white tracking-tight leading-snug mb-2.5">
+                Checking in on Eleanor this afternoon.
+              </h2>
+
+              {/* Description */}
+              <p className="text-[13px] text-purple-100/95 leading-relaxed font-normal mb-3.5">
+                Her sleep was slightly disrupted last night. She was calm this
+                morning, but is becoming a little restless now.
+              </p>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2 text-purple-100 text-xs font-medium mb-3.5">
+                <ShieldCheck className="w-4 h-4 text-purple-200 shrink-0" />
+                <span>Safe in her room · Room {roomNumber}</span>
+              </div>
+
+              {/* Eleanor Resident Subcard / Pill */}
+              <div
+                onClick={() => setIsLifeStoryOpen(true)}
+                className="bg-white/10 hover:bg-white/15 active:bg-white/20 border border-white/20 backdrop-blur-md rounded-2xl p-2.5 flex items-center justify-between cursor-pointer transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <img
+                    src={eleanor}
+                    alt={residentName}
+                    className="w-11 h-11 rounded-full object-cover border-2 border-white/30 shadow-xs shrink-0"
+                  />
+                  <div>
+                    <div className="text-sm font-bold text-white leading-tight">
+                      {residentName} · {residentAge}
+                    </div>
+                    <div className="text-xs text-purple-200 font-normal mt-0.5 hover:underline">
+                      View her Life Story
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/70 mr-1 shrink-0" />
+              </div>
+            </div>
+          </div>
+
+          {/* AI CARE SUMMARY CARD (Rich Purple Gradient) */}
+          <div className="hidden relative rounded-[26px] p-5 text-white shadow-md overflow-hidden bg-gradient-to-br from-[#5E499D] via-[#6D53AF] to-[#4A358A]">
+            {/* Subtle background glow decorative circle */}
+            <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+            <div className="absolute -left-10 -bottom-10 w-44 h-44 rounded-full bg-purple-900/40 blur-xl pointer-events-none" />
+
+            <div className="relative z-10">
+              {/* Overline */}
+              <div className="flex items-center gap-1.5 text-purple-200 text-[10px] font-bold tracking-widest uppercase mb-2.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                <span>AI CARE SUMMARY</span>
+              </div>
+
+              {/* Main Headline */}
+              <h2 className="text-[21px] font-bold text-white tracking-tight leading-snug mb-2.5">
+                Checking in on Eleanor this afternoon.
+              </h2>
+
+              {/* Description */}
+              <p className="text-[13px] text-purple-100/95 leading-relaxed font-normal mb-3.5">
+                Her sleep was slightly disrupted last night. She was calm this
+                morning, but is becoming a little restless now.
+              </p>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2 text-purple-100 text-xs font-medium mb-3.5">
+                <ShieldCheck className="w-4 h-4 text-purple-200 shrink-0" />
+                <span>Safe in her room · Room {roomNumber}</span>
+              </div>
+
+              {/* Eleanor Resident Subcard / Pill */}
+              <div
+                onClick={() => setIsLifeStoryOpen(true)}
+                className="bg-white/10 hover:bg-white/15 active:bg-white/20 border border-white/20 backdrop-blur-md rounded-2xl p-2.5 flex items-center justify-between cursor-pointer transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <img
+                    src={eleanor}
+                    alt={residentName}
+                    className="w-11 h-11 rounded-full object-cover border-2 border-white/30 shadow-xs shrink-0"
+                  />
+                  <div>
+                    <div className="text-sm font-bold text-white leading-tight">
+                      {residentName} · {residentAge}
+                    </div>
+                    <div className="text-xs text-purple-200 font-normal mt-0.5 hover:underline">
+                      View her Life Story
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/70 mr-1 shrink-0" />
+              </div>
+            </div>
+          </div>
+
+          {/* SUNDOWNING WATCH CARD */}
+          <div className="bg-[#F5F2FB] border border-[#ECE5F8] rounded-[26px] p-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">
+                Sundowning Watch
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FDF3E7] text-[#B45309] border border-[#FCD9B6]">
+                Restless
+              </span>
+            </div>
+
+            <h4 className="text-[15px] font-bold text-slate-800 mt-2 mb-1.5 leading-snug">
+              Eleanor may need a calmer afternoon.
+            </h4>
+
+            <p className="text-[13px] text-slate-600 leading-relaxed mb-3">
+              More wrist movement and a rising heart rate match her usual
+              late-afternoon restlessness.
+            </p>
+
+            <p className="text-[13px] font-medium text-purple-700 leading-relaxed">
+              Familiar music and her lavender blanket may help right now.
+            </p>
+          </div>
+
+          {/* CURRENT CARE STATUS SECTION */}
+          <div className="space-y-2 pt-1">
+            <div className="px-1">
+              <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
+                Current care status
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Changes are compared with Eleanor&apos;s usual pattern
+              </p>
+            </div>
+
+            <div className="bg-white rounded-[26px] p-5 shadow-xs border border-slate-100 divide-y divide-slate-100">
+              {/* Sleep */}
+              <div className="pb-3.5 flex items-start gap-3.5">
+                <div className="mt-0.5 shrink-0">
+                  <Moon className="w-4 h-4 text-amber-800" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[11px] font-medium text-slate-400">
+                    Sleep
                   </span>
-                  <span className="text-xs text-purple-200/80 font-medium">
-                    / 100
+                  <span className="block text-sm font-bold text-slate-900 mt-0.5">
+                    {sleepValue}
                   </span>
-                  <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/15 backdrop-blur-xs text-white border border-white/10">
-                    Good
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    3 awakenings · Mild disruption
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-col items-center shrink-0">
-                <WellnessScorePieChart score={86} size={92} strokeWidth={5.5} />
-                {/* <span className="text-[9px] text-purple-200/70 font-medium mt-1">
-                  A picture of today
-                </span> */}
+              {/* Activity & behavior */}
+              <div className="py-3.5 flex items-start gap-3.5">
+                <div className="mt-0.5 shrink-0">
+                  <Footprints className="w-4 h-4 text-amber-800" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[11px] font-medium text-slate-400">
+                    Activity & behavior
+                  </span>
+                  <span className="block text-sm font-bold text-slate-900 mt-0.5">
+                    More restless than usual
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Some pacing since 3:20 PM
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-0.5 pt-1">
-              <p className="text-xs font-medium text-white/95">
-                Steady overall. A little more rest will help.
-              </p>
-              <p className="text-[10.5px] text-purple-200/75 leading-relaxed">
-                Your body is holding its rhythm, with sleep below your usual.
-              </p>
-            </div>
+              {/* Health */}
+              <div className="py-3.5 flex items-start gap-3.5">
+                <div className="mt-0.5 shrink-0">
+                  <Heart className="w-4 h-4 text-amber-800" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[11px] font-medium text-slate-400">
+                    Health
+                  </span>
+                  <span className="block text-sm font-bold text-slate-900 mt-0.5">
+                    Slight change from usual
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Higher pulse and temperature
+                  </span>
+                </div>
+              </div>
 
-            <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-purple-200/90 font-medium">
-              <a
-                href="#digital-twin-mobile"
-                className="hover:text-white transition-colors flex items-center gap-1 group"
-              >
-                <span>Explore your Digital Twin</span>
-                <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </a>
+              {/* Location & movement */}
+              <div className="pt-3.5 flex items-start gap-3.5">
+                <div className="mt-0.5 shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[11px] font-medium text-slate-400">
+                    Location & movement
+                  </span>
+                  <span className="block text-sm font-bold text-slate-900 mt-0.5">
+                    Safe in her room
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    No active wandering alert
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Sentinel Insight Card */}
-          <div className="rounded-3xl p-4 bg-[#F5F3FB] border border-purple-100/70 shadow-xs space-y-2.5">
-            <div className="flex items-center gap-1.5 text-purple-700">
-              <SparkleIcon className="w-3.5 h-3.5 fill-purple-600" />
-              <span className="text-[9px] font-bold tracking-wider uppercase">
-                SENTINEL INSIGHT
-              </span>
+          {/* WHAT MAY HELP RIGHT NOW CARD */}
+          <div className="bg-white rounded-[26px] p-5 shadow-xs border border-slate-100">
+            <div className="flex items-center gap-1.5 text-purple-700 text-[10px] font-bold tracking-widest uppercase mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <span>WHAT MAY HELP RIGHT NOW</span>
             </div>
 
-            <h3 className="text-xs font-bold text-[#16122b] leading-snug">
-              Your recovery could use a little extra kindness.
+            <h3 className="text-[17px] font-bold text-slate-900 leading-snug mb-1.5">
+              Bring a little familiarity into her afternoon.
             </h3>
 
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              Your vitals are steady. Three nights of less sleep may leave you
-              feeling more tired than usual.
+            <p className="text-[13px] text-slate-600 leading-relaxed mb-4">
+              Eleanor has always loved music and books. These familiar comforts
+              have helped her settle before.
             </p>
 
-            <div className="flex items-center justify-between text-[10px] pt-3 border-t border-purple-200/50">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium border border-amber-200/60">
-                Moderate fatigue risk
-              </span>
-              <span className="text-slate-400 font-medium">92% confidence</span>
-            </div>
-          </div>
-
-          {/* Row: "Your vitals, right now" */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-[#16122b]">
-                Your vitals, right now
-              </h2>
-              <span className="text-[10px] text-slate-400">
-                Auto-refreshes every minute
-              </span>
-            </div>
-
-            {/* 2x2 Grid for first 4 vitals */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Heart rate */}
-              <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-2xs">
-                <div className="flex items-center gap-1 text-slate-400">
-                  <Heart className="w-3 h-3 text-rose-400" />
-                  <span className="text-[11px] text-slate-500">Heart rate</span>
-                </div>
-                <div className="mt-2 flex items-baseline">
-                  <span className="text-lg font-bold text-slate-900 tracking-tight">
-                    {hrDisplay}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-normal ml-1">
-                    bpm
-                  </span>
-                </div>
-                <div
-                  className={`mt-1 flex items-center gap-1 text-[10px] ${hrTrendStatus.color}`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${hrTrendStatus.dot}`}
-                  />
-                  <span>{hrTrendStatus.text}</span>
-                </div>
-              </div>
-
-              {/* Blood pressure */}
-              <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-2xs">
-                <div className="flex items-center gap-1 text-slate-400">
-                  <Activity className="w-3 h-3 text-amber-500" />
-                  <span className="text-[11px] text-slate-500">
-                    Blood pressure
-                  </span>
-                </div>
-                <div className="mt-2 flex items-baseline">
-                  <span className="text-lg font-bold text-slate-900 tracking-tight">
-                    {sysDisplay}/{diaDisplay}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-normal ml-1">
-                    mmHg
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <span>Above ideal</span>
-                </div>
-              </div>
-
-              {/* Blood oxygen */}
-              <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-2xs">
-                <div className="flex items-center gap-1 text-slate-400">
-                  <Droplets className="w-3 h-3 text-sky-500" />
-                  <span className="text-[11px] text-slate-500">
-                    Blood oxygen
-                  </span>
-                </div>
-                <div className="mt-2 flex items-baseline">
-                  <span className="text-lg font-bold text-slate-900 tracking-tight">
-                    {o2Display}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-normal ml-1">
-                    %
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>In your usual range</span>
-                </div>
-              </div>
-
-              {/* Body temperature */}
-              <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-2xs">
-                <div className="flex items-center gap-1 text-slate-400">
-                  <Thermometer className="w-3 h-3 text-amber-500" />
-                  <span className="text-[11px] text-slate-500">
-                    Body temperature
-                  </span>
-                </div>
-                <div className="mt-2 flex items-baseline">
-                  <span className="text-lg font-bold text-slate-900 tracking-tight">
-                    {tempVal}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-normal ml-1">
-                    °C
-                  </span>
-                </div>
-                <div
-                  className={`mt-1 flex items-center gap-1 text-[10px] ${hrTrendStatus.color}`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${hrTrendStatus.dot}`}
-                  />
-                  <span>{hrTrendStatus.text}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sleep Card (Full Width) */}
-            <div className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-2xs">
-              <div className="flex items-center gap-1 text-slate-400">
-                <Moon className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="text-xs text-slate-500">Sleep</span>
-              </div>
-              <div className="mt-2 flex items-baseline">
-                <span className="text-xl font-bold text-slate-900 tracking-tight">
-                  {sleepDisplay}
-                </span>
-              </div>
-              <div className="mt-1 flex items-center gap-1 text-[10.5px] text-amber-600 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span>Less than usual</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Wellness Rhythm Card */}
-          <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-xs font-bold text-[#16122b]">
-                  Your wellness rhythm
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  A steady week, with a softer landing today.
-                </p>
-              </div>
-
-              {/* Range Filter Pills */}
-              <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-100/80 border border-slate-200/50">
-                {(["7 days", "30 days", "90 days"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setRhythmRange(tab)}
-                    className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all cursor-pointer ${
-                      rhythmRange === tab
-                        ? "bg-white text-purple-700 shadow-2xs font-semibold"
-                        : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Rhythm Spline Chart */}
-            <div className="relative mt-3 pt-1">
-              <div className="w-full h-20 relative flex flex-col justify-between pointer-events-none">
-                {[79, 65, 50].map((tick) => (
-                  <div key={tick} className="flex items-center w-full">
-                    <span className="text-[9px] text-slate-300 w-4 font-mono">
-                      {tick}
-                    </span>
-                    <div className="flex-1 border-b border-slate-100 ml-1.5" />
-                  </div>
-                ))}
-              </div>
-
-              <div className="absolute inset-x-0 bottom-5 top-1 ml-5">
-                <svg
-                  className="w-full h-full overflow-visible"
-                  viewBox={`0 0 ${rhythmWidth} ${rhythmHeight}`}
-                  preserveAspectRatio="none"
-                >
-                  <defs>
-                    <linearGradient
-                      id="mobRhythmGrad"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor="#8d66eb"
-                        stopOpacity="0.22"
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor="#8d66eb"
-                        stopOpacity="0.0"
-                      />
-                    </linearGradient>
-                  </defs>
-
-                  <path d={rhythmAreaPath} fill="url(#mobRhythmGrad)" />
-                  <path
-                    d={rhythmLinePath}
-                    fill="none"
-                    stroke="#8c67eb"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx={rhythmWidth} cy={42} r="4" fill="#8c67eb" />
-                  <circle cx={rhythmWidth} cy={42} r="1.5" fill="#ffffff" />
-                </svg>
-              </div>
-
-              <div className="flex justify-between items-center ml-5 mt-1.5 pt-1.5 border-t border-slate-100 text-[9.5px] text-slate-400">
-                {currentRhythm.map((item, idx) => (
-                  <span
-                    key={idx}
-                    className={
-                      item.label === "Today"
-                        ? "font-semibold text-slate-700"
-                        : ""
-                    }
-                  >
-                    {item.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* A Small Step for Tonight Card */}
-          <div className="bg-[#F5F3FB] rounded-3xl p-4 border border-purple-100/70 shadow-xs space-y-2.5">
-            <div>
-              <span className="text-[9px] font-bold tracking-wider text-purple-700 uppercase">
-                A SMALL STEP FOR TONIGHT
-              </span>
-
-              <h3 className="text-xs font-bold text-[#16122b] mt-1">
-                Give recovery a head start.
-              </h3>
-
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                Deep sleep is down 14%; daily steps are down 8%.
-              </p>
-            </div>
-
-            <div className="space-y-1.5 pt-1">
+            {/* 3 Action Items */}
+            <div className="space-y-2 mb-4">
+              {/* Item 01 */}
               <div
-                onClick={() => toggleStep("step1")}
-                className={`rounded-xl p-2.5 flex items-center gap-2.5 border transition-all cursor-pointer ${
-                  completedSteps["step1"]
-                    ? "bg-purple-50 border-purple-200"
-                    : "bg-white hover:bg-slate-50 border-slate-200/60"
-                }`}
+                onClick={() => toggleStep("step-1")}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/80 hover:bg-purple-50/60 active:bg-purple-100/60 transition-colors cursor-pointer"
               >
-                <span
-                  className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold shadow-2xs border transition-colors ${
-                    completedSteps["step1"]
-                      ? "bg-purple-600 text-white border-purple-600"
-                      : "bg-slate-50 text-slate-400 border-slate-200"
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 transition-colors ${
+                    completedSteps["step-1"]
+                      ? "bg-purple-600 text-white"
+                      : "bg-[#F0EBFA] text-[#654BB9]"
                   }`}
                 >
-                  {completedSteps["step1"] ? (
-                    <Check className="w-3 h-3" />
+                  {completedSteps["step-1"] ? (
+                    <Check className="w-3.5 h-3.5" />
                   ) : (
                     "01"
                   )}
-                </span>
+                </div>
                 <span
-                  className={`text-[11px] font-medium ${
-                    completedSteps["step1"]
-                      ? "text-purple-900 line-through decoration-purple-300"
+                  className={`text-xs sm:text-[13px] font-medium transition-colors ${
+                    completedSteps["step-1"]
+                      ? "text-slate-400 line-through"
                       : "text-slate-800"
                   }`}
                 >
-                  Take a gentle 30-minute walk
+                  Play soft big-band music
                 </span>
               </div>
 
+              {/* Item 02 */}
               <div
-                onClick={() => toggleStep("step2")}
-                className={`rounded-xl p-2.5 flex items-center gap-2.5 border transition-all cursor-pointer ${
-                  completedSteps["step2"]
-                    ? "bg-purple-50 border-purple-200"
-                    : "bg-white hover:bg-slate-50 border-slate-200/60"
-                }`}
+                onClick={() => toggleStep("step-2")}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/80 hover:bg-purple-50/60 active:bg-purple-100/60 transition-colors cursor-pointer"
               >
-                <span
-                  className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold shadow-2xs border transition-colors ${
-                    completedSteps["step2"]
-                      ? "bg-purple-600 text-white border-purple-600"
-                      : "bg-slate-50 text-slate-400 border-slate-200"
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 transition-colors ${
+                    completedSteps["step-2"]
+                      ? "bg-purple-600 text-white"
+                      : "bg-[#F0EBFA] text-[#654BB9]"
                   }`}
                 >
-                  {completedSteps["step2"] ? (
-                    <Check className="w-3 h-3" />
+                  {completedSteps["step-2"] ? (
+                    <Check className="w-3.5 h-3.5" />
                   ) : (
                     "02"
                   )}
-                </span>
+                </div>
                 <span
-                  className={`text-[11px] font-medium ${
-                    completedSteps["step2"]
-                      ? "text-purple-900 line-through decoration-purple-300"
+                  className={`text-xs sm:text-[13px] font-medium transition-colors ${
+                    completedSteps["step-2"]
+                      ? "text-slate-400 line-through"
                       : "text-slate-800"
                   }`}
                 >
-                  Wind down 15 minutes earlier
+                  Offer her lavender blanket
                 </span>
               </div>
-            </div>
-          </div>
 
-          {/* Vital Relationships & Body Data */}
-          <div className="space-y-3.5">
-            <VitalRelationshipsCard correlations={digitalTwin?.correlations} />
-            <BodyDataCard body={digitalTwin?.body} />
-          </div>
-
-          {/* Section 2: "Your body, in context." */}
-          <div id="digital-twin-mobile" className="space-y-2 pt-2">
-            <h2 className="text-xl font-bold tracking-tight text-[#16122b]">
-              Your body, in context.
-            </h2>
-            <p className="text-[11px] text-slate-500 leading-snug">
-              Understand what&apos;s changing — and what&apos;s normal for you.
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200/70 bg-white/90 text-[10px] font-medium text-slate-600 shadow-2xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                </span>
-                <span>Live · Synced 1 min ago</span>
-              </div>
-
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Sentinel Bio-Pod #BND-001 · 94% ⚡ Paired</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Digital Twin Anatomy Card */}
-          <div className="bg-[#eeeaf6] rounded-3xl p-4 border border-purple-200/50 shadow-xs relative flex flex-col justify-between space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-[#16122b]">
-                  Your digital twin
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  A living picture of your body
-                </p>
-              </div>
-
-              <div className="bg-white/80 border border-purple-200/60 rounded-xl px-2.5 py-1 text-center shadow-2xs">
-                <div className="text-xs font-bold text-purple-950 leading-tight">
-                  92%
-                </div>
-                <div className="text-[8.5px] text-slate-500 font-medium">
-                  53-min wellness
-                </div>
-              </div>
-            </div>
-
-            {/* Organ Selector Tabs/Pills */}
-            <div className="flex items-center justify-center gap-1 mt-1 mb-1 flex-wrap">
-              {[
-                { id: "brain", label: "Brain", desc: "Sleep" },
-                { id: "heart", label: "Heart", desc: "HR" },
-                { id: "lungs", label: "Lungs", desc: "SpO₂" },
-                { id: "hands", label: "Arms", desc: "BP" },
-              ].map((organ) => {
-                const isAct = selectedOrgan === organ.id;
-                return (
-                  <button
-                    key={organ.id}
-                    type="button"
-                    onClick={() =>
-                      setSelectedOrgan(isAct ? null : (organ.id as OrganType))
-                    }
-                    className={`px-2 py-0.5 text-[10px] font-semibold rounded-full transition-all cursor-pointer flex items-center gap-0.5 ${
-                      isAct
-                        ? "bg-[#16122b] text-white shadow-xs"
-                        : "bg-white/80 hover:bg-white text-slate-600 border border-purple-100"
-                    }`}
-                  >
-                    <span>{organ.label}</span>
-                    <span
-                      className={`text-[8.5px] ${
-                        isAct ? "text-purple-200" : "text-slate-400"
-                      }`}
-                    >
-                      · {organ.desc}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Human Anatomy Illustration Container */}
-            <div className="relative my-2 flex items-center justify-center min-h-[320px]">
-              <div className="relative w-48 max-w-full flex items-center justify-center">
-                <HumanBodyIllustration
-                  className="w-full h-auto max-h-[310px] select-none drop-shadow-xs"
-                  selectedOrgan={selectedOrgan}
-                  onSelectOrgan={setSelectedOrgan}
-                />
-
-                {/* SVG Connector Callout Lines */}
-                <svg
-                  className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
-                  viewBox="0 0 240 598"
+              {/* Item 03 */}
+              <div
+                onClick={() => toggleStep("step-3")}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/80 hover:bg-purple-50/60 active:bg-purple-100/60 transition-colors cursor-pointer"
+              >
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 transition-colors ${
+                    completedSteps["step-3"]
+                      ? "bg-purple-600 text-white"
+                      : "bg-[#F0EBFA] text-[#654BB9]"
+                  }`}
                 >
-                  {/* Brain Callout Line */}
-                  {selectedOrgan === "brain" && (
-                    <g className="animate-in fade-in duration-200">
-                      <line
-                        x1="120"
-                        y1="30"
-                        x2="-15"
-                        y2="30"
-                        stroke="#b582a0"
-                        strokeWidth="1.5"
-                        strokeDasharray="3 3"
-                      />
-                      <circle
-                        cx="120"
-                        cy="30"
-                        r="4"
-                        fill="#b9839e"
-                        stroke="white"
-                        strokeWidth="1.5"
-                      />
-                      <circle cx="-15" cy="30" r="3" fill="#b9839e" />
-                    </g>
-                  )}
-
-                  {/* Heart Callout Line */}
-                  {selectedOrgan === "heart" && (
-                    <g className="animate-in fade-in duration-200">
-                      <line
-                        x1="138"
-                        y1="160"
-                        x2="255"
-                        y2="160"
-                        stroke="#f472b6"
-                        strokeWidth="1.5"
-                        strokeDasharray="3 3"
-                      />
-                      <circle
-                        cx="138"
-                        cy="160"
-                        r="4"
-                        fill="#e11d48"
-                        stroke="white"
-                        strokeWidth="1.5"
-                      />
-                      <circle cx="255" cy="160" r="3" fill="#e11d48" />
-                    </g>
-                  )}
-
-                  {/* Lungs Callout Line */}
-                  {selectedOrgan === "lungs" && (
-                    <g className="animate-in fade-in duration-200">
-                      <line
-                        x1="95"
-                        y1="145"
-                        x2="-15"
-                        y2="145"
-                        stroke="#b582a0"
-                        strokeWidth="1.5"
-                        strokeDasharray="3 3"
-                      />
-                      <circle
-                        cx="95"
-                        cy="145"
-                        r="4"
-                        fill="#b9839e"
-                        stroke="white"
-                        strokeWidth="1.5"
-                      />
-                      <circle cx="-15" cy="145" r="3" fill="#b9839e" />
-                    </g>
-                  )}
-
-                  {/* Hands / Arms Callout Line */}
-                  {selectedOrgan === "hands" && (
-                    <g className="animate-in fade-in duration-200">
-                      <line
-                        x1="25"
-                        y1="230"
-                        x2="-15"
-                        y2="230"
-                        stroke="#b18aa8"
-                        strokeWidth="1.5"
-                        strokeDasharray="3 3"
-                      />
-                      <circle
-                        cx="25"
-                        cy="230"
-                        r="4"
-                        fill="#d97706"
-                        stroke="white"
-                        strokeWidth="1.5"
-                      />
-                      <circle cx="-15" cy="230" r="3" fill="#d97706" />
-                    </g>
-                  )}
-                </svg>
-              </div>
-
-              {/* Callout: Brain & Sleep */}
-              {selectedOrgan === "brain" && (
-                <div className="absolute top-[1%] -left-1 bg-white/95 backdrop-blur-md rounded-xl p-2.5 shadow-lg border border-purple-200/80 z-20 min-w-[155px] max-w-[175px] animate-in fade-in zoom-in-95 duration-200 text-[9.5px]">
-                  <div className="flex items-center gap-1 font-bold text-purple-900 uppercase tracking-wider text-[8.5px]">
-                    <Moon className="w-3 h-3 text-purple-600" />
-                    <span>Sleep & Recovery</span>
-                  </div>
-                  <div className="text-base font-extrabold text-[#16122b] mt-0.5 tracking-tight">
-                    {sleepDisplay}
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5 text-[9px] text-slate-600 font-medium">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${sleepStatus.dot}`}
-                    />
-                    <span>{sleepStatus.text}</span>
-                  </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 text-[8.5px] text-slate-500 space-y-0.5">
-                    <div className="flex items-center justify-between">
-                      <span>Deep sleep:</span>
-                      <span className="font-semibold text-slate-700">
-                        {latestVital?.deepSleepTime
-                          ? `${Math.floor(parseFloat(latestVital.deepSleepTime) / 60)}h ${Math.round(parseFloat(latestVital.deepSleepTime) % 60)}m`
-                          : "1h 24m"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>REM sleep:</span>
-                      <span className="font-semibold text-slate-700">
-                        {latestVital?.remSleepTime
-                          ? `${Math.floor(parseFloat(latestVital.remSleepTime) / 60)}h ${Math.round(parseFloat(latestVital.remSleepTime) % 60)}m`
-                          : "1h 45m"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Callout: Heart Rate & Trend & Baseline */}
-              {selectedOrgan === "heart" && (
-                <div className="absolute top-[18%] -right-1 bg-white/95 backdrop-blur-md rounded-xl p-2.5 shadow-lg border border-rose-200/80 z-20 min-w-[155px] max-w-[175px] animate-in fade-in zoom-in-95 duration-200 text-[9.5px]">
-                  <div className="flex items-center gap-1 font-bold text-rose-900 uppercase tracking-wider text-[8.5px]">
-                    <Heart className="w-3 h-3 text-rose-600 fill-rose-500" />
-                    <span>Heart Rate</span>
-                  </div>
-                  <div className="text-base font-extrabold text-[#16122b] mt-0.5 tracking-tight">
-                    {hrDisplay}{" "}
-                    <span className="text-[9px] font-semibold text-slate-400">
-                      bpm
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5 text-[9px] text-slate-600 font-medium">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${hrTrendStatus.dot}`}
-                    />
-                    <span>
-                      Trend:{" "}
-                      <span className="font-semibold text-slate-800">
-                        {hrTrendStatus.text}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 text-[8.5px] text-slate-500 space-y-0.5">
-                    <div className="flex items-center justify-between">
-                      <span>Baseline:</span>
-                      <span className="font-bold text-slate-800 font-mono">
-                        {hrBaseline} bpm
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Diff:</span>
-                      <span
-                        className={`font-semibold font-mono ${
-                          hrDiff < 0
-                            ? "text-emerald-600"
-                            : hrDiff > 0
-                              ? "text-amber-600"
-                              : "text-slate-600"
-                        }`}
-                      >
-                        {hrDiff >= 0 ? `+${hrDiff}` : hrDiff} bpm
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Callout: Oxygen Saturation */}
-              {selectedOrgan === "lungs" && (
-                <div className="absolute top-[16%] -left-1 bg-white/95 backdrop-blur-md rounded-xl p-2.5 shadow-lg border border-cyan-200/80 z-20 min-w-[155px] max-w-[175px] animate-in fade-in zoom-in-95 duration-200 text-[9.5px]">
-                  <div className="flex items-center gap-1 font-bold text-cyan-900 uppercase tracking-wider text-[8.5px]">
-                    <Droplets className="w-3 h-3 text-cyan-600 fill-cyan-500" />
-                    <span>Oxygen Saturation</span>
-                  </div>
-                  <div className="text-base font-extrabold text-[#16122b] mt-0.5 tracking-tight">
-                    {o2Display}%
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5 text-[9px] text-slate-600 font-medium">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${o2Status.dot}`}
-                    />
-                    <span>{o2Status.text}</span>
-                  </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 text-[8.5px] text-slate-500 space-y-0.5">
-                    <div className="flex items-center justify-between">
-                      <span>Baseline:</span>
-                      <span className="font-bold text-slate-800 font-mono">
-                        {Math.round(digitalTwin?.baselines?.spo2?.value ?? 98)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Callout: Blood Pressure (Systolic & Diastolic) */}
-              {selectedOrgan === "hands" && (
-                <div className="absolute top-[28%] -left-1 bg-white/95 backdrop-blur-md rounded-xl p-2.5 shadow-lg border border-amber-200/80 z-20 min-w-[165px] max-w-[185px] animate-in fade-in zoom-in-95 duration-200 text-[9.5px]">
-                  <div className="flex items-center gap-1 font-bold text-amber-900 uppercase tracking-wider text-[8.5px]">
-                    <Activity className="w-3 h-3 text-amber-600" />
-                    <span>Blood Pressure</span>
-                  </div>
-                  <div className="text-base font-extrabold text-[#16122b] mt-0.5 tracking-tight">
-                    {sysDisplay}/{diaDisplay}{" "}
-                    <span className="text-[9px] font-semibold text-slate-400">
-                      mmHg
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5 text-[9px] text-slate-600 font-medium">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${bpStatus.dot}`}
-                    />
-                    <span>{bpStatus.text}</span>
-                  </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 text-[8.5px] text-slate-500 space-y-0.5">
-                    <div className="flex items-center justify-between">
-                      <span>Sys:</span>
-                      <span className="font-bold text-slate-800 font-mono">
-                        {currentSys} (Base {sysBaseline})
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Dia:</span>
-                      <span className="font-bold text-slate-800 font-mono">
-                        {currentDia} (Base {diaBaseline})
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 border-t border-purple-200/50">
-              <span className="text-[9px] font-bold tracking-wider text-purple-700 uppercase">
-                ALL SYSTEMS CONNECTED
-              </span>
-              <p className="text-[10px] text-slate-600 mt-0.5">
-                Small shifts. One connected picture.
-              </p>
-            </div>
-          </div>
-
-          {/* "You, compared with your usual" Comparison Table Card */}
-          <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-xs font-bold text-[#16122b]">
-                  You, compared with your usual
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Your recent readings alongside your personal baseline.
-                </p>
-              </div>
-
-              {/* Filter */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-200/80 bg-white text-[10px] font-medium text-slate-700 hover:bg-slate-50 shadow-2xs cursor-pointer"
-                >
-                  <span>{selectedTimeFilter}</span>
-                  <ChevronDown className="w-3 h-3 text-slate-400" />
-                </button>
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-1 w-32 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-20 text-[10px]">
-                    {["Last 30 minutes", "Last 2 hours", "Today"].map((opt) => (
-                      <div
-                        key={opt}
-                        onClick={() => {
-                          setSelectedTimeFilter(opt);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="px-2.5 py-1 hover:bg-slate-50 cursor-pointer font-medium text-slate-700"
-                      >
-                        {opt}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-[10.5px]">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[9px] font-semibold tracking-wider text-slate-400 uppercase">
-                    <th className="py-1.5 font-medium">HEALTH SIGNAL</th>
-                    <th className="py-1.5 font-medium">BASELINE</th>
-                    <th className="py-1.5 font-medium">TODAY</th>
-                    <th className="py-1.5 font-medium text-right">
-                      VS. BASELINE
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100/60 font-medium">
-                  {comparisonData.map((row, idx) => (
-                    <tr
-                      key={idx}
-                      className="hover:bg-slate-50/60 transition-colors"
-                    >
-                      <td className="py-2 text-slate-800 flex items-center gap-1.5">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            row.type === "purple"
-                              ? "bg-purple-600"
-                              : "bg-slate-300"
-                          }`}
-                        />
-                        <span>{row.signal}</span>
-                      </td>
-                      <td className="py-2 text-slate-400 font-mono text-[10px]">
-                        {row.baseline}
-                      </td>
-                      <td className="py-2 text-slate-800 font-mono text-[10px] font-semibold">
-                        {row.today}
-                      </td>
-                      <td className="py-2 text-right font-mono text-[10px]">
-                        <span
-                          className={`inline-block px-1.5 py-0.5 rounded ${
-                            row.type === "purple"
-                              ? "bg-purple-50 text-purple-700"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {row.diff}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Vitals Trend Recharts Graph Card ("A closer look at your heart rate") */}
-          <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-xs font-bold text-[#16122b]">
-                  {selectedTrendMetric === "heartRate"
-                    ? "A closer look at your heart rate"
-                    : selectedTrendMetric === "systolicBP"
-                      ? "A closer look at your SystolicBP"
-                      : selectedTrendMetric === "diastolicBP"
-                        ? "A closer look at your DiastolicBP"
-                        : selectedTrendMetric === "temperature"
-                          ? "A closer look at your temperature"
-                          : "A closer look at you"}
-                </h3>
-
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  {selectedTrendMetric === null ? (
-                    <span className="text-[10px] text-slate-500 font-normal">
-                      All signals active · select below to isolate
-                    </span>
-                  ) : selectedTrendMetric === "heartRate" ? (
-                    <>
-                      <span className="text-lg font-bold text-slate-900">
-                        {currentHr}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-normal">
-                        bpm
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-normal ml-1">
-                        · {hrDiff >= 0 ? `+${hrDiff}` : hrDiff} bpm from
-                        baseline
-                      </span>
-                    </>
-                  ) : selectedTrendMetric === "systolicBP" ? (
-                    <>
-                      <span className="text-lg font-bold text-slate-900">
-                        {currentSys}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-normal">
-                        mmHg
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-normal ml-1">
-                        · {sysDiff >= 0 ? `+${sysDiff}` : sysDiff} mmHg
-                      </span>
-                    </>
-                  ) : selectedTrendMetric === "diastolicBP" ? (
-                    <>
-                      <span className="text-lg font-bold text-slate-900">
-                        {currentDia}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-normal">
-                        mmHg
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-normal ml-1">
-                        · {diaDiff >= 0 ? `+${diaDiff}` : diaDiff} mmHg
-                      </span>
-                    </>
+                  {completedSteps["step-3"] ? (
+                    <Check className="w-3.5 h-3.5" />
                   ) : (
-                    <>
-                      <span className="text-lg font-bold text-slate-900">
-                        {currentTemp}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-normal">
-                        °C
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-normal ml-1">
-                        · {Number(tempDiff) >= 0 ? `+${tempDiff}` : tempDiff} °C
-                      </span>
-                    </>
+                    "03"
                   )}
                 </div>
-              </div>
-
-              {/* Top Right Legend Indicator */}
-              <div className="flex items-center gap-2 text-[10px]">
-                {selectedTrendMetric !== null ? (
-                  <>
-                    <div className="flex items-center gap-1 text-slate-600">
-                      <span
-                        className="w-2.5 h-0.5 rounded-full inline-block"
-                        style={{
-                          backgroundColor:
-                            METRIC_CONFIGS[selectedTrendMetric].color,
-                        }}
-                      />
-                      <span>Recent</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-slate-400">
-                      <span className="w-2.5 border-b border-dotted border-slate-300 inline-block" />
-                      <span>Baseline</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-1 text-[9.5px] text-slate-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                    <span>4 channels</span>
-                  </div>
-                )}
+                <span
+                  className={`text-xs sm:text-[13px] font-medium transition-colors ${
+                    completedSteps["step-3"]
+                      ? "text-slate-400 line-through"
+                      : "text-slate-800"
+                  }`}
+                >
+                  Invite her to organize books
+                </span>
               </div>
             </div>
 
-            {/* Recharts VitalsTrendGraph */}
-            <VitalsTrendGraph
-              data={trendVitals}
-              baseline={digitalTwin?.baselines?.heartRate?.value ?? 79}
-              baselines={digitalTwin?.baselines}
-              selectedMetric={selectedTrendMetric}
-              onSelectMetric={setSelectedTrendMetric}
-            />
+            {/* Primary Action Button */}
+            <button
+              type="button"
+              onClick={() => setIsCareGuidanceOpen(true)}
+              className="w-full py-3.5 px-4 bg-[#654BB9] hover:bg-[#583FA7] active:bg-[#4E359B] text-white rounded-2xl text-[13px] font-semibold flex items-center justify-between shadow-xs transition-all cursor-pointer"
+            >
+              <span>View Eleanor&apos;s care guidance</span>
+              <ChevronRight className="w-4 h-4 text-white/90" />
+            </button>
           </div>
 
-          {/* "YOUR TWIN IS STILL LEARNING" Banner */}
-          <div className="rounded-2xl p-4 bg-[#eeeaf6] border border-purple-200/50 shadow-2xs">
-            <span className="text-[9px] font-bold tracking-wider text-purple-700 uppercase">
-              YOUR TWIN IS STILL LEARNING
-            </span>
-            <h4 className="text-xs font-bold text-[#16122b] mt-0.5">
-              A more personal sleep baseline is on its way.
-            </h4>
-            <p className="text-[10.5px] text-slate-600 mt-0.5 leading-relaxed">
-              Your latest night: 6h 45m. More nights will help reveal your usual
-              rhythm.
+          {/* RECENT CARE CONTEXT CARD */}
+          <div className="bg-white rounded-[26px] p-5 shadow-xs border border-slate-100">
+            <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">
+              Recent care context
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5 mb-4">
+              Small details that help you understand her day.
             </p>
+
+            <div className="space-y-3.5">
+              {/* Item 1: 3:20 PM */}
+              <div className="flex items-start gap-3">
+                <span className="text-[11px] font-semibold text-purple-900/80 w-16 shrink-0 pt-0.5">
+                  3:20 PM
+                </span>
+                <div className="flex-1">
+                  <h4 className="text-[13px] font-bold text-slate-900 leading-tight">
+                    Restlessness beginning
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    More wrist movement, a little pacing.
+                  </p>
+                </div>
+              </div>
+
+              {/* Item 2: 11:00 AM */}
+              <div className="flex items-start gap-3">
+                <span className="text-[11px] font-semibold text-purple-900/80 w-16 shrink-0 pt-0.5">
+                  11:00 AM
+                </span>
+                <div className="flex-1">
+                  <h4 className="text-[13px] font-bold text-slate-900 leading-tight">
+                    A short spell of pacing
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Settled after organizing familiar books.
+                  </p>
+                </div>
+              </div>
+
+              {/* Item 3: 8:15 AM */}
+              <div className="flex items-start gap-3">
+                <span className="text-[11px] font-semibold text-purple-900/80 w-16 shrink-0 pt-0.5">
+                  8:15 AM
+                </span>
+                <div className="flex-1">
+                  <h4 className="text-[13px] font-bold text-slate-900 leading-tight">
+                    Morning medication refused
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Eleanor reported gum soreness.
+                  </p>
+                </div>
+              </div>
+
+              {/* Item 4: 7:45 AM */}
+              <div className="flex items-start gap-3">
+                <span className="text-[11px] font-semibold text-purple-900/80 w-16 shrink-0 pt-0.5">
+                  7:45 AM
+                </span>
+                <div className="flex-1">
+                  <h4 className="text-[13px] font-bold text-slate-900 leading-tight">
+                    Breakfast preference
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Enjoyed lukewarm pureed oatmeal.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Footer Disclaimer */}
+          {/* <div className="pt-2 pb-6 px-4 text-center">
+            <p className="text-[11px] text-slate-400 leading-relaxed max-w-xs mx-auto">
+              Insights support care decisions. They do not replace advice from
+              Eleanor&apos;s care team.
+            </p>
+          </div> */}
         </main>
       </div>
 
-      {/* Floating Sparkle Action Button in Bottom Right: truly floating above the scrollable viewport! */}
-      {!isDialogOpen && (
-        <div className="absolute bottom-5 right-5 z-30 pointer-events-auto">
+      {/* Modal: Eleanor's Life Story */}
+      {isLifeStoryOpen && (
+        <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-xs flex flex-col justify-end p-0 animate-in fade-in">
+          <div className="w-full bg-white rounded-t-3xl max-h-[85%] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200 overflow-hidden">
+            {/* Fixed Header */}
+            <div className="shrink-0 flex items-center justify-between border-b border-slate-100 p-5 pb-3.5 bg-white">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src={eleanor}
+                  alt={residentName}
+                  className="w-10 h-10 rounded-full object-cover border border-purple-200"
+                />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Eleanor Vance
+                  </h3>
+                  <p className="text-xs text-slate-500">Age 82 · Room 214</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsLifeStoryOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-5 pt-3 space-y-3 text-xs leading-relaxed text-slate-600 sleek-scrollbar">
+              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100">
+                <span className="font-semibold text-purple-900 block mb-1">
+                  Personal Biography & Interests
+                </span>
+                Eleanor was an elementary school librarian for 34 years in
+                Oakridge. She has a deep love for hardcover books, historical
+                fiction, and big band orchestra jazz (Glenn Miller, Benny
+                Goodman).
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="font-semibold text-slate-800 block mb-1">
+                  Calming Anchors & Familiar Routines
+                </span>
+                <ul className="list-disc list-inside space-y-1 text-slate-600">
+                  <li>
+                    Soft wool lavender blanket gifted by daughter Margaret.
+                  </li>
+                  <li>Holding or arranging classic literature books.</li>
+                  <li>Gentle lavender essential oil scent in the afternoon.</li>
+                  <li>Tea with a splash of warm milk around 4:00 PM.</li>
+                </ul>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="font-semibold text-slate-800 block mb-1">
+                  ⚠️ Known triggers
+                </span>
+                <ul className="list-disc list-inside space-y-1 text-slate-600">
+                  <li>Loud television</li>
+                  <li>Dim lighting</li>
+                  <li>Being rushed during transfers</li>
+                </ul>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="font-semibold text-slate-800 block mb-1">
+                  👨‍👩‍👧 Family Contacts
+                </span>
+                <p>
+                  Daughter: Margaret Vance (Primary Caregiver & Healthcare
+                  Proxy)
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Eleanor's Care Guidance */}
+      {isCareGuidanceOpen && (
+        <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-xs flex flex-col justify-end p-0 animate-in fade-in">
+          <div className="w-full bg-white rounded-t-3xl max-h-[85%] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200 overflow-hidden">
+            {/* Fixed Header */}
+            <div className="shrink-0 flex items-center justify-between border-b border-slate-100 p-5 pb-3.5 bg-white">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Care Guidance
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Personalized recommendations for Eleanor
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCareGuidanceOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-5 pt-3 space-y-2.5 text-xs text-slate-600 sleek-scrollbar">
+              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100 flex items-start gap-2.5">
+                <Music className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-purple-900">
+                    Afternoon Sundowning Protocol
+                  </h4>
+                  <p className="mt-0.5 text-purple-800/90 leading-relaxed">
+                    Begin sensory soothing 30 minutes before typical onset
+                    (around 3:30 PM). Dim overhead fluorescents and introduce
+                    warm ambient lamp light.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-2.5">
+                <BookOpen className="w-4 h-4 text-slate-700 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-slate-800">
+                    Meaningful Engagement
+                  </h4>
+                  <p className="mt-0.5 text-slate-600 leading-relaxed">
+                    Provide the hardcover bird identifier book. Eleanor finds
+                    turning pages tactilely soothing and organizing bookmarks
+                    reduces restlessness.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  onClick={() => {
+                    setIsCareGuidanceOpen(false);
+                    setIsTelemedicineCallOpen(true);
+                  }}
+                  className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                >
+                  <Video className="w-4 h-4" />
+                  <span>Connect with Care Team (Telemedicine)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="shrink-0 p-4 border-t border-slate-100 bg-white">
+              <button
+                onClick={() => setIsCareGuidanceOpen(false)}
+                className="w-full py-3 bg-[#654BB9] text-white font-medium text-xs rounded-xl hover:bg-[#583FA7] transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tele-Consultation In-App View */}
+      {isTelemedicineCallOpen && (
+        <div className="absolute inset-0 z-50 bg-[#F8F9FC] flex flex-col h-full w-full overflow-hidden select-none animate-in fade-in duration-150">
+          {/* Top Fixed Header */}
+          <div className="shrink-0 bg-white border-b border-slate-100 px-4 pt-10 pb-2.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#F0EBFA] flex items-center justify-center text-[#654BB9] shrink-0">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-[16px] font-bold text-slate-900 leading-tight">
+                    Tele-Consultation
+                  </h2>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    In progress · {formatCallTime(callSeconds)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTelemedicineCallOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
+                title="Minimize call"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Badges row */}
+            {/* <div className="flex items-center justify-between mt-2.5 pt-0.5">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-semibold border border-emerald-200/50">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>HIPAA &amp; E2E Protected</span>
+              </div>
+              <span className="text-[10px] font-medium text-emerald-700/90 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Encrypted Stream
+              </span>
+            </div> */}
+          </div>
+
+          {/* Doctor Card with Floating PiP */}
+          <div className="bg-black rounded-3xl mx-2 mt-2 p-4 shadow-2xs border border-slate-100 relative text-center">
+            {/* Floating Self Feed PiP (top-right) */}
+            <div className="absolute right-3.5 top-3.5 bg-[#F0EBFA] border border-purple-200/70 rounded-2xl px-3 py-2 text-right shadow-2xs">
+              <div className="flex items-center justify-end gap-1.5 text-[11px] font-bold text-purple-950">
+                <span>You (Mary)</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <p className="text-[10px] text-purple-700 font-medium leading-tight mt-0.5">
+                Live Self Feed
+              </p>
+              <p className="text-[9px] text-slate-500 font-normal leading-tight mt-0.5">
+                {isMicMuted ? "Mic Muted" : "Mic On"}
+              </p>
+            </div>
+
+            {/* Doctor Avatar */}
+            <div className="inline-block relative mt-1">
+              <img
+                src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300"
+                alt="Dr. Sarah Jenkins"
+                className="w-16 h-16 rounded-full object-cover border-2 border-[#654BB9] ring-4 ring-purple-100 shadow-xs mx-auto"
+              />
+            </div>
+
+            {/* Doctor Info */}
+            <h3 className="text-[17px] font-bold text-white mt-2 leading-tight">
+              Dr. Sarah Jenkins, MD
+            </h3>
+            <p className="text-xs text-slate-400 font-normal mt-0.5">
+              Clinical Telemedicine Lead
+            </p>
+            {/* <p className="text-xs font-semibold text-[#654BB9] mt-1.5">
+              Observing Continuous Telemetry
+            </p> */}
+
+            {/* Audio active indicator with animated sound waves */}
+            <div className="flex items-center justify-center gap-1.5 mt-1.5 text-[11px] font-medium text-green-500">
+              <span className="flex items-center gap-0.5">
+                <span className="w-0.5 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="w-0.5 h-3 bg-green-500 rounded-full animate-pulse [animation-delay:150ms]" />
+                <span className="w-0.5 h-2 bg-green-500 rounded-full animate-pulse [animation-delay:300ms]" />
+              </span>
+              <span>Audio active</span>
+            </div>
+
+            {/* Mic, Camera, and End Consult Controls */}
+            <div className="flex items-center justify-center gap-3 pt-5">
+              {/* Mic button */}
+              <button
+                type="button"
+                onClick={() => setIsMicMuted(!isMicMuted)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                  isMicMuted
+                    ? "bg-rose-50 text-rose-600 border border-rose-200"
+                    : "bg-[#F0EBFA] text-[#654BB9] border border-purple-100"
+                }`}
+                title={isMicMuted ? "Unmute microphone" : "Mute microphone"}
+              >
+                {isMicMuted ? (
+                  <MicOff className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* Camera button */}
+              <button
+                type="button"
+                onClick={() => setIsCameraOff(!isCameraOff)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                  isCameraOff
+                    ? "bg-rose-50 text-rose-600 border border-rose-200"
+                    : "bg-[#F0EBFA] text-[#654BB9] border border-purple-100"
+                }`}
+                title={isCameraOff ? "Turn on camera" : "Turn off camera"}
+              >
+                {isCameraOff ? (
+                  <VideoOff className="w-5 h-5" />
+                ) : (
+                  <Video className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* End Consult button */}
+              <button
+                type="button"
+                onClick={() => setIsTelemedicineCallOpen(false)}
+                className="py-2.5 px-4 bg-[#E11D48] hover:bg-[#BE123C] active:bg-[#9F1239] text-white rounded-full font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+              >
+                <PhoneOff className="w-4 h-4" />
+                {/* <span>End Consult</span> */}
+              </button>
+            </div>
+          </div>
+
+          {/* Scrollable Middle Area (Doctor card, Live Vitals, Collapsible Chat & Notes) */}
+          <div
+            className="flex-1 overflow-y-auto px-2 py-3 space-y-3"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {/* Live Vitals Strip */}
+            <div className="bg-white rounded-3xl p-3.5 shadow-2xs border border-slate-100">
+              <div className="flex items-center justify-between mb-2 px-0.5">
+                <span className="text-xs font-bold text-slate-900">
+                  Live vitals
+                </span>
+                <span className="text-[10px] font-medium text-emerald-700">
+                  Synced to Doctor HUD
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2">
+                {/* HR */}
+                <div className="bg-[#FAF9FD] rounded-2xl p-2 text-center border border-purple-50">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-semibold text-purple-900">
+                    <Heart className="w-3 h-3 text-purple-600" />
+                    <span>HR</span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 mt-0.5">
+                    {latestVital?.heartRate
+                      ? Math.round(parseFloat(latestVital.heartRate))
+                      : 72}
+                  </div>
+                  <div className="text-[9px] text-slate-400">bpm</div>
+                </div>
+
+                {/* BP */}
+                <div className="bg-[#FAF9FD] rounded-2xl p-2 text-center border border-purple-50">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-semibold text-purple-900">
+                    <Activity className="w-3 h-3 text-purple-600" />
+                    <span>BP</span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 mt-0.5">
+                    {latestVital?.systolicBP
+                      ? `${Math.round(parseFloat(latestVital.systolicBP))}/${
+                          latestVital?.diastolicBP
+                            ? Math.round(parseFloat(latestVital.diastolicBP))
+                            : 78
+                        }`
+                      : "120/78"}
+                  </div>
+                  <div className="text-[9px] text-slate-400">mmHg</div>
+                </div>
+
+                {/* SpO2 */}
+                <div className="bg-[#FAF9FD] rounded-2xl p-2 text-center border border-purple-50">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-semibold text-purple-900">
+                    <Droplets className="w-3 h-3 text-purple-600" />
+                    <span>SpO2</span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 mt-0.5">
+                    {latestVital?.oxygenSaturation
+                      ? `${Math.round(parseFloat(latestVital.oxygenSaturation))}%`
+                      : "98%"}
+                  </div>
+                  <div className="text-[9px] text-slate-400 opacity-0">-</div>
+                </div>
+
+                {/* Temp */}
+                <div className="bg-[#FAF9FD] rounded-2xl p-2 text-center border border-purple-50">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-semibold text-purple-900">
+                    <Thermometer className="w-3 h-3 text-purple-600" />
+                    <span>Temp</span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 mt-0.5">
+                    {latestVital?.bodyTemperature
+                      ? `${parseFloat(latestVital.bodyTemperature).toFixed(1)}°C`
+                      : "36.6°C"}
+                  </div>
+                  <div className="text-[9px] text-slate-400 opacity-0">-</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Collapsible Section: Consultation chat & clinical notes */}
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-2xs overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsChatExpanded(!isChatExpanded)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#654BB9]" />
+                  <span className="text-xs font-bold text-slate-900">
+                    Consultation chat &amp; clinical notes
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
+                    isChatExpanded ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isChatExpanded && (
+                <div className="px-4 pb-4 space-y-3 pt-1 border-t border-slate-100/60">
+                  {/* Genomic & Clinical Context */}
+                  <div className="bg-[#F7F4FD] border border-purple-100/80 rounded-2xl p-3 text-[11px] leading-relaxed">
+                    <div className="flex items-center gap-1.5 text-[#654BB9] font-bold mb-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Genomic &amp; Clinical Context</span>
+                    </div>
+                    <p className="text-slate-700 font-normal">
+                      Genomic Target: CAD PRS 84th pct &rarr; Systolic target
+                      &lt;125 mmHg
+                    </p>
+                    <p className="text-slate-700 font-normal mt-1">
+                      Pharmacogenomics: CYP2C19 poor metabolizer &rarr;
+                      Ticagrelor verified safe
+                    </p>
+                  </div>
+
+                  {/* Chat Messages */}
+                  <div className="space-y-3 pt-1">
+                    {chatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col ${
+                          msg.sender === "user" ? "items-end" : "items-start"
+                        }`}
+                      >
+                        <span className="text-[10px] text-slate-400 mb-1 px-1">
+                          {msg.sender === "doctor"
+                            ? "Dr. Sarah Jenkins"
+                            : "You"}{" "}
+                          · {msg.time}
+                        </span>
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                            msg.sender === "user"
+                              ? "bg-[#EEF2FF] text-slate-800 rounded-tr-xs"
+                              : "bg-slate-100 text-slate-800 rounded-tl-xs"
+                          }`}
+                        >
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Fixed Bottom Section (Input & Controls) */}
+          <div className="shrink-0 bg-white border-t border-slate-100 px-4 pt-3 pb-3.5 space-y-3 shadow-lg">
+            {/* Message Input Row */}
+            <form
+              onSubmit={handleSendConsultMessage}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Message Dr. Jenkins..."
+                className="flex-1 bg-white border border-slate-200 rounded-full px-4 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#654BB9] focus:ring-1 focus:ring-[#654BB9] transition-all"
+              />
+              <button
+                type="submit"
+                className="w-9 h-9 rounded-full bg-[#654BB9] hover:bg-[#583FA7] text-white flex items-center justify-center shrink-0 shadow-xs cursor-pointer transition-colors"
+                title="Send message"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+
+            {/* Mic, Camera, and End Consult Controls */}
+            <div className="hidden flex items-center justify-between gap-3">
+              {/* Mic button */}
+              <button
+                type="button"
+                onClick={() => setIsMicMuted(!isMicMuted)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                  isMicMuted
+                    ? "bg-rose-50 text-rose-600 border border-rose-200"
+                    : "bg-[#F0EBFA] text-[#654BB9] border border-purple-100"
+                }`}
+                title={isMicMuted ? "Unmute microphone" : "Mute microphone"}
+              >
+                {isMicMuted ? (
+                  <MicOff className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* Camera button */}
+              <button
+                type="button"
+                onClick={() => setIsCameraOff(!isCameraOff)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                  isCameraOff
+                    ? "bg-rose-50 text-rose-600 border border-rose-200"
+                    : "bg-[#F0EBFA] text-[#654BB9] border border-purple-100"
+                }`}
+                title={isCameraOff ? "Turn on camera" : "Turn off camera"}
+              >
+                {isCameraOff ? (
+                  <VideoOff className="w-5 h-5" />
+                ) : (
+                  <Video className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* End Consult button */}
+              <button
+                type="button"
+                onClick={() => setIsTelemedicineCallOpen(false)}
+                className="flex-1 py-2.5 px-4 bg-[#E11D48] hover:bg-[#BE123C] active:bg-[#9F1239] text-white rounded-full font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+              >
+                <PhoneOff className="w-4 h-4" />
+                <span>End Consult</span>
+              </button>
+            </div>
+
+            {/* Footer note */}
+            <p className="text-[10px] text-slate-400 text-center leading-none">
+              Your consultation is private and encrypted
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Action Button for AI Agent */}
+      {!isTelemedicineCallOpen && (
+        <div className="absolute bottom-5 right-5 z-40">
           <button
             type="button"
             onClick={() => setIsDialogOpen(true)}
-            aria-label="Open Sentinel AI Companion"
-            className="w-11 h-11 rounded-full bg-[#1e1738] hover:bg-[#2b2150] text-white flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+            aria-label="Open LifeTwin AI Companion"
+            className="w-12 h-12 rounded-full bg-[#1e1738] hover:bg-[#2b2150] active:scale-95 text-white flex items-center justify-center shadow-xl hover:shadow-2xl transition-all cursor-pointer group border border-purple-400/30 ring-4 ring-purple-500/10"
           >
-            <SparkleIcon className="w-4.5 h-4.5 fill-white transition-transform group-hover:rotate-12" />
+            <SparkleIcon className="w-5 h-5 fill-white transition-transform group-hover:rotate-12" />
           </button>
         </div>
       )}
 
-      {/* In-Phone AI Companion Dialog (strictly inside mobile screen bounds) */}
+      {/* Confined in-phone AI Dialog */}
       {isDialogOpen && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-3 animate-in fade-in duration-150">
           {/* Backdrop confined to phone screen */}
           <div
             onClick={() => setIsDialogOpen(false)}
-            className="absolute inset-0 bg-black/10"
+            className="absolute inset-0 bg-black/40"
           />
 
           {/* Dialog Card inside phone screen */}
           <div className="relative w-full max-w-[320px] bg-white/50 backdrop-blur-md rounded-2xl shadow-2xl border border-purple-100 p-3.5 flex flex-col gap-2.5 z-10 animate-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-2 border-b border-white">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-purple-700">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-white">
-                    Sentinel AI Companion
+                  <h3 className="text-xs font-bold text-black">
+                    LifeTwin AI Companion
                   </h3>
-                  <p className="text-[9.5px] text-slate-200">
+                  <p className="text-[9.5px] text-gray-800">
                     Personal health twin intelligence
                   </p>
                 </div>
@@ -1597,14 +1355,14 @@ export function MobileDashboardView({
 
               <button
                 onClick={() => setIsDialogOpen(false)}
-                className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-white hover:text-slate-700 transition-colors cursor-pointer"
+                className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
             {/* Chat Messages */}
-            <div className="h-[400px] overflow-y-auto space-y-2 pr-1 text-xs">
+            <div className="h-[400px] overflow-y-auto space-y-2 pr-1 text-xs sleek-scrollbar">
               {messages.map((m) => (
                 <div
                   key={m.id}
@@ -1613,24 +1371,52 @@ export function MobileDashboardView({
                   }`}
                 >
                   <div
-                    className={`p-2.5 rounded-2xl max-w-[88%] text-[11px] leading-relaxed ${
+                    className={`p-2.5 rounded-2xl max-w-[88%] text-[11px] font-semibold leading-relaxed ${
                       m.role === "user"
                         ? "bg-[#1e1738] text-white rounded-br-xs"
-                        : "bg-[#F5F3FB] text-slate-800 border border-purple-100 rounded-bl-xs"
+                        : "bg-[#F5F3FB] text-slate-900 border border-purple-100 rounded-bl-xs"
                     }`}
                   >
-                    {m.text}
+                    {m.role === "user" ? (
+                      m.text
+                    ) : (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }: any) => (
+                            <p className="mb-1.5 last:mb-0">{children}</p>
+                          ),
+                          strong: ({ children }: any) => (
+                            <strong className="font-bold text-slate-900">
+                              {children}
+                            </strong>
+                          ),
+                          ul: ({ children }: any) => (
+                            <ul className="list-disc pl-3.5 space-y-0.5 my-1">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }: any) => (
+                            <ol className="list-decimal pl-3.5 space-y-0.5 my-1">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }: any) => <li>{children}</li>,
+                        }}
+                      >
+                        {m.text}
+                      </ReactMarkdown>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Quick Suggestion Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[9.5px]">
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-2 text-[9.5px] border-t border-white">
               {[
-                "Compare with baseline",
-                "How is my heart rhythm?",
-                "What should I do tonight?",
+                "Why is Eleanor’s behavior different today?”",
+                // "How is my heart rhythm?",
+                // "What should I do tonight?",
               ].map((chip) => (
                 <button
                   key={chip}
@@ -1643,14 +1429,14 @@ export function MobileDashboardView({
             </div>
 
             {/* Input & Send Bar */}
-            <div className="flex items-center gap-1.5 pt-1">
+            <div className="flex items-center gap-1.5">
               <Input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSendMessage();
                 }}
-                placeholder="Ask Sentinel AI Companion..."
+                placeholder="ask LifeTwin..."
                 className="h-8 text-[11px] rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-purple-500"
               />
               <button
@@ -1667,5 +1453,3 @@ export function MobileDashboardView({
     </div>
   );
 }
-
-export default MobileDashboardView;
