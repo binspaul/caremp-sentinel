@@ -2,9 +2,11 @@ import axios from "axios";
 import { VitalRecord } from "./types/vital";
 import { LoginResponse } from "./types/login";
 import { ResidentDigitalTwinData } from "./types/digitalTwin";
+import { Resident } from "./types/resident";
 
 export const BASE_URL =
-  (import.meta.env && import.meta.env.VITE_APP_BASE_URL) || "http://localhost:4000";
+  (import.meta.env && import.meta.env.VITE_APP_BASE_URL) ||
+  "http://localhost:4000";
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -14,7 +16,8 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("accessToken") || localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -35,6 +38,7 @@ export async function loginUser(
 
   if (data?.token) {
     localStorage.setItem("token", data.token);
+    localStorage.setItem("accessToken", data.token);
     if (data.refreshToken) {
       localStorage.setItem("refreshToken", data.refreshToken);
     }
@@ -116,6 +120,22 @@ export async function getDigitalTwin(
   return data;
 }
 
+export async function getResidentDetails(
+  residentId: number,
+): Promise<Resident> {
+  const token = localStorage.getItem("token") || "";
+  const response = await api.get(`/v1/residents/${residentId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      accessToken: token,
+      "x-access-token": token,
+    },
+  });
+
+  const data = response.data?.data || response.data;
+  return data;
+}
+
 export interface AgentChatResponse {
   response: string;
   status: string;
@@ -160,7 +180,9 @@ export interface FallIncidentData {
   detectedAt: string;
 }
 
-export async function getLatestUnresolvedFall(residentId?: number): Promise<FallIncidentData | null> {
+export async function getLatestUnresolvedFall(
+  residentId?: number,
+): Promise<FallIncidentData | null> {
   try {
     const token = localStorage.getItem("token") || "";
     const response = await api.get("/v1/falls/latest-unresolved", {
@@ -178,7 +200,7 @@ export async function getLatestUnresolvedFall(residentId?: number): Promise<Fall
 export async function resolveFallIncident(
   id: number,
   status: "resolved_false_alarm" | "resolved_assisted" | "emergency_dispatched",
-  notes?: string
+  notes?: string,
 ): Promise<any> {
   const token = localStorage.getItem("token") || "";
   const response = await api.post(
@@ -186,18 +208,24 @@ export async function resolveFallIncident(
     {
       status,
       resolvedBy: "Resident (Patient App)",
-      resolutionNotes: notes || (status === "resolved_false_alarm" ? "Resident confirmed OK from bedside tablet/mobile." : "Assistance requested by resident."),
+      resolutionNotes:
+        notes ||
+        (status === "resolved_false_alarm"
+          ? "Resident confirmed OK from bedside tablet/mobile."
+          : "Assistance requested by resident."),
     },
     {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    }
+    },
   );
   return response.data;
 }
 
-export async function getResidentGenomicProfile(residentId: number = 1): Promise<any | null> {
+export async function getResidentGenomicProfile(
+  residentId: number = 1,
+): Promise<any | null> {
   try {
     const token = localStorage.getItem("token") || "";
     const response = await api.get(`/v1/genomics/resident/${residentId}`, {
@@ -211,14 +239,19 @@ export async function getResidentGenomicProfile(residentId: number = 1): Promise
   }
 }
 
-export async function getResidentHealthspan(residentId: number = 1): Promise<any | null> {
+export async function getResidentHealthspan(
+  residentId: number = 1,
+): Promise<any | null> {
   try {
     const token = localStorage.getItem("token") || "";
-    const response = await api.get(`/v1/healthspan/resident/${residentId}/latest`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const response = await api.get(
+      `/v1/healthspan/resident/${residentId}/latest`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
     return response.data?.data || null;
   } catch {
     return null;

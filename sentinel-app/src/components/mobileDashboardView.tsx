@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Sparkles,
   User,
@@ -23,6 +23,11 @@ import {
   Thermometer,
   LogOut,
   Footprints,
+  RefreshCw,
+  MapPin,
+  Clock,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import type { VitalRecord } from "@/types/vital";
 import type { ResidentDigitalTwinData } from "../types/digitalTwin";
@@ -30,11 +35,14 @@ import { Input } from "@/components/ui/input";
 import { sendAgentChatMessage } from "../api";
 import wavyBg from "@/assets/purpleWavyBg.png";
 import eleanor from "@/assets/eleanor.png";
+import { Resident } from "@/types/resident";
+import sentinelLogo from "@/assets/CLogo.png";
 
 export interface MobileDashboardViewProps {
   latestVital?: VitalRecord | null;
   trendVitals?: VitalRecord[];
   digitalTwin?: ResidentDigitalTwinData;
+  residentDetails?: Resident;
   currentUser?: {
     firstName?: string;
     lastName?: string;
@@ -42,6 +50,7 @@ export interface MobileDashboardViewProps {
   } | null;
   onSignOut?: () => void;
   onOpenTelemedicine?: () => void;
+  onRefreshVitals?: () => void;
 }
 
 // 4-pointed diamond sparkle icon matching careMP sentinel mark
@@ -107,9 +116,11 @@ export function MobileDashboardView({
   latestVital,
   trendVitals: _trendVitals = [],
   digitalTwin: _digitalTwin,
+  residentDetails,
   currentUser,
   onSignOut,
   onOpenTelemedicine: _onOpenTelemedicine,
+  onRefreshVitals,
 }: MobileDashboardViewProps) {
   const [completedSteps, setCompletedSteps] = useState<{
     [key: string]: boolean;
@@ -118,6 +129,19 @@ export function MobileDashboardView({
   const [isCareGuidanceOpen, setIsCareGuidanceOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isHealthDialogOpen, setIsHealthDialogOpen] = useState(false);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isRefreshingVitals, setIsRefreshingVitals] = useState(false);
+
+  const handleRefreshVitals = async () => {
+    if (!onRefreshVitals || isRefreshingVitals) return;
+    setIsRefreshingVitals(true);
+    try {
+      await onRefreshVitals();
+    } finally {
+      setTimeout(() => setIsRefreshingVitals(false), 500);
+    }
+  };
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<
     { id: string; role: "user" | "assistant"; text: string }[]
@@ -141,9 +165,34 @@ export function MobileDashboardView({
     },
   ]);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
+  useEffect(() => {
+    if (isDialogOpen) {
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, isDialogOpen, isChatLoading]);
+
   const handleSendMessage = async (customText?: string) => {
     const text = (customText || chatInput).trim();
-    if (!text) return;
+    if (!text || isChatLoading) return;
 
     const userMsg = {
       id: `u-${Date.now()}`,
@@ -152,6 +201,7 @@ export function MobileDashboardView({
     };
     setMessages((prev) => [...prev, userMsg]);
     setChatInput("");
+    setIsChatLoading(true);
 
     try {
       const res = await sendAgentChatMessage(text, 1);
@@ -160,6 +210,7 @@ export function MobileDashboardView({
           ...prev,
           { id: `a-${Date.now()}`, role: "assistant", text: res.response },
         ]);
+        setIsChatLoading(false);
         return;
       }
     } catch (e) {
@@ -186,7 +237,8 @@ export function MobileDashboardView({
         ...prev,
         { id: `a-${Date.now()}`, role: "assistant", text: reply },
       ]);
-    }, 400);
+      setIsChatLoading(false);
+    }, 600);
   };
 
   // Tele-Consultation state
@@ -265,6 +317,155 @@ export function MobileDashboardView({
   const residentAge = "82";
   const roomNumber = "214";
 
+  const now = new Date();
+  const currentHour = now.getHours();
+  const timeOfDay =
+    currentHour < 12 ? "morning" : currentHour < 17 ? "afternoon" : "evening";
+  const greeting =
+    currentHour < 12
+      ? "Good morning"
+      : currentHour < 17
+        ? "Good afternoon"
+        : "Good evening";
+  const currentDate = `${now.toLocaleDateString("en-US", {
+    weekday: "long",
+  })}, ${now.getDate()} ${now.toLocaleDateString("en-US", {
+    month: "short",
+  })}`;
+
+  const sundowningSummary = {
+    CALM: {
+      text1: "Eleanor is calm and appears comfortable right now.",
+      text2:
+        "Her heart rate and movement have remained steady, suggesting she is feeling settled and comfortable right now.",
+      text3:
+        "A quiet environment and familiar routines may help her stay relaxed.",
+    },
+    RESTLESS: {
+      text1: "Eleanor may need a little extra reassurance right now.",
+      text2:
+        "Increased movement and a slightly elevated heart rate suggest she may be feeling restless or having difficulty settling.",
+      text3:
+        "A familiar activity, gentle reassurance, or her favorite music may help her settle.",
+    },
+    SUNDOWNING_SURGE: {
+      text1: "Eleanor may need a calmer afternoon and extra reassurance.",
+      text2:
+        " Rising movement and heart rate in the late afternoon match a pattern of increased evening restlessness.",
+      text3:
+        "Familiar music, softer lighting, and her lavender blanket may help her feel calm and comfortable.",
+    },
+  };
+
+  const heartRateValue = latestVital?.heartRate
+    ? Math.round(parseFloat(latestVital.heartRate))
+    : 78;
+  const bpValue = latestVital?.systolicBP
+    ? `${Math.round(parseFloat(latestVital.systolicBP))}/${
+        latestVital?.diastolicBP
+          ? Math.round(parseFloat(latestVital.diastolicBP))
+          : 78
+      }`
+    : "120/78";
+  const spo2Value = latestVital?.oxygenSaturation
+    ? Math.round(parseFloat(latestVital.oxygenSaturation))
+    : 98;
+  const tempValue = latestVital?.bodyTemperature
+    ? parseFloat(latestVital.bodyTemperature).toFixed(1)
+    : "37.1";
+
+  const getRoundedBaseline = (entry: any, fallback: number): number => {
+    if (entry === null || entry === undefined) return fallback;
+    const raw =
+      typeof entry === "object" && entry !== null && "value" in entry
+        ? entry.value
+        : entry;
+    const num = typeof raw === "number" ? raw : parseFloat(raw);
+    return isNaN(num) ? fallback : Math.round(num);
+  };
+
+  const hrBaseline = getRoundedBaseline(_digitalTwin?.baselines?.heartRate, 72);
+  const sysBaseline = getRoundedBaseline(
+    _digitalTwin?.baselines?.systolicBP,
+    120,
+  );
+  const diaBaseline = getRoundedBaseline(
+    _digitalTwin?.baselines?.diastolicBP,
+    80,
+  );
+  const spo2Baseline = getRoundedBaseline(_digitalTwin?.baselines?.spo2, 98);
+  const tempBaseline = getRoundedBaseline(
+    _digitalTwin?.baselines?.bodyTemperature,
+    37,
+  );
+
+  const healthCards = [
+    {
+      title: "Heart rate",
+      value: heartRateValue,
+      unit: "bpm",
+      variation: "+1",
+      baseline: `${hrBaseline} bpm`,
+      trend: "up" as const,
+      icon: Heart,
+      iconBg: "bg-rose-100 text-rose-600",
+      trendColor: "text-amber-700 border-amber-200/60",
+    },
+    {
+      title: "BP",
+      value: bpValue,
+      unit: "mmHg",
+      variation: "-1",
+      baseline: `${sysBaseline}/${diaBaseline} mmHg`,
+      trend: "down" as const,
+      icon: Activity,
+      iconBg: "bg-indigo-100 text-indigo-600",
+      trendColor: "text-blue-700 border-blue-200/60",
+    },
+    {
+      title: "SpO₂",
+      value: `${spo2Value}%`,
+      unit: "",
+      variation: "+1",
+      baseline: `${spo2Baseline}%`,
+      trend: "up" as const,
+      icon: Droplets,
+      iconBg: "bg-teal-100 text-teal-600",
+      trendColor: "text-emerald-700 border-emerald-200/60",
+    },
+    {
+      title: "Temperature",
+      value: `${tempValue}°C`,
+      unit: "",
+      variation: "+1",
+      baseline: `${tempBaseline}°C`,
+      trend: "up" as const,
+      icon: Thermometer,
+      iconBg: "bg-amber-100 text-amber-600",
+      trendColor: "text-amber-700 border-amber-200/60",
+    },
+  ];
+
+  const wanderingData = _digitalTwin?.healthInsights?.wandering;
+  const wanderingLocation =
+    wanderingData?.currentLocation || `Room ${roomNumber}`;
+  const isSafeZone = wanderingData?.isSafeZone ?? true;
+  const wanderingStatusRaw = wanderingData?.wanderingStatus || "SAFE_IN_ROOM";
+  const wanderingStatusFormatted = wanderingStatusRaw
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
+  const elopementRisk = wanderingData?.elopementRisk || "LOW";
+  const riskScore = wanderingData?.riskScore ?? 14;
+  const pacingLoopCount = wanderingData?.pacingLoopCount ?? 2;
+  const minutesOutOfBed = wanderingData?.minutesOutOfBed ?? 18;
+  const nightBedExit = wanderingData?.nightBedExit ?? false;
+  const actionAlert = wanderingData?.actionAlert || null;
+  const contributingFactors = wanderingData?.contributingFactors || [
+    "Mild restlessness",
+    "Late afternoon corridor movement",
+  ];
+
   return (
     <div className="w-full h-full relative overflow-hidden flex flex-col font-sans select-none">
       {/* Scrollable Container */}
@@ -276,9 +477,10 @@ export function MobileDashboardView({
         <header className="w-full px-5 pt-10 pb-2 flex items-center justify-between sticky top-0 z-20 bg-[#F8F9FC]/90 backdrop-blur-md">
           {/* careMP SENTINEL Logo */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#654BB9] flex items-center justify-center text-white shadow-xs">
+            {/* <div className="w-8 h-8 rounded-full bg-[#654BB9] flex items-center justify-center text-white shadow-xs">
               <SparkleIcon className="w-4 h-4 fill-white" />
-            </div>
+            </div> */}
+            <img src={sentinelLogo} width={30} height={30} />
             <div className="flex flex-col">
               <span className="text-[17px] font-bold text-slate-900 tracking-tight leading-none">
                 careMP
@@ -349,7 +551,7 @@ export function MobileDashboardView({
 
         {/* Content Stream */}
         <main className="px-4 pt-4 space-y-4">
-          <div className="flex items-center gap-2.5">
+          {/* <div className="flex items-center gap-2.5">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-medium border border-emerald-200/50">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Updated 3:40 PM</span>
@@ -357,11 +559,14 @@ export function MobileDashboardView({
             <span className="text-xs text-slate-400 font-normal">
               Thursday, 14 May
             </span>
-          </div>
+          </div> */}
+          <span className="text-xs text-slate-700 font-normal">
+            {currentDate}
+          </span>
           {/* Greeting Section */}
           <div className="">
             <h1 className="text-[26px] font-bold tracking-tight text-slate-900 leading-tight">
-              Good afternoon, {caregiverName}.
+              {greeting}, {caregiverName}.
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               Here&apos;s how {residentName} is doing today
@@ -383,19 +588,24 @@ export function MobileDashboardView({
 
               {/* Main Headline */}
               <h2 className="text-[21px] font-bold text-white tracking-tight leading-snug mb-2.5">
-                Checking in on Eleanor this afternoon.
+                Checking in on Eleanor this {timeOfDay}.
               </h2>
 
               {/* Description */}
               <p className="text-[13px] text-purple-100/95 leading-relaxed font-normal mb-3.5">
-                Her sleep was slightly disrupted last night. She was calm this
-                morning, but is becoming a little restless now.
+                {_digitalTwin?.aiSummary ||
+                  `Her sleep was slightly disrupted last night. She was calm this
+                morning, but is becoming a little restless now.`}
               </p>
 
               {/* Status Badge */}
               <div className="flex items-center gap-2 text-purple-100 text-xs font-medium mb-3.5">
                 <ShieldCheck className="w-4 h-4 text-purple-200 shrink-0" />
-                <span>Safe in her room · Room {roomNumber}</span>
+                <span>
+                  Current location ·{" "}
+                  {_digitalTwin?.healthInsights?.wandering?.currentLocation ||
+                    `Room ${roomNumber}`}
+                </span>
               </div>
 
               {/* Eleanor Resident Subcard / Pill */}
@@ -485,21 +695,34 @@ export function MobileDashboardView({
                 Sundowning Watch
               </h3>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FDF3E7] text-[#B45309] border border-[#FCD9B6]">
-                Restless
+                {_digitalTwin?.healthInsights?.sundowning?.status
+                  ?.toLowerCase()
+                  .replace(/^./, (char) => char.toUpperCase()) || "Restless"}
               </span>
             </div>
 
             <h4 className="text-[15px] font-bold text-slate-800 mt-2 mb-1.5 leading-snug">
-              Eleanor may need a calmer afternoon.
+              {
+                sundowningSummary[
+                  _digitalTwin?.healthInsights?.sundowning?.status ?? "CALM"
+                ].text1
+              }
             </h4>
 
             <p className="text-[13px] text-slate-600 leading-relaxed mb-3">
-              More wrist movement and a rising heart rate match her usual
-              late-afternoon restlessness.
+              {
+                sundowningSummary[
+                  _digitalTwin?.healthInsights?.sundowning?.status ?? "CALM"
+                ].text2
+              }
             </p>
 
             <p className="text-[13px] font-medium text-purple-700 leading-relaxed">
-              Familiar music and her lavender blanket may help right now.
+              {
+                sundowningSummary[
+                  _digitalTwin?.healthInsights?.sundowning?.status ?? "CALM"
+                ].text3
+              }
             </p>
           </div>
 
@@ -528,7 +751,9 @@ export function MobileDashboardView({
                     {sleepValue}
                   </span>
                   <span className="block text-xs text-slate-500 mt-0.5">
-                    3 awakenings · Mild disruption
+                    {sleepValue === "0"
+                      ? "3 awakenings · Mild disruption"
+                      : "No Sleep recorded"}
                   </span>
                 </div>
               </div>
@@ -552,7 +777,10 @@ export function MobileDashboardView({
               </div>
 
               {/* Health */}
-              <div className="py-3.5 flex items-start gap-3.5">
+              <div
+                onClick={() => setIsHealthDialogOpen(true)}
+                className="py-3.5 flex items-start gap-3.5 hover:bg-slate-50/80 active:bg-slate-100/60 cursor-pointer transition-all rounded-xl px-2 -mx-2"
+              >
                 <div className="mt-0.5 shrink-0">
                   <Heart className="w-4 h-4 text-amber-800" />
                 </div>
@@ -567,10 +795,15 @@ export function MobileDashboardView({
                     Higher pulse and temperature
                   </span>
                 </div>
+
+                <ChevronRight className="w-5 h-5 mt-5 text-slate-400" />
               </div>
 
               {/* Location & movement */}
-              <div className="pt-3.5 flex items-start gap-3.5">
+              <div
+                onClick={() => setIsLocationDialogOpen(true)}
+                className="pt-3.5 flex items-start gap-3.5 hover:bg-slate-50/80 active:bg-slate-100/60 cursor-pointer transition-all rounded-xl px-2 -mx-2"
+              >
                 <div className="mt-0.5 shrink-0">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 </div>
@@ -579,12 +812,13 @@ export function MobileDashboardView({
                     Location & movement
                   </span>
                   <span className="block text-sm font-bold text-slate-900 mt-0.5">
-                    Safe in her room
+                    {wanderingStatusFormatted}
                   </span>
                   <span className="block text-xs text-slate-500 mt-0.5">
-                    No active wandering alert
+                    {actionAlert || "No active wandering alert"}
                   </span>
                 </div>
+                <ChevronRight className="w-5 h-5 mt-5 text-slate-400" />
               </div>
             </div>
           </div>
@@ -804,7 +1038,11 @@ export function MobileDashboardView({
                   <h3 className="text-base font-bold text-slate-900">
                     Eleanor Vance
                   </h3>
-                  <p className="text-xs text-slate-500">Age 82 · Room 214</p>
+                  <p className="text-xs text-slate-500">
+                    Age {residentDetails?.age || residentAge} ·{" "}
+                    {_digitalTwin?.healthInsights?.wandering?.currentLocation ||
+                      `Room ${roomNumber}`}
+                  </p>
                 </div>
               </div>
               <button
@@ -821,27 +1059,49 @@ export function MobileDashboardView({
                 <span className="font-semibold text-purple-900 block mb-1">
                   Personal Biography & Interests
                 </span>
-                Eleanor was an elementary school librarian for 34 years in
+                {residentDetails?.description ||
+                  `Eleanor was an elementary school librarian for 34 years in
                 Oakridge. She has a deep love for hardcover books, historical
                 fiction, and big band orchestra jazz (Glenn Miller, Benny
-                Goodman).
+                Goodman).`}
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-purple-100">
                 <span className="font-semibold text-slate-800 block mb-1">
-                  Calming Anchors & Familiar Routines
+                  Notes
                 </span>
-                <ul className="list-disc list-inside space-y-1 text-slate-600">
-                  <li>
-                    Soft wool lavender blanket gifted by daughter Margaret.
-                  </li>
-                  <li>Holding or arranging classic literature books.</li>
-                  <li>Gentle lavender essential oil scent in the afternoon.</li>
-                  <li>Tea with a splash of warm milk around 4:00 PM.</li>
-                </ul>
+                {residentDetails?.notes ||
+                  `Active medications: Donepezil 5mg daily. Monitored for sundowning agitation, circadian rhythm inversion, and hallway pacing.`}
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="p-3 bg-green-50 rounded-2xl border border-slate-100">
+                <span className="font-semibold text-slate-800 block mb-1">
+                  🌿Calming Anchors & Familiar Routines
+                </span>
+                {residentDetails?.specialNotes ? (
+                  <ul className="list-disc list-inside space-y-1 text-slate-600">
+                    {residentDetails.specialNotes
+                      .replace(/^Personalized anchors:\s*/i, "")
+                      .split(",")
+                      .map((note, index) => (
+                        <li key={index}>{note.trim()}</li>
+                      ))}
+                  </ul>
+                ) : (
+                  <ul className="list-disc list-inside space-y-1 text-slate-600">
+                    <li>
+                      Soft wool lavender blanket gifted by daughter Margaret.
+                    </li>
+                    <li>Holding or arranging classic literature books.</li>
+                    <li>
+                      Gentle lavender essential oil scent in the afternoon.
+                    </li>
+                    <li>Tea with a splash of warm milk around 4:00 PM.</li>
+                  </ul>
+                )}
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-2xl border border-slate-100">
                 <span className="font-semibold text-slate-800 block mb-1">
                   ⚠️ Known triggers
                 </span>
@@ -852,7 +1112,7 @@ export function MobileDashboardView({
                 </ul>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="p-3 bg-pink-50 rounded-2xl border border-slate-100">
                 <span className="font-semibold text-slate-800 block mb-1">
                   👨‍👩‍👧 Family Contacts
                 </span>
@@ -990,7 +1250,7 @@ export function MobileDashboardView({
           {/* Doctor Card with Floating PiP */}
           <div className="bg-black rounded-3xl mx-2 mt-2 p-4 shadow-2xs border border-slate-100 relative text-center">
             {/* Floating Self Feed PiP (top-right) */}
-            <div className="absolute right-3.5 top-3.5 bg-[#F0EBFA] border border-purple-200/70 rounded-2xl px-3 py-2 text-right shadow-2xs">
+            <div className="absolute right-3.5 top-3.5 bg-[#F0EBFA] border border-purple-200/70 rounded-lg px-3 py-2 text-right shadow-2xs">
               <div className="flex items-center justify-end gap-1.5 text-[11px] font-bold text-purple-950">
                 <span>You (Mary)</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1332,13 +1592,13 @@ export function MobileDashboardView({
           {/* Backdrop confined to phone screen */}
           <div
             onClick={() => setIsDialogOpen(false)}
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/80"
           />
 
           {/* Dialog Card inside phone screen */}
-          <div className="relative w-full max-w-[320px] bg-white/50 backdrop-blur-md rounded-2xl shadow-2xl border border-purple-100 p-3.5 flex flex-col gap-2.5 z-10 animate-in zoom-in-95 duration-150">
+          <div className="relative w-full max-w-[320px] bg-white backdrop-blur-md rounded-2xl shadow-2xl p-3.5 flex flex-col gap-2.5 z-10 animate-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-white">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-purple-700">
                   <Sparkles className="w-4 h-4" />
@@ -1355,14 +1615,17 @@ export function MobileDashboardView({
 
               <button
                 onClick={() => setIsDialogOpen(false)}
-                className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
             {/* Chat Messages */}
-            <div className="h-[400px] overflow-y-auto space-y-2 pr-1 text-xs sleek-scrollbar">
+            <div
+              ref={messagesContainerRef}
+              className="h-[400px] overflow-y-auto space-y-2 pr-1 text-xs sleek-scrollbar"
+            >
               {messages.map((m) => (
                 <div
                   key={m.id}
@@ -1373,7 +1636,7 @@ export function MobileDashboardView({
                   <div
                     className={`p-2.5 rounded-2xl max-w-[88%] text-[11px] font-semibold leading-relaxed ${
                       m.role === "user"
-                        ? "bg-[#1e1738] text-white rounded-br-xs"
+                        ? "bg-violet-200 text-slate-900 rounded-br-xs"
                         : "bg-[#F5F3FB] text-slate-900 border border-purple-100 rounded-bl-xs"
                     }`}
                   >
@@ -1409,10 +1672,23 @@ export function MobileDashboardView({
                   </div>
                 </div>
               ))}
+              {isChatLoading && (
+                <div className="flex flex-col items-start animate-in fade-in duration-200">
+                  <div className="p-2.5 px-3 rounded-2xl bg-[#F5F3FB] border border-purple-100 rounded-bl-xs flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" />
+                    <span className="text-[10px] text-purple-700 font-medium ml-1">
+                      Thinking...
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Quick Suggestion Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pt-2 text-[9.5px] border-t border-white">
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-2 text-[9.5px] border-t border-slate-200">
               {[
                 "Why is Eleanor’s behavior different today?”",
                 // "How is my heart rhythm?",
@@ -1420,8 +1696,9 @@ export function MobileDashboardView({
               ].map((chip) => (
                 <button
                   key={chip}
+                  disabled={isChatLoading}
                   onClick={() => handleSendMessage(chip)}
-                  className="shrink-0 px-2.5 py-1 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/60 font-medium transition-colors cursor-pointer"
+                  className="shrink-0 px-2.5 py-1 rounded-full bg-purple-50 hover:bg-purple-100 disabled:opacity-50 text-purple-700 border border-purple-200/60 font-medium transition-colors cursor-pointer"
                 >
                   {chip}
                 </button>
@@ -1432,21 +1709,336 @@ export function MobileDashboardView({
             <div className="flex items-center gap-1.5">
               <Input
                 value={chatInput}
+                disabled={isChatLoading}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSendMessage();
+                  if (e.key === "Enter" && !isChatLoading) handleSendMessage();
                 }}
-                placeholder="ask LifeTwin..."
-                className="h-8 text-[11px] rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-purple-500"
+                placeholder={
+                  isChatLoading ? "LifeTwin is thinking..." : "Ask LifeTwin..."
+                }
+                className="h-8 text-[11px] rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-purple-500 disabled:opacity-60"
               />
               <button
                 onClick={() => handleSendMessage()}
-                disabled={!chatInput.trim()}
+                disabled={!chatInput.trim() || isChatLoading}
                 className="h-8 w-8 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs"
               >
-                <Send className="w-3 h-3" />
+                {isChatLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3 h-3" />
+                )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Confined in-phone Health Dialog */}
+      {isHealthDialogOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-3 animate-in fade-in duration-150">
+          {/* Backdrop confined to phone screen */}
+          <div
+            onClick={() => setIsHealthDialogOpen(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+          />
+
+          {/* Dialog Card inside phone screen */}
+          <div className="relative w-full max-w-[340px] bg-white rounded-3xl shadow-2xl border border-slate-100 p-5 flex flex-col gap-4 z-10 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
+                  <Heart className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Health</h3>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Current vital signs & trends
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleRefreshVitals}
+                  disabled={isRefreshingVitals}
+                  title="Refresh vitals"
+                  className="w-7 h-7 rounded-full hover:bg-slate-100 active:scale-95 flex items-center justify-center text-slate-400 hover:text-purple-600 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      isRefreshingVitals ? "animate-spin text-purple-600" : ""
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={() => setIsHealthDialogOpen(false)}
+                  className="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* 4 Health Cards Grid */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {healthCards.map((card) => (
+                <div
+                  key={card.title}
+                  className="bg-[#FAF9FD] rounded-2xl p-3 border border-purple-100/70 flex flex-col justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center ${card.iconBg}`}
+                    >
+                      <card.icon className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-500 block">
+                      {card.title}
+                    </span>
+                  </div>
+                  <div className="mt-2.5">
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-lg font-bold text-slate-900 tracking-tight">
+                        {card.value}
+                      </span>
+                      {card.unit && (
+                        <span className="text-[10px] font-medium text-slate-400">
+                          {card.unit}
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className={`flex items-center justify-start gap-1 text-[10px] text-gray-500 font-bold  py-0.5 rounded-full`}
+                    >
+                      <span>
+                        <span className="text-slate-400 font-normal">
+                          baseline:
+                        </span>{" "}
+                        {card.baseline}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* <div
+                      className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${card.trendColor}`}
+                    >
+                      {card.trend === "up" ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      <span>{card.variation}</span>
+                    </div> */}
+
+            {/* Context Note */}
+            {/* <div className="bg-amber-50/70 rounded-xl p-2.5 border border-amber-200/50 flex items-start gap-2 text-[11px] text-amber-900 leading-snug">
+              <span className="shrink-0 text-amber-600 font-bold">•</span>
+              <span>
+                Higher pulse and temperature detected compared to baseline.
+              </span>
+            </div> */}
+          </div>
+        </div>
+      )}
+      {/* Confined in-phone Location & Movement Dialog */}
+      {isLocationDialogOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-3 animate-in fade-in duration-150">
+          {/* Backdrop confined to phone screen */}
+          <div
+            onClick={() => setIsLocationDialogOpen(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+          />
+
+          {/* Dialog Card inside phone screen */}
+          <div className="relative w-full max-w-[340px] max-h-[88vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-slate-100 p-5 flex flex-col gap-3.5 z-10 animate-in zoom-in-95 duration-150 sleek-scrollbar">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 leading-tight">
+                    Location & Movement
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Real-time position & safety tracking
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsLocationDialogOpen(false)}
+                className="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Current Location & Status Banner */}
+            <div className="bg-[#F8F9FC] rounded-2xl p-3.5 border border-slate-100 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="truncate max-w-[170px]">
+                    {wanderingLocation}
+                  </span>
+                </div>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    isSafeZone
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                      : "bg-rose-50 text-rose-700 border-rose-200/60"
+                  }`}
+                >
+                  {isSafeZone ? "Safe Zone" : "Restricted Area"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
+                <span className="text-slate-500">Status</span>
+                <span className="font-semibold text-slate-800">
+                  {wanderingStatusFormatted}
+                </span>
+              </div>
+            </div>
+
+            {/* 4 Movement Stats Cards Grid */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Pacing Loop Count */}
+              <div className="bg-[#FAF9FD] rounded-2xl p-3 border border-purple-100/70 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-lg bg-purple-100/70 flex items-center justify-center text-purple-700">
+                    <Footprints className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[10.5px] font-semibold text-slate-500">
+                    Pacing loops
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <div className="text-lg font-bold text-slate-900 tracking-tight">
+                    {pacingLoopCount}
+                  </div>
+                  <span className="text-[9.5px] text-slate-400">
+                    hallway rounds
+                  </span>
+                </div>
+              </div>
+
+              {/* Minutes Out of Bed */}
+              <div className="bg-[#FAF9FD] rounded-2xl p-3 border border-purple-100/70 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-100/70 flex items-center justify-center text-indigo-700">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[10.5px] font-semibold text-slate-500">
+                    Out of bed
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <div className="text-lg font-bold text-slate-900 tracking-tight">
+                    {minutesOutOfBed}m
+                  </div>
+                  <span className="text-[9.5px] text-slate-400">
+                    active time
+                  </span>
+                </div>
+              </div>
+
+              {/* Night Bed Exit */}
+              <div className="bg-[#FAF9FD] rounded-2xl p-3 border border-purple-100/70 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-lg bg-blue-100/70 flex items-center justify-center text-blue-700">
+                    <Moon className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[10.5px] font-semibold text-slate-500">
+                    Night bed exit
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <div className="text-base font-bold text-slate-900 tracking-tight">
+                    {nightBedExit ? "Detected" : "None"}
+                  </div>
+                  <span className="text-[9.5px] text-slate-400">
+                    {nightBedExit ? "requires check" : "normal sleep"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Elopement Risk & Score */}
+              <div className="bg-[#FAF9FD] rounded-2xl p-3 border border-purple-100/70 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10.5px] font-semibold text-slate-500">
+                    Risk level
+                  </span>
+                  <span
+                    className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-full border ${
+                      elopementRisk === "LOW"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                        : elopementRisk === "ELEVATED"
+                          ? "bg-amber-50 text-amber-700 border-amber-200/60"
+                          : "bg-rose-50 text-rose-700 border-rose-200/60"
+                    }`}
+                  >
+                    {elopementRisk}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <div className="text-lg font-bold text-slate-900 tracking-tight">
+                    {riskScore}
+                    <span className="text-xs text-slate-400 font-normal">
+                      /100
+                    </span>
+                  </div>
+                  <span className="text-[9.5px] text-slate-400">
+                    risk score
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Alert Banner */}
+            {actionAlert ? (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/70 text-[11px] text-amber-900 flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-bold block">Action Alert</span>
+                  <span className="text-amber-800 leading-snug">
+                    {actionAlert}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/50 text-[11px] text-emerald-900 flex items-center gap-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>No active wandering or perimeter alert.</span>
+              </div>
+            )}
+
+            {/* Contributing Factors */}
+            {contributingFactors && contributingFactors.length > 0 && (
+              <div className="pt-2 border-t border-slate-100">
+                <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase block mb-1.5">
+                  Contributing Factors
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {contributingFactors.map((factor, idx) => (
+                    <span
+                      key={idx}
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600"
+                    >
+                      {factor}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
