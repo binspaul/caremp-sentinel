@@ -133,8 +133,8 @@ def generate_summary(context: Dict[str, Any], model: str = DEFAULT_MODEL) -> str
     if not api_key:
         return generate_template_summary(context)
 
-    # 1. Direct call to Google Generative Language API prioritizing Gemma 4
-    candidate_models = [DEFAULT_MODEL, "gemma-4-31b-it", "gemini-3.5-flash-lite", "gemini-flash-latest"]
+    # 1. Direct call to Google Generative Language API
+    candidate_models = [DEFAULT_MODEL, "gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-flash-latest"]
     user_prompt = _build_user_prompt(context)
     payload = {
         "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
