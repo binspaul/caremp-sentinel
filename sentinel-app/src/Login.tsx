@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { loginUser } from "./api";
 import { AlertCircle, Loader2 } from "lucide-react";
+import FullLogo from "./assets/Full_Logo.png";
 
 export interface LoginProps {
   onLoginSuccess?: () => void;
 }
 
 export function Login({ onLoginSuccess }: LoginProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("sadmin@caremp.ai");
+  const [password, setPassword] = useState("sadmin@123#");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +31,8 @@ export function Login({ onLoginSuccess }: LoginProps) {
       }
     } catch (err: unknown) {
       const errorMsg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
         (err as Error)?.message ||
         "Login failed. Please check your credentials or API connection.";
       setError(errorMsg);
@@ -40,21 +42,22 @@ export function Login({ onLoginSuccess }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F6FA] text-[#1c192d] flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-purple-200">
+    <div className="w-full h-full min-h-full overflow-y-auto bg-[linear-gradient(127deg,_#F7F5FC_5.71%,_#E8E1F4_40%,_#BDAADD_77.14%)] text-[#1c192d] flex flex-col items-center justify-center p-4 selection:bg-purple-200">
       {/* Centered Login Card */}
-      <div className="w-full max-w-[460px] bg-white rounded-[28px] border border-slate-200/60 shadow-xs p-8 sm:p-10 text-left">
-        {/* Top Tag Pill */}
-        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#EEEBF8] text-[#6C56CE] text-[10px] font-bold tracking-wider uppercase select-none">
-          YOUR DAILY WELLBEING
-        </div>
+      <div className="w-full max-w-[360px] sm:max-w-[420px] bg-white/30 rounded-[24px] sm:rounded-[28px] border border-slate-200/60 shadow-xs p-6 sm:p-8 text-left my-auto">
+        <img src={FullLogo} className="w-50 h-16 -mt-4" />
 
         {/* Title & Subtitle */}
-        <h1 className="text-3xl font-bold tracking-tight text-[#16122B] mt-4">
+        <h1 className="text-xl font-bold tracking-tight text-[#16122B] mt-2">
           Welcome back.
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-normal mt-2 leading-relaxed">
+        {/* <p className="text-xs sm:text-sm text-slate-500 font-normal mt-2 leading-relaxed">
           A little check-in. A clearer picture of you.
           <br />
+          Log in to your careMP Sentinel account.
+        </p> */}
+
+        <p className="text-xs text-slate-500 font-normal mt-2 leading-relaxed">
           Log in to your careMP Sentinel account.
         </p>
 
@@ -109,7 +112,9 @@ export function Login({ onLoginSuccess }: LoginProps) {
             <div className="flex justify-end mt-2">
               <button
                 type="button"
-                onClick={() => alert("Password reset link will be sent to your email.")}
+                onClick={() =>
+                  alert("Password reset link will be sent to your email.")
+                }
                 className="text-xs font-medium text-[#6C56CE] hover:text-[#5842be] transition-colors cursor-pointer"
               >
                 Forgot password?
@@ -135,7 +140,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
         </form>
 
         {/* Auto-fill shortcut */}
-        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+        {/* <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
           <span className="text-slate-400">Demo Resident Account:</span>
           <button
             type="button"
@@ -144,10 +149,10 @@ export function Login({ onLoginSuccess }: LoginProps) {
           >
             Auto-fill Demo
           </button>
-        </div>
+        </div> */}
 
         {/* Footer Link */}
-        <div className="text-center mt-6 text-xs text-slate-500 font-normal">
+        {/* <div className="text-center mt-6 text-xs text-slate-500 font-normal">
           New to careMP Sentinel?{" "}
           <button
             type="button"
@@ -156,7 +161,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           >
             Create an account
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Under-Card Subtitle */}

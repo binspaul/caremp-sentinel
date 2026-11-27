@@ -60,6 +60,8 @@ export interface HealthInsights {
   predictions: Prediction[];
   healthyAgeing: HealthyAgeing;
   recommendations: Recommendation[];
+  sundowning: Sundowning;
+  wandering: Wandering;
 }
 
 export interface HealthyAgeing {
@@ -109,4 +111,31 @@ export interface Recommendation {
 
 export interface HealthRecord {
   [key: string]: unknown;
+}
+
+export interface Sundowning {
+  status: "CALM" | "RESTLESS" | "SUNDOWNING_SURGE";
+  severity: string;
+  agitationIndex: number;
+  isSundowningWindow: boolean;
+  advanceNoticeMinutes: number | null;
+  contributingFactors: string[];
+  recommendedInterventions: string[];
+}
+
+export interface Wandering {
+  actionAlert: string | null;
+  contributingFactors: string[];
+  currentLocation: string;
+  elopementRisk: "LOW" | "ELEVATED" | "CRITICAL";
+  isSafeZone: boolean;
+  minutesOutOfBed: number;
+  nightBedExit: boolean;
+  pacingLoopCount: number;
+  riskScore: number;
+  wanderingStatus:
+    | "SAFE_IN_ROOM"
+    | "HALLWAY_PACING"
+    | "NOCTURNAL_BED_EXIT"
+    | "PERIMETER_ALERT";
 }
