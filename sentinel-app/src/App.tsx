@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Iphone16Pro } from "./components/iPhone16Pro";
 import { MobileDashboardView } from "./components/mobileDashboardView";
+import { Login } from "./Login";
 import { PatientTelemedicineModal } from "./components/telemedicine/PatientTelemedicineModal";
 import { PatientFallDialog } from "./components/falls/PatientFallDialog";
 import {
@@ -9,9 +10,11 @@ import {
   getVitalsTrendData,
   getLatestUnresolvedFall,
   type FallIncidentData,
+  getResidentDetails,
 } from "./api";
 import type { VitalRecord } from "./types/vital";
 import type { ResidentDigitalTwinData } from "./types/digitalTwin";
+import { Resident } from "./types/resident";
 
 export interface User {
   id: number;
@@ -27,6 +30,10 @@ export interface User {
 }
 
 export default function App() {
+  const [accessToken, setAccessToken] = useState<string | null>(() => {
+    return localStorage.getItem("accessToken") || localStorage.getItem("token");
+  });
+
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const stored = localStorage.getItem("user");
@@ -59,11 +66,27 @@ export default function App() {
     .filter(Boolean)
     .join(" ");
 
+  const handleLoginSuccess = () => {
+    const token =
+      localStorage.getItem("accessToken") || localStorage.getItem("token");
+    setAccessToken(token);
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        setCurrentUser(JSON.parse(stored));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const handleSignOut = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
     localStorage.removeItem("auth");
+    setAccessToken(null);
     setCurrentUser(null);
   };
 
@@ -72,6 +95,7 @@ export default function App() {
   const [isTelemedicineOpen, setIsTelemedicineOpen] = useState(false);
   const [activeFall, setActiveFall] = useState<FallIncidentData | null>(null);
   const [digitalTwin, setDigitalTwin] = useState<ResidentDigitalTwinData>();
+  const [residentDetails, setResidentDetails] = useState<Resident>();
 
   const fetchActiveFall = async () => {
     try {
@@ -117,60 +141,85 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    fetchDigitalTwin();
-    const interval = setInterval(fetchDigitalTwin, 30 * 60 * 1000); // 30 min interval
-    return () => clearInterval(interval);
-  }, [currentUser?.personId, currentUser?.id]);
+  const fetchResidentDetails = async () => {
+    try {
+      const residentId = Number(currentUser?.personId || currentUser?.id || 1);
+      const response = await getResidentDetails(residentId);
+      if (response) {
+        setResidentDetails(response);
+      }
+    } catch (err) {
+      console.error("Failed to fetch resident details:", err);
+    }
+  };
 
   useEffect(() => {
+    if (!accessToken) return;
+    fetchDigitalTwin();
+    fetchResidentDetails();
+    // const interval = setInterval(fetchDigitalTwin, 30 * 60 * 1000); // 30 min interval
+    // return () => clearInterval(interval);
+  }, [accessToken, currentUser?.personId, currentUser?.id]);
+
+  useEffect(() => {
+    if (!accessToken) return;
     fetchVitalsData();
-    const interval = setInterval(fetchVitalsData, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [accessToken]);
 
   const mobileContent = (
     <MobileDashboardView
       latestVital={latestVital}
       trendVitals={trendVitals}
       digitalTwin={digitalTwin}
+      residentDetails={residentDetails}
       currentUser={currentUser}
       onSignOut={handleSignOut}
       onOpenTelemedicine={() => setIsTelemedicineOpen(true)}
+      onRefreshVitals={fetchVitalsData}
     />
+  );
+
+  const currentView = accessToken ? (
+    mobileContent
+  ) : (
+    <Login onLoginSuccess={handleLoginSuccess} />
   );
 
   return (
     <div className="min-h-screen bg-[#F0F2F6] flex flex-col items-center justify-center">
       {isMobileScreen ? (
         <div className="w-full h-screen overflow-hidden bg-[#F8F9FC]">
-          {mobileContent}
+          {currentView}
         </div>
       ) : (
         <div className="py-6 flex items-center justify-center">
           <Iphone16Pro width={390} height={780}>
-            {mobileContent}
+            {currentView}
           </Iphone16Pro>
         </div>
       )}
 
       {/* Patient Telemedicine Video Modal */}
-      <PatientTelemedicineModal
-        isOpen={isTelemedicineOpen}
-        onClose={() => setIsTelemedicineOpen(false)}
-        latestVital={latestVital}
-        patientName={fullName || "Margaret"}
-      />
+      {accessToken && (
+        <>
+          <PatientTelemedicineModal
+            isOpen={isTelemedicineOpen}
+            onClose={() => setIsTelemedicineOpen(false)}
+            latestVital={latestVital}
+            patientName={fullName || "Margaret"}
+          />
 
-      {/* Patient Hard Fall Detection Reassurance Dialog */}
-      <PatientFallDialog
-        incident={activeFall}
-        onDismiss={() => setActiveFall(null)}
-        onCallCareTeam={() => {
-          setActiveFall(null);
-          setIsTelemedicineOpen(true);
-        }}
-      />
+          {/* Patient Hard Fall Detection Reassurance Dialog */}
+          <PatientFallDialog
+            incident={activeFall}
+            onDismiss={() => setActiveFall(null)}
+            onCallCareTeam={() => {
+              setActiveFall(null);
+              setIsTelemedicineOpen(true);
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
