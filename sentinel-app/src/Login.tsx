@@ -140,7 +140,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
         </form>
 
         {/* Auto-fill shortcut */}
-        {/* <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+        <div className="hidden mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
           <span className="text-slate-400">Demo Resident Account:</span>
           <button
             type="button"
@@ -149,7 +149,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           >
             Auto-fill Demo
           </button>
-        </div> */}
+        </div>
 
         {/* Footer Link */}
         {/* <div className="text-center mt-6 text-xs text-slate-500 font-normal">
