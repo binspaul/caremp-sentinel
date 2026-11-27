@@ -39,19 +39,37 @@ DEFAULT_STM_TTL_DAYS = 7
 MAX_COMPACTION_TOKENS = 1500
 
 # Backend NestJS API Configuration
-raw_base_url = (os.getenv("BASE_URL") or os.getenv("API_BASE_URL") or "http://localhost:4000").rstrip('/')
-BASE_URL = raw_base_url
+def _clean_url(val: str | None) -> str | None:
+    if not val:
+        return None
+    cleaned = val.strip().rstrip('/')
+    if cleaned in ("https:", "http:", "https://", "http://", "https:/", "http:/", ""):
+        return None
+    from urllib.parse import urlparse
+    parsed = urlparse(cleaned)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    return cleaned
+
+clean_api_base = _clean_url(os.getenv("API_BASE_URL"))
+clean_base = _clean_url(os.getenv("BASE_URL"))
+
+raw_base_url = clean_api_base or clean_base or "http://localhost:4000"
+raw_base_url = raw_base_url.rstrip('/')
 if not raw_base_url.endswith("/v1"):
     API_BASE_URL = f"{raw_base_url}/v1"
 else:
     API_BASE_URL = raw_base_url
+BASE_URL = API_BASE_URL.rsplit('/v1', 1)[0]
 
 API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN", "")
 API_USER_EMAIL = os.getenv("API_USER_EMAIL", "sadmin@caremp.ai")
 API_USER_PASSWORD = os.getenv("API_USER_PASSWORD", "sadmin@123#")
 
 # Engines Microservice URL (FastAPI)
-raw_engines_url = (os.getenv("ENGINES_API_URL") or "http://localhost:5001/engines").rstrip('/')
+clean_engines = _clean_url(os.getenv("ENGINES_API_URL"))
+raw_engines_url = clean_engines or "http://localhost:5001/engines"
+raw_engines_url = raw_engines_url.rstrip('/')
 if not raw_engines_url.endswith("/api/engines") and not raw_engines_url.endswith("/engines"):
     ENGINES_API_URL = f"{raw_engines_url}/engines"
 else:

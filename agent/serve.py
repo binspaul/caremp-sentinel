@@ -62,7 +62,7 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# Enable CORS for local web dashboard and hosted frontend origins (port 5173/5174/3000)
+# Enable CORS for local web dashboard and hosted frontend origins
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
@@ -70,6 +70,8 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
     "http://127.0.0.1:3000",
+    "https://sentinel.caremp.ai",
+    "https://sentinel-app.caremp.ai",
     "*",
 ]
 
